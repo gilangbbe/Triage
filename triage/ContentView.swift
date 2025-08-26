@@ -49,4 +49,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environment(DataManager.shared)
+        .environment(QuickReplyManager.shared)
 }
