@@ -245,4 +245,6 @@ struct TestParsingView: View {
 
 #Preview {
     SettingsView()
+        .environment(QuickReplyManager.shared)
+        .environment(DataManager.shared)
 }

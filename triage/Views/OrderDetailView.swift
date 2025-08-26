@@ -207,5 +207,6 @@ struct StatusPickerView: View {
             phoneNumber: "+1234567890",
             orderDetails: "2x Coffee (Large)\n1x Sandwich (Turkey)\n1x Salad"
         ))
+        .environment(DataManager.shared)
     }
 }

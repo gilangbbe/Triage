@@ -57,11 +57,3 @@ struct triageApp: App {
         }
     }
 }
-
-// Extension to handle keyboard extension data sync
-extension DataManager {
-    func syncWithKeyboardExtension() {
-        // Load any new orders that might have been added by the keyboard extension
-        loadOrders()
-    }
-}

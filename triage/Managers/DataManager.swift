@@ -39,15 +39,11 @@ class DataManager {
         context.insert(order)
         saveContext()
         loadOrders()
-        
-        // Also sync to shared container for keyboard extension
-        syncToSharedContainer()
     }
     
     func updateOrder(_ order: CustomerOrder) {
         saveContext()
         loadOrders()
-        syncToSharedContainer()
     }
     
     func deleteOrder(_ order: CustomerOrder) {
@@ -56,7 +52,6 @@ class DataManager {
         context.delete(order)
         saveContext()
         loadOrders()
-        syncToSharedContainer()
     }
     
     func deleteOrders(at indexSet: IndexSet) {
@@ -68,7 +63,6 @@ class DataManager {
         }
         saveContext()
         loadOrders()
-        syncToSharedContainer()
     }
     
     func clearAllOrders() {
@@ -79,7 +73,6 @@ class DataManager {
         }
         saveContext()
         loadOrders()
-        syncToSharedContainer()
     }
     
     // MARK: - Data Loading
@@ -108,29 +101,9 @@ class DataManager {
     }
     
     // MARK: - Keyboard Extension Integration
-    private func syncToSharedContainer() {
-        // Convert SwiftData models to simple data structures for keyboard extension
-        let orderData = orders.map { order in
-            CustomerOrderData(
-                id: order.id.uuidString,
-                name: order.name,
-                email: order.email,
-                address: order.address,
-                phoneNumber: order.phoneNumber,
-                orderDetails: order.orderDetails,
-                dateCreated: order.dateCreated,
-                status: order.status.rawValue
-            )
-        }
-        
-        if let encoded = try? JSONEncoder().encode(orderData) {
-            sharedUserDefaults?.set(encoded, forKey: "SavedOrders")
-        }
-    }
-    
     func syncFromKeyboardExtension() {
         // Load any new orders from keyboard extension
-        guard let sharedData = sharedUserDefaults?.data(forKey: "SavedOrders"),
+        guard let sharedData = sharedUserDefaults?.data(forKey: "NewOrders"),
               let orderDataArray = try? JSONDecoder().decode([CustomerOrderData].self, from: sharedData),
               let context = modelContext else { return }
         
@@ -154,6 +127,9 @@ class DataManager {
                 context.insert(newOrder)
             }
         }
+        
+        // Clear the processed orders from shared container
+        sharedUserDefaults?.removeObject(forKey: "NewOrders")
         
         saveContext()
         loadOrders()

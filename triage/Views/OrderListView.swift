@@ -153,4 +153,5 @@ struct EmptyStateView: View {
 #Preview {
     OrderListView()
         .environment(OrderListViewModel(dataManager: DataManager.shared))
+        .environment(DataManager.shared)
 }

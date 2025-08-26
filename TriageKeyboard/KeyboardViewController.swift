@@ -268,19 +268,19 @@ class KeyboardViewController: UIInputViewController {
             return
         }
         
-        // Load existing orders
-        var orders: [CustomerOrderData] = []
-        if let data = sharedDefaults.data(forKey: "SavedOrders"),
+        // Load existing new orders waiting to be processed
+        var newOrders: [CustomerOrderData] = []
+        if let data = sharedDefaults.data(forKey: "NewOrders"),
            let decodedOrders = try? JSONDecoder().decode([CustomerOrderData].self, from: data) {
-            orders = decodedOrders
+            newOrders = decodedOrders
         }
         
-        // Add new order
-        orders.append(order)
+        // Add the new order to the queue
+        newOrders.append(order)
         
         // Save back to shared container
-        if let encoded = try? JSONEncoder().encode(orders) {
-            sharedDefaults.set(encoded, forKey: "SavedOrders")
+        if let encoded = try? JSONEncoder().encode(newOrders) {
+            sharedDefaults.set(encoded, forKey: "NewOrders")
         }
     }
     

@@ -172,4 +172,5 @@ struct AddQuickReplyView: View {
 
 #Preview {
     QuickRepliesView()
+        .environment(QuickReplyManager.shared)
 }

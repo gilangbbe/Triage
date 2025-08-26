@@ -114,4 +114,5 @@ struct EditOrderView: View {
         phoneNumber: "+1234567890",
         orderDetails: "Sample order"
     )))
+    .environment(DataManager.shared)
 }
