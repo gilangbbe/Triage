@@ -10,11 +10,13 @@ import SwiftUI
 @main
 struct triageApp: App {
     @StateObject private var dataManager = DataManager.shared
+    @StateObject private var quickReplyManager = QuickReplyManager.shared
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(dataManager)
+                .environmentObject(quickReplyManager)
                 .onAppear {
                     // Check for new orders from keyboard extension when app becomes active
                     NotificationCenter.default.addObserver(
@@ -23,6 +25,7 @@ struct triageApp: App {
                         queue: .main
                     ) { _ in
                         dataManager.syncWithKeyboardExtension()
+                        quickReplyManager.loadQuickReplies()
                     }
                 }
         }
