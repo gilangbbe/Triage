@@ -207,7 +207,7 @@ class KeyboardViewController: UIInputViewController {
     }
     
     private func saveOrderToSharedContainer(_ order: CustomerOrderData) {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.biru.triage") else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.triage") else {
             statusLabel.text = "Error: Could not access shared storage"
             statusLabel.textColor = UIColor.systemRed
             return

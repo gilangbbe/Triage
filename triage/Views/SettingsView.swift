@@ -48,7 +48,7 @@ struct SettingsView: View {
                     HStack {
                         Text("App Group ID")
                         Spacer()
-                        Text("group.com.biru.triage")
+                        Text("group.com.triage")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
