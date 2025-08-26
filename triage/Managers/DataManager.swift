@@ -6,15 +6,15 @@
 //
 
 import Foundation
+import SwiftData
 import Combine
 
-class DataManager: ObservableObject {
+@Observable
+class DataManager {
     static let shared = DataManager()
     
-    @Published var orders: [CustomerOrder] = []
-    
-    private let userDefaults = UserDefaults.standard
-    private let ordersKey = "SavedOrders"
+    var orders: [CustomerOrder] = []
+    private var modelContext: ModelContext?
     
     // App Group for sharing data between main app and keyboard extension
     private let appGroupID = "group.com.ada.triage"
@@ -23,82 +23,140 @@ class DataManager: ObservableObject {
     }
     
     private init() {
+        // ModelContext will be set by the main app
         loadOrders()
+    }
+    
+    func setModelContext(_ context: ModelContext) {
+        self.modelContext = context
+        loadOrders() // Reload data with the new context
     }
     
     // MARK: - CRUD Operations
     func addOrder(_ order: CustomerOrder) {
-        orders.append(order)
-        saveOrders()
+        guard let context = modelContext else { return }
+        
+        context.insert(order)
+        saveContext()
+        loadOrders()
+        
+        // Also sync to shared container for keyboard extension
+        syncToSharedContainer()
     }
     
     func updateOrder(_ order: CustomerOrder) {
-        if let index = orders.firstIndex(where: { $0.id == order.id }) {
-            orders[index] = order
-            saveOrders()
-        }
+        saveContext()
+        loadOrders()
+        syncToSharedContainer()
     }
     
     func deleteOrder(_ order: CustomerOrder) {
-        orders.removeAll { $0.id == order.id }
-        saveOrders()
+        guard let context = modelContext else { return }
+        
+        context.delete(order)
+        saveContext()
+        loadOrders()
+        syncToSharedContainer()
     }
     
-    func deleteOrder(at indexSet: IndexSet) {
-        orders.remove(atOffsets: indexSet)
-        saveOrders()
-    }
-    
-    // MARK: - Persistence
-    private func saveOrders() {
-        if let encoded = try? JSONEncoder().encode(orders) {
-            userDefaults.set(encoded, forKey: ordersKey)
-            // Also save to shared container for keyboard extension
-            sharedUserDefaults?.set(encoded, forKey: ordersKey)
+    func deleteOrders(at indexSet: IndexSet) {
+        guard let context = modelContext else { return }
+        
+        for index in indexSet {
+            let order = orders[index]
+            context.delete(order)
         }
+        saveContext()
+        loadOrders()
+        syncToSharedContainer()
     }
     
+    func clearAllOrders() {
+        guard let context = modelContext else { return }
+        
+        for order in orders {
+            context.delete(order)
+        }
+        saveContext()
+        loadOrders()
+        syncToSharedContainer()
+    }
+    
+    // MARK: - Data Loading
     func loadOrders() {
-        // Try to load from shared container first (in case keyboard extension added data)
-        var data: Data?
+        guard let context = modelContext else { return }
         
-        if let sharedData = sharedUserDefaults?.data(forKey: ordersKey) {
-            data = sharedData
-        } else if let localData = userDefaults.data(forKey: ordersKey) {
-            data = localData
-        }
-        
-        if let data = data,
-           let decoded = try? JSONDecoder().decode([CustomerOrder].self, from: data) {
-            orders = decoded
+        do {
+            let descriptor = FetchDescriptor<CustomerOrder>(
+                sortBy: [SortDescriptor(\.dateCreated, order: .reverse)]
+            )
+            orders = try context.fetch(descriptor)
+        } catch {
+            print("Failed to fetch orders: \(error)")
+            orders = []
         }
     }
     
-    // MARK: - Keyboard Extension Methods
-    func addOrderFromKeyboard(_ order: CustomerOrder) {
-        // This method will be called from the keyboard extension
-        var currentOrders = loadOrdersFromShared()
-        currentOrders.append(order)
-        saveOrdersToShared(currentOrders)
+    private func saveContext() {
+        guard let context = modelContext else { return }
         
-        // Update local orders if main app is running
-        DispatchQueue.main.async {
-            self.orders = currentOrders
+        do {
+            try context.save()
+        } catch {
+            print("Failed to save context: \(error)")
         }
     }
     
-    private func loadOrdersFromShared() -> [CustomerOrder] {
-        guard let data = sharedUserDefaults?.data(forKey: ordersKey),
-              let orders = try? JSONDecoder().decode([CustomerOrder].self, from: data) else {
-            return []
+    // MARK: - Keyboard Extension Integration
+    private func syncToSharedContainer() {
+        // Convert SwiftData models to simple data structures for keyboard extension
+        let orderData = orders.map { order in
+            CustomerOrderData(
+                id: order.id.uuidString,
+                name: order.name,
+                email: order.email,
+                address: order.address,
+                phoneNumber: order.phoneNumber,
+                orderDetails: order.orderDetails,
+                dateCreated: order.dateCreated,
+                status: order.status.rawValue
+            )
         }
-        return orders
+        
+        if let encoded = try? JSONEncoder().encode(orderData) {
+            sharedUserDefaults?.set(encoded, forKey: "SavedOrders")
+        }
     }
     
-    private func saveOrdersToShared(_ orders: [CustomerOrder]) {
-        if let encoded = try? JSONEncoder().encode(orders) {
-            sharedUserDefaults?.set(encoded, forKey: ordersKey)
+    func syncFromKeyboardExtension() {
+        // Load any new orders from keyboard extension
+        guard let sharedData = sharedUserDefaults?.data(forKey: "SavedOrders"),
+              let orderDataArray = try? JSONDecoder().decode([CustomerOrderData].self, from: sharedData),
+              let context = modelContext else { return }
+        
+        // Get existing order IDs
+        let existingIDs = Set(orders.map { $0.id.uuidString })
+        
+        // Add new orders from keyboard extension
+        for orderData in orderDataArray {
+            if !existingIDs.contains(orderData.id) {
+                let newOrder = CustomerOrder(
+                    name: orderData.name,
+                    email: orderData.email,
+                    address: orderData.address,
+                    phoneNumber: orderData.phoneNumber,
+                    orderDetails: orderData.orderDetails
+                )
+                newOrder.id = UUID(uuidString: orderData.id) ?? UUID()
+                newOrder.dateCreated = orderData.dateCreated
+                newOrder.status = OrderStatus(rawValue: orderData.status) ?? .pending
+                
+                context.insert(newOrder)
+            }
         }
+        
+        saveContext()
+        loadOrders()
     }
     
     // MARK: - Search and Filter
@@ -117,4 +175,16 @@ class DataManager: ObservableObject {
     func filterOrders(by status: OrderStatus) -> [CustomerOrder] {
         return orders.filter { $0.status == status }
     }
+}
+
+// MARK: - Data transfer model for keyboard extension
+struct CustomerOrderData: Codable {
+    let id: String
+    var name: String
+    var email: String
+    var address: String
+    var phoneNumber: String?
+    var orderDetails: String?
+    var dateCreated: Date
+    var status: String
 }

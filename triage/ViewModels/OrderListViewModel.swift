@@ -6,16 +6,23 @@
 //
 
 import Foundation
-import Combine
+import SwiftUI
 
-class OrderListViewModel: ObservableObject {
-    @Published var orders: [CustomerOrder] = []
-    @Published var searchText = ""
-    @Published var selectedStatus: OrderStatus? = nil
-    @Published var showingAddOrder = false
+@Observable
+class OrderListViewModel {
+    var searchText = ""
+    var selectedStatus: OrderStatus? = nil
+    var showingAddOrder = false
     
-    private let dataManager = DataManager.shared
-    private var cancellables = Set<AnyCancellable>()
+    private let dataManager: DataManager
+    
+    init(dataManager: DataManager) {
+        self.dataManager = dataManager
+    }
+    
+    var orders: [CustomerOrder] {
+        return dataManager.orders
+    }
     
     var filteredOrders: [CustomerOrder] {
         var result = orders
@@ -37,17 +44,6 @@ class OrderListViewModel: ObservableObject {
         return result.sorted { $0.dateCreated > $1.dateCreated }
     }
     
-    init() {
-        setupBindings()
-    }
-    
-    private func setupBindings() {
-        dataManager.$orders
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.orders, on: self)
-            .store(in: &cancellables)
-    }
-    
     func deleteOrder(_ order: CustomerOrder) {
         dataManager.deleteOrder(order)
     }
@@ -58,9 +54,8 @@ class OrderListViewModel: ObservableObject {
     }
     
     func updateOrderStatus(_ order: CustomerOrder, status: OrderStatus) {
-        var updatedOrder = order
-        updatedOrder.status = status
-        dataManager.updateOrder(updatedOrder)
+        order.status = status
+        dataManager.updateOrder(order)
     }
     
     func clearAllFilters() {

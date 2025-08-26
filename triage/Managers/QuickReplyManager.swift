@@ -6,14 +6,14 @@
 //
 
 import Foundation
+import SwiftData
 
-class QuickReplyManager: ObservableObject {
+@Observable
+class QuickReplyManager {
     static let shared = QuickReplyManager()
     
-    @Published var quickReplies: [QuickReply] = []
-    
-    private let userDefaults = UserDefaults.standard
-    private let quickRepliesKey = "QuickReplies"
+    var quickReplies: [QuickReply] = []
+    private var modelContext: ModelContext?
     
     // App Group for sharing data between main app and keyboard extension
     private let appGroupID = "group.com.ada.triage"
@@ -22,61 +22,106 @@ class QuickReplyManager: ObservableObject {
     }
     
     private init() {
+        // ModelContext will be set by the main app
         loadQuickReplies()
+        setupDefaultReplies()
+    }
+    
+    func setModelContext(_ context: ModelContext) {
+        self.modelContext = context
+        loadQuickReplies() // Reload data with the new context
         setupDefaultReplies()
     }
     
     // MARK: - CRUD Operations
     func addQuickReply(_ reply: QuickReply) {
-        quickReplies.append(reply)
-        saveQuickReplies()
+        guard let context = modelContext else { return }
+        
+        context.insert(reply)
+        saveContext()
+        loadQuickReplies()
+        syncToSharedContainer()
     }
     
     func updateQuickReply(_ reply: QuickReply) {
-        if let index = quickReplies.firstIndex(where: { $0.id == reply.id }) {
-            quickReplies[index] = reply
-            saveQuickReplies()
-        }
+        saveContext()
+        loadQuickReplies()
+        syncToSharedContainer()
     }
     
     func deleteQuickReply(_ reply: QuickReply) {
-        quickReplies.removeAll { $0.id == reply.id }
-        saveQuickReplies()
+        guard let context = modelContext else { return }
+        
+        context.delete(reply)
+        saveContext()
+        loadQuickReplies()
+        syncToSharedContainer()
     }
     
     func deleteQuickReply(at indexSet: IndexSet) {
-        quickReplies.remove(atOffsets: indexSet)
-        saveQuickReplies()
+        guard let context = modelContext else { return }
+        
+        for index in indexSet {
+            let reply = quickReplies[index]
+            context.delete(reply)
+        }
+        saveContext()
+        loadQuickReplies()
+        syncToSharedContainer()
     }
     
     func toggleReplyStatus(_ reply: QuickReply) {
-        var updatedReply = reply
-        updatedReply.isActive.toggle()
-        updateQuickReply(updatedReply)
+        reply.isActive.toggle()
+        updateQuickReply(reply)
     }
     
-    // MARK: - Persistence
-    private func saveQuickReplies() {
-        if let encoded = try? JSONEncoder().encode(quickReplies) {
-            userDefaults.set(encoded, forKey: quickRepliesKey)
-            // Also save to shared container for keyboard extension
-            sharedUserDefaults?.set(encoded, forKey: quickRepliesKey)
-        }
+    func updateQuickReply(_ reply: QuickReply, title: String, message: String, isActive: Bool) {
+        reply.title = title
+        reply.message = message
+        reply.isActive = isActive
+        updateQuickReply(reply)
     }
     
+    // MARK: - Data Loading
     func loadQuickReplies() {
-        // Try to load from shared container first (in case keyboard extension made changes)
-        var data: Data?
+        guard let context = modelContext else { return }
         
-        if let sharedData = sharedUserDefaults?.data(forKey: quickRepliesKey) {
-            data = sharedData
-        } else if let localData = userDefaults.data(forKey: quickRepliesKey) {
-            data = localData
+        do {
+            let descriptor = FetchDescriptor<QuickReply>(
+                sortBy: [SortDescriptor(\.title, order: .forward)]
+            )
+            quickReplies = try context.fetch(descriptor)
+        } catch {
+            print("Failed to fetch quick replies: \(error)")
+            quickReplies = []
+        }
+    }
+    
+    private func saveContext() {
+        guard let context = modelContext else { return }
+        
+        do {
+            try context.save()
+        } catch {
+            print("Failed to save quick replies context: \(error)")
+        }
+    }
+    
+    // MARK: - Keyboard Extension Integration
+    private func syncToSharedContainer() {
+        // Convert SwiftData models to simple data structures for keyboard extension
+        let replyData = quickReplies.map { reply in
+            QuickReplyData(
+                id: reply.id.uuidString,
+                title: reply.title,
+                message: reply.message,
+                isActive: reply.isActive,
+                dateCreated: reply.dateCreated
+            )
         }
         
-        if let data = data,
-           let decoded = try? JSONDecoder().decode([QuickReply].self, from: data) {
-            quickReplies = decoded
+        if let encoded = try? JSONEncoder().encode(replyData) {
+            sharedUserDefaults?.set(encoded, forKey: "QuickReplies")
         }
     }
     
@@ -87,7 +132,7 @@ class QuickReplyManager: ObservableObject {
     
     private func setupDefaultReplies() {
         // Only add default replies if no replies exist
-        guard quickReplies.isEmpty else { return }
+        guard quickReplies.isEmpty, let context = modelContext else { return }
         
         let defaultReplies = [
             QuickReply(title: "Thank You", message: "Thank you for your order! We'll process it shortly."),
@@ -99,7 +144,21 @@ class QuickReplyManager: ObservableObject {
             QuickReply(title: "Working Hours", message: "Our working hours are Monday-Sunday, 9:00 AM - 9:00 PM. How can we help you?")
         ]
         
-        quickReplies = defaultReplies
-        saveQuickReplies()
+        for reply in defaultReplies {
+            context.insert(reply)
+        }
+        
+        saveContext()
+        loadQuickReplies()
+        syncToSharedContainer()
     }
+}
+
+// MARK: - Data transfer model for keyboard extension
+struct QuickReplyData: Codable {
+    let id: String
+    var title: String
+    var message: String
+    var isActive: Bool
+    var dateCreated: Date
 }

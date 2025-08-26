@@ -9,7 +9,7 @@ import SwiftUI
 import Charts
 
 struct AnalyticsView: View {
-    @EnvironmentObject var orderListViewModel: OrderListViewModel
+    @Environment(OrderListViewModel.self) private var orderListViewModel
     
     var ordersByStatus: [StatusCount] {
         let orders = orderListViewModel.orders
@@ -171,5 +171,5 @@ struct SummaryCard: View {
 
 #Preview {
     AnalyticsView()
-        .environmentObject(OrderListViewModel())
+        .environment(OrderListViewModel(dataManager: DataManager.shared))
 }

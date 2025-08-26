@@ -6,15 +6,18 @@
 //
 
 import Foundation
+import SwiftData
 
-struct QuickReply: Identifiable, Codable {
-    let id = UUID()
+@Model
+final class QuickReply {
+    var id: UUID
     var title: String
     var message: String
     var isActive: Bool
     var dateCreated: Date
     
     init(title: String, message: String, isActive: Bool = true) {
+        self.id = UUID()
         self.title = title
         self.message = message
         self.isActive = isActive

@@ -9,9 +9,11 @@ import SwiftUI
 
 struct AddOrderView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var viewModel = AddOrderViewModel()
+    @Environment(AddOrderViewModel.self) private var viewModel
     
     var body: some View {
+        @Bindable var viewModel = viewModel
+        
         NavigationView {
             Form {
                 Section(header: Text("Customer Information")) {
@@ -72,9 +74,11 @@ struct AddOrderView: View {
 
 struct RawTextInputView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: AddOrderViewModel
+    let viewModel: AddOrderViewModel
     
     var body: some View {
+        @Bindable var viewModel = viewModel
+        
         NavigationView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Paste customer message here:")
@@ -123,7 +127,7 @@ struct RawTextInputView: View {
                         viewModel.parseFromRawText()
                         dismiss()
                     }
-                    .disabled(viewModel.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(viewModel.rawText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -132,4 +136,5 @@ struct RawTextInputView: View {
 
 #Preview {
     AddOrderView()
+        .environment(AddOrderViewModel(dataManager: DataManager.shared))
 }
