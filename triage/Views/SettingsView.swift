@@ -20,6 +20,10 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.blue)
                     
+                    NavigationLink("Quick Replies") {
+                        QuickRepliesView()
+                    }
+                    
                     NavigationLink("Test Parsing") {
                         TestParsingView()
                     }
