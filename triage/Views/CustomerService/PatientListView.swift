@@ -31,7 +31,7 @@ struct PatientListView: View {
     
     var body: some View {
         NavigationView() {
-            VStack {
+            VStack(spacing: 16) {
                 SearchBarPatient(text: $viewModel.searchText)
                 
                 List(patients) { patient in
@@ -41,8 +41,11 @@ struct PatientListView: View {
                         }
                         .listRowInsets(EdgeInsets())
                 }
+                .padding(.horizontal, 8)
                 .scrollContentBackground(.hidden)
             }
+            .navigationTitle("Patient List")
+            .navigationBarTitleDisplayMode(.automatic)
         }
     }
 }
@@ -57,7 +60,7 @@ struct SearchBarPatient: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 24)
     }
 }
 
