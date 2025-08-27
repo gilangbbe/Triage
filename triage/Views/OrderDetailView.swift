@@ -10,6 +10,7 @@ import SwiftUI
 struct OrderDetailView: View {
     @State var order: CustomerOrder
     @Environment(\.dismiss) private var dismiss
+    @Environment(DataManager.self) private var dataManager
     @State private var showingEditView = false
     
     var body: some View {
@@ -105,7 +106,7 @@ struct OrderDetailView: View {
             EditOrderView(order: $order)
         }
         .onChange(of: order.status) { _, newStatus in
-            DataManager.shared.updateOrder(order)
+            dataManager.updateOrder(order)
         }
     }
     
@@ -206,5 +207,6 @@ struct StatusPickerView: View {
             phoneNumber: "+1234567890",
             orderDetails: "2x Coffee (Large)\n1x Sandwich (Turkey)\n1x Salad"
         ))
+        .environment(DataManager.shared)
     }
 }

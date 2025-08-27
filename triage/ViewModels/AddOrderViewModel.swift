@@ -6,18 +6,23 @@
 //
 
 import Foundation
-import Combine
+import SwiftUI
 
-class AddOrderViewModel: ObservableObject {
-    @Published var name = ""
-    @Published var email = ""
-    @Published var address = ""
-    @Published var phoneNumber = ""
-    @Published var orderDetails = ""
-    @Published var rawText = ""
-    @Published var showingRawTextInput = false
+@Observable
+class AddOrderViewModel {
+    var name = ""
+    var email = ""
+    var address = ""
+    var phoneNumber = ""
+    var orderDetails = ""
+    var rawText = ""
+    var showingRawTextInput = false
     
-    private let dataManager = DataManager.shared
+    private let dataManager: DataManager
+    
+    init(dataManager: DataManager) {
+        self.dataManager = dataManager
+    }
     
     var isValidOrder: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&

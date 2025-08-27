@@ -11,14 +11,20 @@ class KeyboardViewController: UIInputViewController {
     
     private var parseButton: UIButton!
     private var pasteButton: UIButton!
+    private var quickRepliesButton: UIButton!
     private var textView: UITextView!
     private var statusLabel: UILabel!
     private var nextKeyboardButton: UIButton!
+    private var quickRepliesCollectionView: UICollectionView!
+    private var quickRepliesContainer: UIView!
+    
+    private var quickReplies: [QuickReplyData] = []
+    private var showingQuickReplies = false
     
     override func updateViewConstraints() {
         super.updateViewConstraints()
         
-        // Set the keyboard height
+        // Set the keyboard height - increased to accommodate quick replies
         let heightConstraint = NSLayoutConstraint(
             item: view!,
             attribute: .height,
@@ -26,7 +32,7 @@ class KeyboardViewController: UIInputViewController {
             toItem: nil,
             attribute: .notAnAttribute,
             multiplier: 0.0,
-            constant: 220
+            constant: showingQuickReplies ? 320 : 220
         )
         heightConstraint.priority = UILayoutPriority(999)
         view.addConstraint(heightConstraint)
@@ -35,6 +41,7 @@ class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        loadQuickReplies()
         setupKeyboardUI()
     }
     
@@ -78,7 +85,7 @@ class KeyboardViewController: UIInputViewController {
         let buttonStack = UIStackView()
         buttonStack.axis = .horizontal
         buttonStack.distribution = .fillEqually
-        buttonStack.spacing = 12
+        buttonStack.spacing = 8
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(buttonStack)
         
@@ -87,7 +94,7 @@ class KeyboardViewController: UIInputViewController {
         pasteButton.setTitle("Paste", for: .normal)
         pasteButton.backgroundColor = UIColor.systemBlue
         pasteButton.setTitleColor(.white, for: .normal)
-        pasteButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        pasteButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         pasteButton.layer.cornerRadius = 8
         pasteButton.addTarget(self, action: #selector(pasteButtonTapped), for: .touchUpInside)
         buttonStack.addArrangedSubview(pasteButton)
@@ -97,10 +104,20 @@ class KeyboardViewController: UIInputViewController {
         parseButton.setTitle("Parse & Save", for: .normal)
         parseButton.backgroundColor = UIColor.systemGreen
         parseButton.setTitleColor(.white, for: .normal)
-        parseButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        parseButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         parseButton.layer.cornerRadius = 8
         parseButton.addTarget(self, action: #selector(parseButtonTapped), for: .touchUpInside)
         buttonStack.addArrangedSubview(parseButton)
+        
+        // Quick Replies button
+        quickRepliesButton = UIButton(type: .system)
+        quickRepliesButton.setTitle("Quick Replies", for: .normal)
+        quickRepliesButton.backgroundColor = UIColor.systemPurple
+        quickRepliesButton.setTitleColor(.white, for: .normal)
+        quickRepliesButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        quickRepliesButton.layer.cornerRadius = 8
+        quickRepliesButton.addTarget(self, action: #selector(toggleQuickReplies), for: .touchUpInside)
+        buttonStack.addArrangedSubview(quickRepliesButton)
         
         // Next keyboard button
         nextKeyboardButton = UIButton(type: .system)
@@ -120,6 +137,32 @@ class KeyboardViewController: UIInputViewController {
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(statusLabel)
         
+        // Quick Replies Container
+        quickRepliesContainer = UIView()
+        quickRepliesContainer.backgroundColor = UIColor.systemBackground
+        quickRepliesContainer.layer.cornerRadius = 8
+        quickRepliesContainer.layer.borderColor = UIColor.systemGray4.cgColor
+        quickRepliesContainer.layer.borderWidth = 1
+        quickRepliesContainer.translatesAutoresizingMaskIntoConstraints = false
+        quickRepliesContainer.isHidden = true
+        containerView.addSubview(quickRepliesContainer)
+        
+        // Collection View for Quick Replies
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumInteritemSpacing = 8
+        layout.minimumLineSpacing = 8
+        layout.sectionInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
+        
+        quickRepliesCollectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        quickRepliesCollectionView.backgroundColor = UIColor.clear
+        quickRepliesCollectionView.delegate = self
+        quickRepliesCollectionView.dataSource = self
+        quickRepliesCollectionView.register(QuickReplyCell.self, forCellWithReuseIdentifier: "QuickReplyCell")
+        quickRepliesCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        quickRepliesContainer.addSubview(quickRepliesCollectionView)
+        
         // Setup constraints
         NSLayoutConstraint.activate([
             // Container
@@ -137,19 +180,31 @@ class KeyboardViewController: UIInputViewController {
             textView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
             textView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
             textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            textView.heightAnchor.constraint(equalToConstant: 80),
+            textView.heightAnchor.constraint(equalToConstant: 60),
             
             // Button stack
             buttonStack.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 12),
             buttonStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
             buttonStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            buttonStack.heightAnchor.constraint(equalToConstant: 44),
+            buttonStack.heightAnchor.constraint(equalToConstant: 36),
             
             // Next keyboard button constraint
-            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 44),
+            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 36),
+            
+            // Quick Replies Container
+            quickRepliesContainer.topAnchor.constraint(equalTo: buttonStack.bottomAnchor, constant: 12),
+            quickRepliesContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
+            quickRepliesContainer.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
+            quickRepliesContainer.heightAnchor.constraint(equalToConstant: 80),
+            
+            // Collection View
+            quickRepliesCollectionView.topAnchor.constraint(equalTo: quickRepliesContainer.topAnchor),
+            quickRepliesCollectionView.leadingAnchor.constraint(equalTo: quickRepliesContainer.leadingAnchor),
+            quickRepliesCollectionView.trailingAnchor.constraint(equalTo: quickRepliesContainer.trailingAnchor),
+            quickRepliesCollectionView.bottomAnchor.constraint(equalTo: quickRepliesContainer.bottomAnchor),
             
             // Status label
-            statusLabel.topAnchor.constraint(equalTo: buttonStack.bottomAnchor, constant: 8),
+            statusLabel.topAnchor.constraint(equalTo: quickRepliesContainer.bottomAnchor, constant: 8),
             statusLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
             statusLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
             statusLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -12)
@@ -213,19 +268,67 @@ class KeyboardViewController: UIInputViewController {
             return
         }
         
-        // Load existing orders
-        var orders: [CustomerOrderData] = []
-        if let data = sharedDefaults.data(forKey: "SavedOrders"),
+        // Load existing new orders waiting to be processed
+        var newOrders: [CustomerOrderData] = []
+        if let data = sharedDefaults.data(forKey: "NewOrders"),
            let decodedOrders = try? JSONDecoder().decode([CustomerOrderData].self, from: data) {
-            orders = decodedOrders
+            newOrders = decodedOrders
         }
         
-        // Add new order
-        orders.append(order)
+        // Add the new order to the queue
+        newOrders.append(order)
         
         // Save back to shared container
-        if let encoded = try? JSONEncoder().encode(orders) {
-            sharedDefaults.set(encoded, forKey: "SavedOrders")
+        if let encoded = try? JSONEncoder().encode(newOrders) {
+            sharedDefaults.set(encoded, forKey: "NewOrders")
+        }
+    }
+    
+    @objc private func toggleQuickReplies() {
+        showingQuickReplies.toggle()
+        quickRepliesContainer.isHidden = !showingQuickReplies
+        
+        // Update button appearance
+        quickRepliesButton.backgroundColor = showingQuickReplies ? UIColor.systemOrange : UIColor.systemPurple
+        quickRepliesButton.setTitle(showingQuickReplies ? "Hide Replies" : "Quick Replies", for: .normal)
+        
+        // Update keyboard height
+        updateViewConstraints()
+        
+        // Reload collection view if showing
+        if showingQuickReplies {
+            loadQuickReplies()
+            quickRepliesCollectionView.reloadData()
+        }
+    }
+    
+    private func loadQuickReplies() {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.triage") else {
+            return
+        }
+        
+        if let data = sharedDefaults.data(forKey: "QuickReplies"),
+           let replies = try? JSONDecoder().decode([QuickReplyData].self, from: data) {
+            quickReplies = replies.filter { $0.isActive }
+        }
+    }
+    
+    private func insertQuickReply(_ reply: QuickReplyData) {
+        textDocumentProxy.insertText(reply.message)
+        
+        // Hide quick replies after selection
+        showingQuickReplies = false
+        quickRepliesContainer.isHidden = true
+        quickRepliesButton.backgroundColor = UIColor.systemPurple
+        quickRepliesButton.setTitle("Quick Replies", for: .normal)
+        updateViewConstraints()
+        
+        statusLabel.text = "Quick reply inserted: \(reply.title)"
+        statusLabel.textColor = UIColor.systemBlue
+        
+        // Clear status after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.statusLabel.text = ""
         }
     }
     
@@ -250,6 +353,70 @@ class KeyboardViewController: UIInputViewController {
     }
 }
 
+// MARK: - UICollectionViewDataSource, UICollectionViewDelegate
+extension KeyboardViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return quickReplies.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "QuickReplyCell", for: indexPath) as! QuickReplyCell
+        cell.configure(with: quickReplies[indexPath.item])
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let reply = quickReplies[indexPath.item]
+        insertQuickReply(reply)
+    }
+}
+
+// MARK: - QuickReplyCell
+class QuickReplyCell: UICollectionViewCell {
+    private let titleLabel = UILabel()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupCell()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupCell() {
+        contentView.backgroundColor = UIColor.systemBlue
+        contentView.layer.cornerRadius = 8
+        
+        titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        titleLabel.textColor = UIColor.white
+        titleLabel.textAlignment = .center
+        titleLabel.numberOfLines = 2
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(titleLabel)
+        
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            contentView.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
+            contentView.heightAnchor.constraint(equalToConstant: 64)
+        ])
+    }
+    
+    func configure(with reply: QuickReplyData) {
+        titleLabel.text = reply.title
+    }
+    
+    override var isHighlighted: Bool {
+        didSet {
+            contentView.backgroundColor = isHighlighted ? UIColor.systemBlue.withAlphaComponent(0.7) : UIColor.systemBlue
+        }
+    }
+}
+
+
 // MARK: - UITextViewDelegate
 extension KeyboardViewController: UITextViewDelegate {
     func textViewDidBeginEditing(_ textView: UITextView) {
@@ -268,6 +435,22 @@ extension KeyboardViewController: UITextViewDelegate {
 }
 
 // MARK: - Data Models for Keyboard Extension
+struct QuickReplyData: Codable {
+    let id: String
+    var title: String
+    var message: String
+    var isActive: Bool
+    var dateCreated: Date
+    
+    init(title: String, message: String, isActive: Bool = true) {
+        self.id = UUID().uuidString
+        self.title = title
+        self.message = message
+        self.isActive = isActive
+        self.dateCreated = Date()
+    }
+}
+
 struct CustomerOrderData: Codable {
     let id: String
     var name: String

@@ -6,33 +6,54 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct triageApp: App {
-    @StateObject private var dataManager = DataManager.shared
+    let modelContainer: ModelContainer
+    
+    init() {
+        do {
+            // Configure SwiftData to use the App Group container
+            let appGroupID = "group.com.ada.triage"
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+                fatalError("Could not find App Group container")
+            }
+            
+            let storeURL = containerURL.appendingPathComponent("TriageData.sqlite")
+            let configuration = ModelConfiguration(url: storeURL)
+            
+            modelContainer = try ModelContainer(
+                for: CustomerOrder.self, QuickReply.self,
+                configurations: configuration
+            )
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error)")
+        }
+    }
     
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(dataManager)
+                .modelContainer(modelContainer)
+                .environment(DataManager.shared)
+                .environment(QuickReplyManager.shared)
                 .onAppear {
-                    // Check for new orders from keyboard extension when app becomes active
+                    // Set model context for managers
+                    let context = modelContainer.mainContext
+                    DataManager.shared.setModelContext(context)
+                    QuickReplyManager.shared.setModelContext(context)
+                    
+                    // Check for new data from keyboard extension when app becomes active
                     NotificationCenter.default.addObserver(
                         forName: UIApplication.didBecomeActiveNotification,
                         object: nil,
                         queue: .main
                     ) { _ in
-                        dataManager.syncWithKeyboardExtension()
+                        DataManager.shared.syncFromKeyboardExtension()
+                        QuickReplyManager.shared.loadQuickReplies()
                     }
                 }
         }
-    }
-}
-
-// Extension to handle keyboard extension data sync
-extension DataManager {
-    func syncWithKeyboardExtension() {
-        // Load any new orders that might have been added by the keyboard extension
-        loadOrders()
     }
 }

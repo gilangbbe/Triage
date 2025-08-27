@@ -6,9 +6,11 @@
 //
 
 import Foundation
+import SwiftData
 
-struct CustomerOrder: Identifiable, Codable {
-    let id = UUID()
+@Model
+final class CustomerOrder {
+    var id: UUID
     var name: String
     var email: String
     var address: String
@@ -18,6 +20,7 @@ struct CustomerOrder: Identifiable, Codable {
     var status: OrderStatus
     
     init(name: String = "", email: String = "", address: String = "", phoneNumber: String? = nil, orderDetails: String? = nil) {
+        self.id = UUID()
         self.name = name
         self.email = email
         self.address = address
