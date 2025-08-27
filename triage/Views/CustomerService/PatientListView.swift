@@ -21,6 +21,7 @@ class Patient: Identifiable {
 struct PatientListView: View {
     // Selected Patient State
     @State var selectedPatientID: UUID? = nil
+    @EnvironmentObject var viewModel: OrderListViewModel
     
     let patients: [Patient] = [
         Patient(name: "John Doe", birthdate: Date(timeIntervalSince1970: 1555977600)),
@@ -31,6 +32,8 @@ struct PatientListView: View {
     var body: some View {
         NavigationView() {
             VStack {
+                SearchBarPatient(text: $viewModel.searchText)
+                
                 List(patients) { patient in
                     PatientRowView(isSelected: selectedPatientID == patient.id)
                         .onTapGesture {
@@ -38,11 +41,28 @@ struct PatientListView: View {
                         }
                         .listRowInsets(EdgeInsets())
                 }
+                .scrollContentBackground(.hidden)
             }
         }
     }
 }
 
+struct SearchBarPatient: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            TextField("Search Patient", text: $text)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 28)
+    }
+}
+
+
 #Preview {
     PatientListView()
+        .environmentObject(OrderListViewModel())
 }
