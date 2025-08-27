@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct OrderListView: View {
-    @EnvironmentObject var viewModel: OrderListViewModel
+    @Environment(OrderListViewModel.self) private var viewModel
+    @Environment(DataManager.self) private var dataManager
     @State private var showingAddOrder = false
     
     var body: some View {
+        @Bindable var viewModel = viewModel
+        
         NavigationView {
             VStack {
                 // Search and Filter Section
@@ -58,6 +61,7 @@ struct OrderListView: View {
             }
             .sheet(isPresented: $showingAddOrder) {
                 AddOrderView()
+                    .environment(AddOrderViewModel(dataManager: dataManager))
             }
         }
     }
@@ -148,5 +152,6 @@ struct EmptyStateView: View {
 
 #Preview {
     OrderListView()
-        .environmentObject(OrderListViewModel())
+        .environment(OrderListViewModel(dataManager: DataManager.shared))
+        .environment(DataManager.shared)
 }

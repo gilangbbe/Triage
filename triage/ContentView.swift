@@ -8,23 +8,30 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var orderListViewModel = OrderListViewModel()
+    @Environment(DataManager.self) private var dataManager
+    @Environment(QuickReplyManager.self) private var quickReplyManager
+    
+    @State private var orderListViewModel: OrderListViewModel?
     
     var body: some View {
         TabView {
-            OrderListView()
-                .environmentObject(orderListViewModel)
-                .tabItem {
-                    Image(systemName: "list.bullet")
-                    Text("Orders")
-                }
+            if let orderListViewModel = orderListViewModel {
+                OrderListView()
+                    .environment(orderListViewModel)
+                    .tabItem {
+                        Image(systemName: "list.bullet")
+                        Text("Orders")
+                    }
+            }
             
-            AnalyticsView()
-                .environmentObject(orderListViewModel)
-                .tabItem {
-                    Image(systemName: "chart.bar")
-                    Text("Analytics")
-                }
+            if let orderListViewModel = orderListViewModel {
+                AnalyticsView()
+                    .environment(orderListViewModel)
+                    .tabItem {
+                        Image(systemName: "chart.bar")
+                        Text("Analytics")
+                    }
+            }
             
             SettingsView()
                 .tabItem {
@@ -32,9 +39,16 @@ struct ContentView: View {
                     Text("Settings")
                 }
         }
+        .onAppear {
+            if orderListViewModel == nil {
+                orderListViewModel = OrderListViewModel(dataManager: dataManager)
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environment(DataManager.shared)
+        .environment(QuickReplyManager.shared)
 }

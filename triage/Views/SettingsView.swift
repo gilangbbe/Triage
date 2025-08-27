@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(DataManager.self) private var dataManager
     @State private var showingClearAllAlert = false
     @State private var showingKeyboardInstructions = false
     
@@ -74,8 +75,21 @@ struct SettingsView: View {
     }
     
     private func exportData() {
-        let orders = DataManager.shared.orders
-        guard let data = try? JSONEncoder().encode(orders),
+        let orders = dataManager.orders
+        let orderData = orders.map { order in
+            CustomerOrderData(
+                id: order.id.uuidString,
+                name: order.name,
+                email: order.email,
+                address: order.address,
+                phoneNumber: order.phoneNumber,
+                orderDetails: order.orderDetails,
+                dateCreated: order.dateCreated,
+                status: order.status.rawValue
+            )
+        }
+        
+        guard let data = try? JSONEncoder().encode(orderData),
               let jsonString = String(data: data, encoding: .utf8) else {
             return
         }
@@ -89,7 +103,7 @@ struct SettingsView: View {
     }
     
     private func clearAllOrders() {
-        DataManager.shared.orders.removeAll()
+        dataManager.clearAllOrders()
     }
 }
 
@@ -231,4 +245,6 @@ struct TestParsingView: View {
 
 #Preview {
     SettingsView()
+        .environment(QuickReplyManager.shared)
+        .environment(DataManager.shared)
 }
