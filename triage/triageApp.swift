@@ -22,7 +22,7 @@ struct triageApp: App {
             let configuration = ModelConfiguration(url: storeURL)
             
             modelContainer = try ModelContainer(
-                for: CustomerOrder.self, QuickReply.self,
+                for: Patient.self, Appointment.self, Package.self, QuickReply.self,
                 configurations: configuration
             )
         } catch {
@@ -34,12 +34,16 @@ struct triageApp: App {
         WindowGroup {
             ContentView()
                 .modelContainer(modelContainer)
-                .environment(DataManager.shared)
+                .environment(PatientManager.shared)
+                .environment(AppointmentManager.shared)
+                .environment(PackageManager.shared)
                 .environment(QuickReplyManager.shared)
                 .onAppear {
                     // Set model context for managers
                     let context = modelContainer.mainContext
-                    DataManager.shared.setModelContext(context)
+                    PatientManager.shared.setModelContext(context)
+                    AppointmentManager.shared.setModelContext(context)
+                    PackageManager.shared.setModelContext(context)
                     QuickReplyManager.shared.setModelContext(context)
                     
                     // Check for new data from keyboard extension when app becomes active
@@ -48,7 +52,7 @@ struct triageApp: App {
                         object: nil,
                         queue: .main
                     ) { _ in
-                        DataManager.shared.syncFromKeyboardExtension()
+                        PatientManager.shared.syncFromKeyboardExtension()
                         QuickReplyManager.shared.loadQuickReplies()
                     }
                 }

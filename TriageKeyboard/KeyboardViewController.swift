@@ -228,31 +228,28 @@ class KeyboardViewController: UIInputViewController {
         }
     }
     
-    @objc private func parseButtonTapped() {
-        let text = textView.text ?? ""
-        
-        if text.isEmpty || text == "Paste customer message here..." {
-            statusLabel.text = "Please enter or paste customer message first"
+        @objc private func parseButtonTapped() {
+        guard let text = textView.text, !text.isEmpty else {
+            statusLabel.text = "Error: No text to parse"
             statusLabel.textColor = UIColor.systemRed
             return
         }
         
-        // Parse the text using the same logic as the main app
-        if let order = CustomerOrderParser.parseFromText(text) {
-            // Save to shared container
-            saveOrderToSharedContainer(order)
-            
-            statusLabel.text = "✓ Order parsed and saved for \(order.name)"
-            statusLabel.textColor = UIColor.systemGreen
-            
-            // Clear the text view after a delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                self.clearTextView()
-            }
-        } else {
-            statusLabel.text = "Could not parse order. Check format and try again."
+        guard let patient = PatientParser.parseFromText(text) else {
+            statusLabel.text = "Error: Could not parse patient information"
             statusLabel.textColor = UIColor.systemRed
+            return
         }
+        
+        // Save to shared container for main app to process
+        savePatientToSharedContainer(patient)
+        
+        // Show success message
+        statusLabel.text = "✓ Patient parsed and saved successfully"
+        statusLabel.textColor = UIColor.systemGreen
+        
+        // Clear the text view
+        clearTextView()
     }
     
     private func clearTextView() {
@@ -261,26 +258,26 @@ class KeyboardViewController: UIInputViewController {
         statusLabel.text = ""
     }
     
-    private func saveOrderToSharedContainer(_ order: CustomerOrderData) {
+    private func savePatientToSharedContainer(_ patient: PatientData) {
         guard let sharedDefaults = SharedConfiguration.sharedUserDefaults else {
             statusLabel.text = "Error: Could not access shared storage"
             statusLabel.textColor = UIColor.systemRed
             return
         }
         
-        // Load existing new orders waiting to be processed
-        var newOrders: [CustomerOrderData] = []
-        if let data = sharedDefaults.data(forKey: SharedConfiguration.SharedDataKeys.newOrders),
-           let decodedOrders = try? JSONDecoder().decode([CustomerOrderData].self, from: data) {
-            newOrders = decodedOrders
+        // Load existing new patients waiting to be processed
+        var newPatients: [PatientData] = []
+        if let data = sharedDefaults.data(forKey: SharedConfiguration.SharedDataKeys.newPatients),
+           let decodedPatients = try? JSONDecoder().decode([PatientData].self, from: data) {
+            newPatients = decodedPatients
         }
         
-        // Add the new order to the queue
-        newOrders.append(order)
+        // Add the new patient to the queue
+        newPatients.append(patient)
         
         // Save back to shared container
-        if let encoded = try? JSONEncoder().encode(newOrders) {
-            sharedDefaults.set(encoded, forKey: SharedConfiguration.SharedDataKeys.newOrders)
+        if let encoded = try? JSONEncoder().encode(newPatients) {
+            sharedDefaults.set(encoded, forKey: SharedConfiguration.SharedDataKeys.newPatients)
         }
     }
     
@@ -451,36 +448,43 @@ struct QuickReplyData: Codable {
     }
 }
 
-struct CustomerOrderData: Codable {
+struct PatientData: Codable {
     let id: String
-    var name: String
-    var email: String
-    var address: String
+    var fullName: String
+    var nationalID: String?
+    var dateOfBirth: Date?
+    var gender: String?
+    var placeOfBirth: String?
+    var registeredAt: Date?
     var phoneNumber: String?
-    var orderDetails: String?
-    var dateCreated: Date
-    var status: String
+    var address: String?
     
-    init(name: String, email: String, address: String, phoneNumber: String? = nil, orderDetails: String? = nil) {
+    init(fullName: String, nationalID: String? = nil, dateOfBirth: Date? = nil, gender: String? = nil, placeOfBirth: String? = nil, phoneNumber: String? = nil, address: String? = nil) {
         self.id = UUID().uuidString
-        self.name = name
-        self.email = email
-        self.address = address
+        self.fullName = fullName
+        self.nationalID = nationalID
+        self.dateOfBirth = dateOfBirth
+        self.gender = gender
+        self.placeOfBirth = placeOfBirth
         self.phoneNumber = phoneNumber
-        self.orderDetails = orderDetails
-        self.dateCreated = Date()
-        self.status = "Pending"
+        self.address = address
+        self.registeredAt = Date()
     }
 }
 
-struct CustomerOrderParser {
-    static func parseFromText(_ text: String) -> CustomerOrderData? {
+struct PatientParser {
+    static func parseFromText(_ text: String) -> PatientData? {
         let lines = text.components(separatedBy: .newlines)
-        var name = ""
-        var email = ""
-        var address = ""
+        var fullName = ""
+        var nationalID: String?
+        var dateOfBirth: Date?
+        var gender: String?
+        var placeOfBirth: String?
         var phoneNumber: String?
-        var orderDetails: String?
+        var address: String?
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
         
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -491,16 +495,24 @@ struct CustomerOrderParser {
                 let value = components[1...].joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
                 
                 switch key {
-                case "name", "nama":
-                    name = value
-                case "email", "e-mail":
-                    email = value
+                case "name", "nama", "full name", "nama lengkap":
+                    fullName = value
+                case "nik", "national id", "ktp", "id":
+                    nationalID = value
+                case "dob", "date of birth", "tanggal lahir", "lahir":
+                    dateOfBirth = dateFormatter.date(from: value)
+                case "gender", "jenis kelamin", "kelamin":
+                    if value.lowercased().contains("man") || value.lowercased().contains("pria") || value.lowercased().contains("laki") {
+                        gender = "Man"
+                    } else if value.lowercased().contains("woman") || value.lowercased().contains("wanita") || value.lowercased().contains("perempuan") {
+                        gender = "Woman"
+                    }
+                case "place of birth", "tempat lahir", "born":
+                    placeOfBirth = value
+                case "phone", "telephone", "telepon", "hp", "no hp", "nomor hp":
+                    phoneNumber = value
                 case "address", "alamat", "addr":
                     address = value
-                case "phone", "telephone", "telepon", "hp", "no hp":
-                    phoneNumber = value
-                case "order", "pesanan", "details":
-                    orderDetails = value
                 default:
                     // Ignore unrecognized keys
                     break
@@ -508,14 +520,16 @@ struct CustomerOrderParser {
             }
         }
         
-        // Only create order if we have at least name and one contact method
-        if !name.isEmpty && (!email.isEmpty || !address.isEmpty) {
-            return CustomerOrderData(
-                name: name,
-                email: email,
-                address: address,
+        // Only create patient if we have at least full name
+        if !fullName.isEmpty {
+            return PatientData(
+                fullName: fullName,
+                nationalID: nationalID,
+                dateOfBirth: dateOfBirth,
+                gender: gender,
+                placeOfBirth: placeOfBirth,
                 phoneNumber: phoneNumber,
-                orderDetails: orderDetails
+                address: address
             )
         }
         

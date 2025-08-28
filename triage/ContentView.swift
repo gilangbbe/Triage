@@ -8,30 +8,35 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(DataManager.self) private var dataManager
+    @Environment(PatientManager.self) private var patientManager
+    @Environment(AppointmentManager.self) private var appointmentManager
+    @Environment(PackageManager.self) private var packageManager
     @Environment(QuickReplyManager.self) private var quickReplyManager
     
-    @State private var orderListViewModel: OrderListViewModel?
+    @State private var patientListViewModel: PatientListViewModel?
     
     var body: some View {
         TabView {
-            if let orderListViewModel = orderListViewModel {
-                OrderListView()
-                    .environment(orderListViewModel)
+            if let patientListViewModel = patientListViewModel {
+                PatientListView()
+                    .environment(patientListViewModel)
                     .tabItem {
-                        Image(systemName: "list.bullet")
-                        Text("Orders")
+                        Image(systemName: "person.3")
+                        Text("Patients")
                     }
             }
             
-            if let orderListViewModel = orderListViewModel {
-                AnalyticsView()
-                    .environment(orderListViewModel)
-                    .tabItem {
-                        Image(systemName: "chart.bar")
-                        Text("Analytics")
-                    }
-            }
+            AppointmentListView()
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("Appointments")
+                }
+            
+            PackageListView()
+                .tabItem {
+                    Image(systemName: "square.stack.3d.up")
+                    Text("Packages")
+                }
             
             SettingsView()
                 .tabItem {
@@ -40,8 +45,8 @@ struct ContentView: View {
                 }
         }
         .onAppear {
-            if orderListViewModel == nil {
-                orderListViewModel = OrderListViewModel(dataManager: dataManager)
+            if patientListViewModel == nil {
+                patientListViewModel = PatientListViewModel(patientManager: patientManager)
             }
         }
     }
@@ -49,6 +54,8 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environment(DataManager.shared)
+        .environment(PatientManager.shared)
+        .environment(AppointmentManager.shared)
+        .environment(PackageManager.shared)
         .environment(QuickReplyManager.shared)
 }

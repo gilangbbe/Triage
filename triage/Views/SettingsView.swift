@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(DataManager.self) private var dataManager
+    @Environment(PatientManager.self) private var patientManager
     @State private var showingClearAllAlert = false
     @State private var showingKeyboardInstructions = false
     

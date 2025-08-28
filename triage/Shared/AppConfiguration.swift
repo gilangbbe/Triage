@@ -14,8 +14,10 @@ struct AppConfiguration {
     
     // MARK: - Shared Data Keys
     struct SharedDataKeys {
-        /// Key for storing new orders from keyboard extension
+        /// Key for storing new orders from keyboard extension (deprecated)
         static let newOrders = "NewOrders"
+        /// Key for storing new patients from keyboard extension
+        static let newPatients = "NewPatients"
         /// Key for storing quick replies for keyboard extension
         static let quickReplies = "QuickReplies"
     }
