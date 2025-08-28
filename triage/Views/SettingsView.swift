@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @Environment(PatientManager.self) private var patientManager
+    @Environment(QuickReplyManager.self) private var quickReplyManager
     @State private var showingClearAllAlert = false
     @State private var showingKeyboardInstructions = false
     
@@ -36,7 +38,7 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.blue)
                     
-                    Button("Clear All Orders") {
+                    Button("Clear All Patients") {
                         showingClearAllAlert = true
                     }
                     .foregroundColor(.red)
@@ -61,13 +63,13 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
         }
-        .alert("Clear All Orders", isPresented: $showingClearAllAlert) {
+        .alert("Clear All Patients", isPresented: $showingClearAllAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Clear All", role: .destructive) {
-                clearAllOrders()
+                clearAllPatients()
             }
         } message: {
-            Text("This action cannot be undone. All customer orders will be permanently deleted.")
+            Text("This action cannot be undone. All patient records will be permanently deleted.")
         }
         .sheet(isPresented: $showingKeyboardInstructions) {
             KeyboardInstructionsView()
@@ -75,35 +77,32 @@ struct SettingsView: View {
     }
     
     private func exportData() {
-        let orders = dataManager.orders
-        let orderData = orders.map { order in
-            CustomerOrderData(
-                id: order.id.uuidString,
-                name: order.name,
-                email: order.email,
-                address: order.address,
-                phoneNumber: order.phoneNumber,
-                orderDetails: order.orderDetails,
-                dateCreated: order.dateCreated,
-                status: order.status.rawValue
+        let patients = patientManager.patients
+        let patientData = patients.map { patient in
+            PatientData(
+                id: patient.id.uuidString,
+                fullName: patient.fullName,
+                nationalID: patient.nationalID,
+                dateOfBirth: patient.dateOfBirth,
+                gender: patient.gender?.rawValue,
+                placeOfBirth: patient.placeOfBirth,
+                phoneNumber: patient.phoneNumber,
+                address: patient.address
             )
         }
         
-        guard let data = try? JSONEncoder().encode(orderData),
+        guard let data = try? JSONEncoder().encode(patientData),
               let jsonString = String(data: data, encoding: .utf8) else {
             return
         }
         
-        let activityVC = UIActivityViewController(activityItems: [jsonString], applicationActivities: nil)
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityVC, animated: true)
-        }
+        // Simple sharing - for now just print to console
+        print("Patient data exported:")
+        print(jsonString)
     }
     
-    private func clearAllOrders() {
-        dataManager.clearAllOrders()
+    private func clearAllPatients() {
+        patientManager.clearAllPatients()
     }
 }
 
@@ -193,16 +192,18 @@ struct InstructionStep: View {
 struct TestParsingView: View {
     @State private var testText = """
     name: John Doe
-    email: john@example.com
-    address: 123 Main Street, Anytown, ST 12345
-    phone: +1 (555) 123-4567
-    order: 2x Large Coffee, 1x Turkey Sandwich, 1x Caesar Salad
+    nik: 1234567890123456
+    dob: 15/08/1990
+    gender: Man
+    place of birth: Jakarta
+    phone: +62-812-3456-7890
+    address: Jl. Sudirman No. 123, Jakarta Pusat
     """
-    @State private var parsedOrder: CustomerOrder?
+    @State private var parsedPatient: Patient?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Test the parsing functionality by entering sample text:")
+            Text("Test the patient parsing functionality by entering sample text:")
                 .font(.headline)
             
             TextEditor(text: $testText)
@@ -212,23 +213,33 @@ struct TestParsingView: View {
                 .cornerRadius(8)
             
             Button("Parse Text") {
-                parsedOrder = CustomerOrder.parseFromText(testText)
+                parsedPatient = Patient.parseFromText(testText)
             }
             .buttonStyle(.borderedProminent)
             
-            if let order = parsedOrder {
+            if let patient = parsedPatient {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Parsed Result:")
                         .font(.headline)
                     
-                    Text("Name: \(order.name)")
-                    Text("Email: \(order.email)")
-                    Text("Address: \(order.address)")
-                    if let phone = order.phoneNumber {
+                    Text("Name: \(patient.fullName)")
+                    if let nik = patient.nationalID {
+                        Text("NIK: \(nik)")
+                    }
+                    if let dob = patient.dateOfBirth {
+                        Text("Date of Birth: \(dob, style: .date)")
+                    }
+                    if let gender = patient.gender {
+                        Text("Gender: \(gender.rawValue)")
+                    }
+                    if let birthPlace = patient.placeOfBirth {
+                        Text("Place of Birth: \(birthPlace)")
+                    }
+                    if let phone = patient.phoneNumber {
                         Text("Phone: \(phone)")
                     }
-                    if let details = order.orderDetails {
-                        Text("Order: \(details)")
+                    if let address = patient.address {
+                        Text("Address: \(address)")
                     }
                 }
                 .padding()
@@ -239,12 +250,12 @@ struct TestParsingView: View {
             Spacer()
         }
         .padding()
-        .navigationTitle("Test Parsing")
+        .navigationTitle("Test Patient Parsing")
     }
 }
 
 #Preview {
     SettingsView()
+        .environment(PatientManager.shared)
         .environment(QuickReplyManager.shared)
-        .environment(DataManager.shared)
 }

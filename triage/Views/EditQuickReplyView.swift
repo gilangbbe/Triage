@@ -1,3 +1,11 @@
+//
+//  EditQuickReplyView.swift
+//  triage
+//
+//  Created by Gilang Banyu Biru Erassunu on 28/08/25.
+//
+
+
 import SwiftUI
 import SwiftData
 

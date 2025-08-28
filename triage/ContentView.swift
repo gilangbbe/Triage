@@ -14,6 +14,8 @@ struct ContentView: View {
     @Environment(QuickReplyManager.self) private var quickReplyManager
     
     @State private var patientListViewModel: PatientListViewModel?
+    @State private var appointmentListViewModel: AppointmentListViewModel?
+    @State private var packageListViewModel: PackageListViewModel?
     
     var body: some View {
         TabView {
@@ -26,28 +28,29 @@ struct ContentView: View {
                     }
             }
             
-            AppointmentListView()
-                .tabItem {
-                    Image(systemName: "calendar")
-                    Text("Appointments")
-                }
+            if let appointmentListViewModel = appointmentListViewModel {
+                AppointmentListView()
+                    .environment(appointmentListViewModel)
+                    .tabItem {
+                        Image(systemName: "calendar")
+                        Text("Appointments")
+                    }
+            }
             
-            PackageListView()
-                .tabItem {
-                    Image(systemName: "square.stack.3d.up")
-                    Text("Packages")
-                }
+            if let packageListViewModel = packageListViewModel {
+                PackageListView()
+                    .environment(packageListViewModel)
+                    .tabItem {
+                        Image(systemName: "square.stack.3d.up")
+                        Text("Packages")
+                    }
+            }
             
             SettingsView()
                 .tabItem {
                     Image(systemName: "gear")
                     Text("Settings")
                 }
-        }
-        .onAppear {
-            if patientListViewModel == nil {
-                patientListViewModel = PatientListViewModel(patientManager: patientManager)
-            }
         }
     }
 }

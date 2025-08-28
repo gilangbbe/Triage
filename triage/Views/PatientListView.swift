@@ -8,26 +8,37 @@
 import SwiftUI
 
 struct PatientListView: View {
-    @Environment(PatientManager.self) private var patientManager
     @Environment(PatientListViewModel.self) private var viewModel
+    @State private var showingAddPatient = false
+    @State private var searchText = ""
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(patientManager.patients, id: \.id) { patient in
+                ForEach(viewModel.filteredPatients, id: \.id) { patient in
                     PatientRowView(patient: patient)
+                        .onTapGesture {
+                            // Handle patient selection
+                        }
                 }
                 .onDelete { indexSet in
-                    patientManager.deletePatients(at: indexSet)
+                    viewModel.deletePatients(at: indexSet, from: viewModel.filteredPatients)
                 }
             }
             .navigationTitle("Patients")
+            .searchable(text: $searchText)
+            .onChange(of: searchText) { _, newValue in
+                viewModel.searchText = newValue
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Add Patient") {
-                        // Add patient action
+                        showingAddPatient = true
                     }
                 }
+            }
+            .sheet(isPresented: $showingAddPatient) {
+                AddPatientView()
             }
         }
     }
@@ -41,14 +52,34 @@ struct PatientRowView: View {
             Text(patient.fullName)
                 .font(.headline)
             
-            if let phoneNumber = patient.phoneNumber {
-                Text(phoneNumber)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            HStack {
+                if let gender = patient.gender {
+                    Text(gender.rawValue)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(gender == .male ? Color.blue.opacity(0.2) : Color.pink.opacity(0.2))
+                        .cornerRadius(4)
+                }
+                
+                if let phoneNumber = patient.phoneNumber {
+                    Text(phoneNumber)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                if let registeredAt = patient.registeredAt {
+                    Text(registeredAt, style: .date)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
-            if let registeredAt = patient.registeredAt {
-                Text("Registered: \(registeredAt, style: .date)")
+            if let nationalID = patient.nationalID {
+                Text("NIK: \(nationalID)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -59,5 +90,5 @@ struct PatientRowView: View {
 
 #Preview {
     PatientListView()
-        .environment(PatientManager.shared)
+        .environment(PatientListViewModel(patientManager: PatientManager.shared))
 }

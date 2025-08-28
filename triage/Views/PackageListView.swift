@@ -8,25 +8,34 @@
 import SwiftUI
 
 struct PackageListView: View {
-    @Environment(PackageManager.self) private var packageManager
+    @Environment(PackageListViewModel.self) private var viewModel
+    @State private var showingAddPackage = false
+    @State private var searchText = ""
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(packageManager.packages, id: \.id) { package in
+                ForEach(viewModel.filteredPackages, id: \.id) { package in
                     PackageRowView(package: package)
                 }
                 .onDelete { indexSet in
-                    packageManager.deletePackages(at: indexSet)
+                    viewModel.deletePackages(at: indexSet, from: viewModel.filteredPackages)
                 }
             }
             .navigationTitle("Packages")
+            .searchable(text: $searchText)
+            .onChange(of: searchText) { _, newValue in
+                viewModel.searchText = newValue
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Add Package") {
-                        // Add package action
+                        showingAddPackage = true
                     }
                 }
+            }
+            .sheet(isPresented: $showingAddPackage) {
+                AddPackageView()
             }
         }
     }
@@ -36,20 +45,34 @@ struct PackageRowView: View {
     let package: Package
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(package.name)
                 .font(.headline)
             
             if let description = package.descriptionText {
                 Text(description)
-                    .font(.caption)
+                    .font(.body)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
             }
             
-            Text("\(package.patients.count) patients assigned")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Label("\(package.patients.count)", systemImage: "person.3")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                if !package.patients.isEmpty {
+                    Text("Assigned Patients")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.2))
+                        .cornerRadius(8)
+                }
+            }
         }
         .padding(.vertical, 2)
     }
@@ -57,5 +80,5 @@ struct PackageRowView: View {
 
 #Preview {
     PackageListView()
-        .environment(PackageManager.shared)
+        .environment(PackageListViewModel(packageManager: PackageManager.shared))
 }
