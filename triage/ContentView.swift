@@ -44,6 +44,8 @@ struct ContentView: View {
                 orderListViewModel = OrderListViewModel(dataManager: dataManager)
             }
         }
+//        PatientListView()
+//            .environment(OrderListViewModel(dataManager: DataManager.shared))
     }
 }
 

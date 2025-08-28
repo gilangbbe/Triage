@@ -17,7 +17,8 @@ class DataManager {
     private var modelContext: ModelContext?
     
     // App Group for sharing data between main app and keyboard extension
-    private let appGroupID = "group.com.ada.triage"
+//    private let appGroupID = "group.com.ada.triage"
+    private let appGroupID = "group.com.ada.jason.triage"
     private var sharedUserDefaults: UserDefaults? {
         return UserDefaults(suiteName: appGroupID)
     }

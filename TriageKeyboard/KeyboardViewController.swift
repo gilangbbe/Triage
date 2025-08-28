@@ -262,7 +262,7 @@ class KeyboardViewController: UIInputViewController {
     }
     
     private func saveOrderToSharedContainer(_ order: CustomerOrderData) {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.triage") else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.jason.triage") else {
             statusLabel.text = "Error: Could not access shared storage"
             statusLabel.textColor = UIColor.systemRed
             return
@@ -303,7 +303,7 @@ class KeyboardViewController: UIInputViewController {
     }
     
     private func loadQuickReplies() {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.triage") else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.jason.triage") else {
             return
         }
         

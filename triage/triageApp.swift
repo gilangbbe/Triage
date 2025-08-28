@@ -15,7 +15,8 @@ struct triageApp: App {
     init() {
         do {
             // Configure SwiftData to use the App Group container
-            let appGroupID = "group.com.ada.triage"
+//            let appGroupID = "group.com.ada.triage"
+            let appGroupID = "group.com.ada.jason.triage"
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
                 fatalError("Could not find App Group container")
             }
