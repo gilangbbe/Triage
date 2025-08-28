@@ -31,7 +31,7 @@ struct PatientListView: View {
     
     var body: some View {
         @Bindable var viewModel = viewModel
-        NavigationView() {
+        NavigationSplitView() {
             VStack(spacing: 16) {
                 SearchBarPatient(text: $viewModel.searchText)
                 
@@ -61,6 +61,9 @@ struct PatientListView: View {
                     }
                 }
             }
+            .toolbar(removing: .sidebarToggle)
+        } detail : {
+            
         }
     }
 }
