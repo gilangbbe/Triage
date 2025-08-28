@@ -37,14 +37,12 @@ struct PatientListView: View {
                 
                 SegmentedControlFilter()
                 
-                
                 List(patients) { patient in
-                    PatientRowView(isSelected: selectedPatientID == patient.id)
-                        .onTapGesture {
-                            selectedPatientID = patient.id
-                        }
+                    PatientRowNavigationLink(
+                            patient: patient,
+                            isSelected: selectedPatientID == patient.id
+                        )
                         .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.visible)
                 }
                 .padding(.horizontal, 8)
                 .scrollContentBackground(.hidden)
@@ -94,6 +92,20 @@ struct SegmentedControlFilter: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
         }
+    }
+}
+
+struct PatientRowNavigationLink: View {
+    let patient: Patient
+    let isSelected: Bool
+    
+    var body: some View {
+        NavigationLink(
+            destination: PatientDetailView()
+        ) {
+            PatientRowView()
+        }
+        .buttonStyle(.plain)
     }
 }
 

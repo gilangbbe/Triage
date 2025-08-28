@@ -14,38 +14,38 @@ struct ContentView: View {
     @State private var orderListViewModel: OrderListViewModel?
     
     var body: some View {
-        TabView {
-            if let orderListViewModel = orderListViewModel {
-                OrderListView()
-                    .environment(orderListViewModel)
-                    .tabItem {
-                        Image(systemName: "list.bullet")
-                        Text("Orders")
-                    }
-            }
-            
-            if let orderListViewModel = orderListViewModel {
-                AnalyticsView()
-                    .environment(orderListViewModel)
-                    .tabItem {
-                        Image(systemName: "chart.bar")
-                        Text("Analytics")
-                    }
-            }
-            
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
-                }
-        }
-        .onAppear {
-            if orderListViewModel == nil {
-                orderListViewModel = OrderListViewModel(dataManager: dataManager)
-            }
-        }
-//        PatientListView()
-//            .environment(OrderListViewModel(dataManager: DataManager.shared))
+//        TabView {
+//            if let orderListViewModel = orderListViewModel {
+//                OrderListView()
+//                    .environment(orderListViewModel)
+//                    .tabItem {
+//                        Image(systemName: "list.bullet")
+//                        Text("Orders")
+//                    }
+//            }
+//            
+//            if let orderListViewModel = orderListViewModel {
+//                AnalyticsView()
+//                    .environment(orderListViewModel)
+//                    .tabItem {
+//                        Image(systemName: "chart.bar")
+//                        Text("Analytics")
+//                    }
+//            }
+//            
+//            SettingsView()
+//                .tabItem {
+//                    Image(systemName: "gear")
+//                    Text("Settings")
+//                }
+//        }
+//        .onAppear {
+//            if orderListViewModel == nil {
+//                orderListViewModel = OrderListViewModel(dataManager: dataManager)
+//            }
+//        }
+        PatientListView()
+            .environment(OrderListViewModel(dataManager: DataManager.shared))
     }
 }
 
