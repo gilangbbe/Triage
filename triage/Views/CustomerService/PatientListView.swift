@@ -21,6 +21,7 @@ class Patient: Identifiable {
 struct PatientListView: View {
     // Selected Patient State
     @State var selectedPatientID: UUID? = nil
+    @State private var showingNotificationSheet: Bool = false
     @Environment(OrderListViewModel.self) private var viewModel
     
     let patients: [Patient] = [
@@ -51,7 +52,9 @@ struct PatientListView: View {
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {} ) {
+                    Button(action: {
+                        showingNotificationSheet.toggle()
+                    } ) {
                         Image(systemName: "bell")
                     }
                 }
@@ -62,6 +65,9 @@ struct PatientListView: View {
                 }
             }
             .toolbar(removing: .sidebarToggle)
+            .sheet(isPresented: $showingNotificationSheet) {
+                NotificationSheetView()
+            }
         } detail : {
             
         }
