@@ -46,14 +46,14 @@ struct SettingsView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.0.0")
+                        Text(AppConfiguration.appVersion)
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
                         Text("App Group ID")
                         Spacer()
-                        Text("group.com.ada.triage")
+                        Text(AppConfiguration.appGroupID)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
