@@ -262,7 +262,7 @@ class KeyboardViewController: UIInputViewController {
     }
     
     private func saveOrderToSharedContainer(_ order: CustomerOrderData) {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.jason.triage") else {
+        guard let sharedDefaults = SharedConfiguration.sharedUserDefaults else {
             statusLabel.text = "Error: Could not access shared storage"
             statusLabel.textColor = UIColor.systemRed
             return
@@ -270,7 +270,7 @@ class KeyboardViewController: UIInputViewController {
         
         // Load existing new orders waiting to be processed
         var newOrders: [CustomerOrderData] = []
-        if let data = sharedDefaults.data(forKey: "NewOrders"),
+        if let data = sharedDefaults.data(forKey: SharedConfiguration.SharedDataKeys.newOrders),
            let decodedOrders = try? JSONDecoder().decode([CustomerOrderData].self, from: data) {
             newOrders = decodedOrders
         }
@@ -280,7 +280,7 @@ class KeyboardViewController: UIInputViewController {
         
         // Save back to shared container
         if let encoded = try? JSONEncoder().encode(newOrders) {
-            sharedDefaults.set(encoded, forKey: "NewOrders")
+            sharedDefaults.set(encoded, forKey: SharedConfiguration.SharedDataKeys.newOrders)
         }
     }
     
@@ -303,11 +303,11 @@ class KeyboardViewController: UIInputViewController {
     }
     
     private func loadQuickReplies() {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.ada.jason.triage") else {
+        guard let sharedDefaults = SharedConfiguration.sharedUserDefaults else {
             return
         }
         
-        if let data = sharedDefaults.data(forKey: "QuickReplies"),
+        if let data = sharedDefaults.data(forKey: SharedConfiguration.SharedDataKeys.quickReplies),
            let replies = try? JSONDecoder().decode([QuickReplyData].self, from: data) {
             quickReplies = replies.filter { $0.isActive }
         }

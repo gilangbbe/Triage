@@ -16,10 +16,8 @@ class QuickReplyManager {
     private var modelContext: ModelContext?
     
     // App Group for sharing data between main app and keyboard extension
-//    private let appGroupID = "group.com.ada.triage"
-    private let appGroupID = "group.com.ada.jason.triage"
     private var sharedUserDefaults: UserDefaults? {
-        return UserDefaults(suiteName: appGroupID)
+        return AppConfiguration.sharedUserDefaults
     }
     
     private init() {
@@ -122,7 +120,7 @@ class QuickReplyManager {
         }
         
         if let encoded = try? JSONEncoder().encode(replyData) {
-            sharedUserDefaults?.set(encoded, forKey: "QuickReplies")
+            sharedUserDefaults?.set(encoded, forKey: AppConfiguration.SharedDataKeys.quickReplies)
         }
     }
     

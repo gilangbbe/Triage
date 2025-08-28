@@ -17,10 +17,8 @@ class DataManager {
     private var modelContext: ModelContext?
     
     // App Group for sharing data between main app and keyboard extension
-//    private let appGroupID = "group.com.ada.triage"
-    private let appGroupID = "group.com.ada.jason.triage"
     private var sharedUserDefaults: UserDefaults? {
-        return UserDefaults(suiteName: appGroupID)
+        return AppConfiguration.sharedUserDefaults
     }
     
     private init() {
@@ -104,7 +102,7 @@ class DataManager {
     // MARK: - Keyboard Extension Integration
     func syncFromKeyboardExtension() {
         // Load any new orders from keyboard extension
-        guard let sharedData = sharedUserDefaults?.data(forKey: "NewOrders"),
+        guard let sharedData = sharedUserDefaults?.data(forKey: AppConfiguration.SharedDataKeys.newOrders),
               let orderDataArray = try? JSONDecoder().decode([CustomerOrderData].self, from: sharedData),
               let context = modelContext else { return }
         
@@ -130,7 +128,7 @@ class DataManager {
         }
         
         // Clear the processed orders from shared container
-        sharedUserDefaults?.removeObject(forKey: "NewOrders")
+        sharedUserDefaults?.removeObject(forKey: AppConfiguration.SharedDataKeys.newOrders)
         
         saveContext()
         loadOrders()
