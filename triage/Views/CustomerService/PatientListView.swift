@@ -10,6 +10,7 @@ import SwiftUI
 struct PatientListView: View {
     // Selected Patient State
     @State var selectedPatientID: UUID? = nil
+    @State private var showingNotificationSheet: Bool = false
     @Environment(PatientListViewModel.self) private var viewModel
     
     // Computed property to get patients from viewModel
@@ -39,7 +40,9 @@ struct PatientListView: View {
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {} ) {
+                    Button(action: {
+                        showingNotificationSheet.toggle()
+                    } ) {
                         Image(systemName: "bell")
                     }
                 }
@@ -50,6 +53,9 @@ struct PatientListView: View {
                 }
             }
             .toolbar(removing: .sidebarToggle)
+            .sheet(isPresented: $showingNotificationSheet) {
+                NotificationSheetView()
+            }
         } detail : {
             
         }
