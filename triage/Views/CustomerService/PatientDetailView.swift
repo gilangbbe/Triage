@@ -33,18 +33,20 @@ struct PatientDetailView: View {
                 }
             }
             HStack(alignment: .top, spacing: 16) {
-            // Patient Appointment
-            Group {
-                VStack(alignment: .leading) {
-                    Group {
-                        HStack {
-                            Image(systemName: "exclamationmark.arrow.trianglehead.counterclockwise.rotate.90")
-                            Text("UPCOMING APPOINTMENT")
-                        }
-                        ScrollView {
+                // Patient Appointment
+                Group {
+                    VStack(alignment: .leading) {
+                        Group {
+                            HStack {
+                                Image(systemName: "exclamationmark.arrow.trianglehead.counterclockwise.rotate.90")
+                                Text("UPCOMING APPOINTMENT")
+                            }
+                            
                             VStack {
-                                ForEach(0..<4, id: \.self) { i in
-                                    AppointmentListRow()
+                                ScrollView {
+                                    ForEach(0..<4, id: \.self) { i in
+                                        AppointmentListRow()
+                                    }
                                 }
                             }
                             .padding()
@@ -52,16 +54,17 @@ struct PatientDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .padding(.bottom, 16)
                         }
-                    }
-                    Group {
-                        HStack {
-                            Image(systemName: "clock.fill")
-                            Text("APPOINTMENT HISTORY")
-                        }
-                        ScrollView {
+                        Group {
+                            HStack {
+                                Image(systemName: "clock.fill")
+                                Text("APPOINTMENT HISTORY")
+                            }
+                            
                             VStack {
-                                ForEach(0..<4, id: \.self) { i in
-                                    AppointmentListRow()
+                                ScrollView {
+                                    ForEach(0..<4, id: \.self) { i in
+                                        AppointmentListRow()
+                                    }
                                 }
                             }
                             .padding()
@@ -69,8 +72,7 @@ struct PatientDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
-                }
-                .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity)
                 }
                 // Patient Profile
                 Group {
@@ -216,7 +218,7 @@ struct FormField: View {
 
 #Preview {
     let samplePatient = Patient(fullName: "John Doe")
-
+    
     return PatientDetailView(patient: samplePatient)
 }
 
