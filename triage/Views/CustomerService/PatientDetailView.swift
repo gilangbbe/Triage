@@ -8,13 +8,14 @@
 import SwiftUI
 
 struct PatientDetailView: View {
+    let patient: Patient
     @State private var name: String = ""
     @State private var age: String = ""
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("John Doe")
+                Text(patient.fullName)
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .padding(.bottom, 8)
@@ -78,31 +79,31 @@ struct PatientDetailView: View {
                             icon: "person.text.rectangle.fill",
                             label: "NATIONAL IDENTITY NUMBER",
                             placeholder: "Enter 16 Digits",
-                            text: $name
+                            value: patient.nationalID ?? "Not provided"
                         )
                         FormField(
                             icon: "calendar.and.person",
                             label: "DATE OF BIRTH",
                             placeholder: "Enter Date-Month-Year",
-                            text: $name
+                            value: formattedDateOfBirth
                         )
                         FormField(
                             icon: "calendar.badge.checkmark",
                             label: "REGISTERED DATE",
                             placeholder: "Enter Date-Month-Year",
-                            text: $name
+                            value: formattedRegisteredDate
                         )
                         FormField(
                             icon: "phone.fill",
                             label: "PHONE NUMBER",
                             placeholder: "Enter Phone Number",
-                            text: $name
+                            value: patient.phoneNumber ?? "Not provided"
                         )
                         FormField(
                             icon: "house.fill",
                             label: "ADDRESS",
                             placeholder: "Enter Address",
-                            text: $name
+                            value: patient.address ?? "Not provided"
                         )
                     }
                     .frame(maxWidth: .infinity)
@@ -110,6 +111,26 @@ struct PatientDetailView: View {
             }
         }
         .padding(.horizontal, 16)
+    }
+    
+    private var formattedDateOfBirth: String {
+        if let dateOfBirth = patient.dateOfBirth {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .long
+            return formatter.string(from: dateOfBirth)
+        } else {
+            return "Not provided"
+        }
+    }
+    
+    private var formattedRegisteredDate: String {
+        if let registeredAt = patient.registeredAt {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .long
+            return formatter.string(from: registeredAt)
+        } else {
+            return "Not provided"
+        }
     }
 }
 
@@ -148,24 +169,54 @@ struct FormField: View {
     let icon: String
     let label: String
     let placeholder: String
+    let value: String?
     @Binding var text: String
+    
+    init(icon: String, label: String, placeholder: String, text: Binding<String>) {
+        self.icon = icon
+        self.label = label
+        self.placeholder = placeholder
+        self.value = nil
+        self._text = text
+    }
+    
+    init(icon: String, label: String, placeholder: String, value: String) {
+        self.icon = icon
+        self.label = label
+        self.placeholder = placeholder
+        self.value = value
+        self._text = .constant("")
+    }
     
     var body: some View {
         HStack {
             Image(systemName: icon)
             Text(label)
         }
-        TextField(placeholder, text: $text)
-            .font(.headline)
-            .padding()
-            .foregroundColor(.black)
-            .background(Color.secondary.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .padding(.bottom, 16)
+        if let displayValue = value {
+            Text(displayValue)
+                .font(.headline)
+                .padding()
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.bottom, 16)
+        } else {
+            TextField(placeholder, text: $text)
+                .font(.headline)
+                .padding()
+                .foregroundColor(.black)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.bottom, 16)
+        }
     }
 }
 
 #Preview {
-    PatientDetailView()
+    let samplePatient = Patient(fullName: "John Doe")
+
+    return PatientDetailView(patient: samplePatient)
 }
 

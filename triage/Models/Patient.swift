@@ -41,8 +41,8 @@ final class Patient {
 }
 
 enum Gender: String, Codable, CaseIterable { 
-    case male = "Man"
-    case female = "Woman"
+    case male = "Male"
+    case female = "Female"
 }
 
 // MARK: - Parsing Extension

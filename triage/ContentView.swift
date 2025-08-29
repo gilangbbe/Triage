@@ -52,6 +52,17 @@ struct ContentView: View {
                     Text("Settings")
                 }
         }
+        .onAppear {
+            if patientListViewModel == nil {
+                patientListViewModel = PatientListViewModel(patientManager: patientManager)
+            }
+            if appointmentListViewModel == nil {
+                appointmentListViewModel = AppointmentListViewModel(appointmentManager: appointmentManager)
+            }
+            if packageListViewModel == nil {
+                packageListViewModel = PackageListViewModel(packageManager: packageManager)
+            }
+        }
     }
 }
 

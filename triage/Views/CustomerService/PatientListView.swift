@@ -7,27 +7,15 @@
 
 import SwiftUI
 
-class Patient: Identifiable {
-    var id: UUID = UUID()
-    var name: String
-    var birthdate: Date
-    
-    init(name: String, birthdate: Date) {
-        self.name = name
-        self.birthdate = birthdate
-    }
-}
-
 struct PatientListView: View {
     // Selected Patient State
     @State var selectedPatientID: UUID? = nil
-    @Environment(OrderListViewModel.self) private var viewModel
+    @Environment(PatientListViewModel.self) private var viewModel
     
-    let patients: [Patient] = [
-        Patient(name: "John Doe", birthdate: Date(timeIntervalSince1970: 1555977600)),
-        Patient(name: "Jane Smith", birthdate: Date(timeIntervalSince1970: 946684800)),
-        Patient(name: "Michael Brown", birthdate: Date(timeIntervalSince1970: 631152000))
-    ]
+    // Computed property to get patients from viewModel
+    private var patients: [Patient] {
+        viewModel.filteredPatients
+    }
     
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -104,9 +92,9 @@ struct PatientRowNavigationLink: View {
     
     var body: some View {
         NavigationLink(
-            destination: PatientDetailView()
+            destination: PatientDetailView(patient: patient)
         ) {
-            PatientRowView()
+            PatientRowView(patient: patient)
         }
         .buttonStyle(.plain)
     }
@@ -115,5 +103,5 @@ struct PatientRowNavigationLink: View {
 
 #Preview {
     PatientListView()
-        .environment(OrderListViewModel(dataManager: DataManager.shared))
+        .environment(PatientListViewModel(patientManager: PatientManager.shared))
 }
