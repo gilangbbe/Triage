@@ -1,13 +1,14 @@
 //
-//  Step3SummaryView.swift
+//  Step2ConfirmationView.swift
 //  triage
 //
-//  Created by Chiquitta Kellie on 28/08/25.
+//  Created by Chiquitta Kellie on 29/08/25.
 //
+
 import SwiftUI
 import Foundation
 
-struct Step3SummaryView: View {
+struct Step2ConfirmationView: View {
     @ObservedObject var viewModel: AddPatientViewModel
     
     var body: some View {
@@ -75,24 +76,6 @@ struct Step3SummaryView: View {
                         .pickerStyle(.segmented)
                     }
                 }
-                
-                Section(header: Text("Appointments")) {
-                    if viewModel.selectedAppointments.isEmpty {
-                        Text("No appointments yet")
-                            .foregroundColor(.secondary)
-                    } else {
-                        ForEach(viewModel.selectedAppointments) { appt in
-                            VStack(alignment: .leading) {
-                                Text(appt.name).bold()
-                                Text("Date: \(appt.date, style: .date) @ \(appt.time)")
-                                if appt.consultation {
-                                    Text("Consultation required")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
             }
             
             Spacer()
@@ -102,11 +85,11 @@ struct Step3SummaryView: View {
                 ForEach(1...3, id: \.self) { i in
                     HStack(spacing: 0) {
                         Circle()
-                            .fill(i <= 3 ? Color(hex: "#0F0E46") : Color(hex: "#F0F0F7"))
+                            .fill(i <= 2 ? Color(hex: "#0F0E46") : Color(hex: "#F0F0F7"))
                             .frame(width: 28, height: 28)
                             .overlay(
                                 Text("\(i)")
-                                    .foregroundColor(i <= 3 ? .white : .black)
+                                    .foregroundColor(i <= 2 ? .white : .black)
                             )
                         
                         if i < 3 {
@@ -122,3 +105,4 @@ struct Step3SummaryView: View {
         }
     }
 }
+

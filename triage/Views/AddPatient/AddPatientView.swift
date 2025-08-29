@@ -17,9 +17,8 @@ struct AddPatientView: View {
             VStack {
                 switch step {
                 case 1: Step1PatientDetailsView(viewModel: viewModel)
+                case 2: Step2ConfirmationView(viewModel: viewModel)
 //                case 2: Step2AppointmentsView(viewModel: viewModel)
-                case 2: Step3SummaryView(viewModel: viewModel)
-                case 3: Step3SummaryView(viewModel: viewModel)
                 default: EmptyView()
                 }
             }
@@ -35,9 +34,14 @@ struct AddPatientView: View {
                    }
                 }
                 ToolbarItem(placement: .principal) {
-                    Text("New Patient")
-                        .font(.headline)
-                        .foregroundColor(Color(hex: "#0F0E46"))
+                    VStack(alignment: .center) {
+                        Text("STEP \(step) OF 3")
+                            .font(.caption)
+                            .foregroundColor(Color.black)
+                        Text("New Patient")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "#0F0E46"))
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if step < 3 {

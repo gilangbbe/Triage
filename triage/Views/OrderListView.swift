@@ -62,6 +62,7 @@ struct OrderListView: View {
             .sheet(isPresented: $showingAddOrder) {
                 AddPatientView()
                     .environment(AddOrderViewModel(dataManager: dataManager))
+                    .frame(width: 800)
             }
         }
     }
