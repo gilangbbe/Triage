@@ -51,6 +51,12 @@ struct ContentView: View {
                     Image(systemName: "gear")
                     Text("Settings")
                 }
+            
+            CalendarView()
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("Calendar")
+                }
         }
         .onAppear {
             if patientListViewModel == nil {
