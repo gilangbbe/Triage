@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddPatientView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(PatientManager.self) private var patienttManager
     @State private var step = 1
     @StateObject private var viewModel = AddPatientViewModel()
     

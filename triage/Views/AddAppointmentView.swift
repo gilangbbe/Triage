@@ -70,9 +70,10 @@ struct AddAppointmentView: View {
     
     private func saveAppointment() {
         let newAppointment = Appointment(
-            title: title,
-            department: selectedDepartment,
-            start: appointmentDate,
+            name: title,
+            date: appointmentDate,
+            time: appointmentDate,
+            consultation: true,
             patient: selectedPatient,
             package: selectedPackage
         )

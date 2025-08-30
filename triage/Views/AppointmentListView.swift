@@ -69,37 +69,13 @@ struct AppointmentRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(appointment.title)
+                Text(appointment.name)
                     .font(.headline)
-                
-                Spacer()
-                
-                Text(appointment.status.rawValue.capitalized)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(statusColor.opacity(0.2))
-                    .foregroundColor(statusColor)
-                    .cornerRadius(8)
             }
             
             HStack {
-                Text(appointment.department.rawValue)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.2))
-                    .cornerRadius(8)
-                
-                Spacer()
-                
                 VStack(alignment: .trailing) {
-                    Text(appointment.start, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text(appointment.start, style: .time)
+                    Text(appointment.date, style: .date)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -112,19 +88,6 @@ struct AppointmentRowView: View {
             }
         }
         .padding(.vertical, 2)
-    }
-    
-    private var statusColor: Color {
-        switch appointment.status {
-        case .scheduled:
-            return .blue
-        case .completed:
-            return .green
-        case .cancelled:
-            return .red
-        case .noShow:
-            return .orange
-        }
     }
 }
 

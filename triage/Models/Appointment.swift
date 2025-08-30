@@ -11,41 +11,31 @@ import SwiftData
 @Model
 final class Appointment {
     @Attribute(.unique) var id: UUID
-    var title: String
-    var department: Department
-    var start: Date
-    var status: AppointmentStatus
+    var name: String
+    var date: Date
+    var time: Date
+    var consultation: Bool
+    var department: Department?
 
     // Links
     var patient: Patient?
     var package: Package?
 
     init(id: UUID = UUID(),
-         title: String,
-         department: Department,
-         start: Date,
-         status: AppointmentStatus = .scheduled,
+         name: String,
+         date: Date,
+         time: Date,
+         consultation: Bool,
          patient: Patient? = nil,
          package: Package? = nil) {
         self.id = id
-        self.title = title
-        self.department = department
-        self.start = start
-        self.status = status
+        self.name = name
+        self.date = date
+        self.time = time
+        self.consultation = consultation
         self.patient = patient
         self.package = package
     }
 }
 
-enum AppointmentStatus: String, Codable, CaseIterable {
-    case scheduled
-    case completed
-    case cancelled
-    case noShow
-}
 
-enum Department: String, Codable, CaseIterable {
-    case mcu = "MCU"
-    case radiology = "Radiology"
-    case laboratory = "Laboratorium"
-}

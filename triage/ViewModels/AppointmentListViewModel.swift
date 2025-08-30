@@ -12,7 +12,6 @@ import SwiftUI
 class AppointmentListViewModel {
     var searchText = ""
     var selectedDepartment: Department? = nil
-    var selectedStatus: AppointmentStatus? = nil
     var showingAddAppointment = false
     
     private let appointmentManager: AppointmentManager
@@ -27,16 +26,6 @@ class AppointmentListViewModel {
         // Apply search filter
         if !searchText.isEmpty {
             appointments = appointmentManager.searchAppointments(query: searchText)
-        }
-        
-        // Apply department filter
-        if let department = selectedDepartment {
-            appointments = appointments.filter { $0.department == department }
-        }
-        
-        // Apply status filter
-        if let status = selectedStatus {
-            appointments = appointments.filter { $0.status == status }
         }
         
         return appointments

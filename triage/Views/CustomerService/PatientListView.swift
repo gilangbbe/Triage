@@ -11,6 +11,7 @@ struct PatientListView: View {
     // Selected Patient State
     @State var selectedPatientID: UUID? = nil
     @State private var showingNotificationSheet: Bool = false
+    @State private var showingAddPatientSheet = false
     @Environment(PatientListViewModel.self) private var viewModel
     
     // Computed property to get patients from viewModel
@@ -28,10 +29,10 @@ struct PatientListView: View {
                 
                 List(patients) { patient in
                     PatientRowNavigationLink(
-                            patient: patient,
-                            isSelected: selectedPatientID == patient.id
-                        )
-                        .listRowInsets(EdgeInsets())
+                        patient: patient,
+                        isSelected: selectedPatientID == patient.id
+                    )
+                    .listRowInsets(EdgeInsets())
                 }
                 .padding(.horizontal, 8)
                 .scrollContentBackground(.hidden)
@@ -47,7 +48,9 @@ struct PatientListView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {} ) {
+                    Button(action: {
+                        showingAddPatientSheet.toggle()
+                    } ) {
                         Image(systemName: "plus")
                     }
                 }
@@ -55,6 +58,10 @@ struct PatientListView: View {
             .toolbar(removing: .sidebarToggle)
             .sheet(isPresented: $showingNotificationSheet) {
                 NotificationSheetView()
+            }
+            .sheet(isPresented: $showingAddPatientSheet) {
+                AddPatientView()
+                    .frame(width: 800)
             }
         } detail : {
             

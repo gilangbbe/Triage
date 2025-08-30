@@ -49,6 +49,7 @@ struct AddPackageView: View {
     private func savePackage() {
         let newPackage = Package(
             name: name,
+            department: .mcu,
             descriptionText: descriptionText.isEmpty ? nil : descriptionText
         )
         

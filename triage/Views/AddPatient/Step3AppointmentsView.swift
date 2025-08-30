@@ -60,7 +60,7 @@ struct Step3AppointmentsView: View {
 }
 
 struct AppointmentPacketCard: View {
-    let packet: AppointmentPacket
+    let packet: Package
     @ObservedObject var viewModel: AddPatientViewModel
     
     var body: some View {

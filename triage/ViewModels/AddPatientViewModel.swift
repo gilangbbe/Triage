@@ -35,7 +35,7 @@ final class AddPatientViewModel: ObservableObject {
     @Published var appointmentDates: [UUID: Date] = [:]
     @Published var needsConsultation: [UUID: Bool] = [:]
     
-    var filteredPackets: [AppointmentPacket] { [] } // TODO
+    var filteredPackets: [Package] { [] } // TODO
     
     // MARK: - Validations
     func isStepValid(_ step: Int) -> Bool {
@@ -206,7 +206,7 @@ final class AddPatientViewModel: ObservableObject {
     }
     
     // MARK: - Appointments
-    func addAppointment(packet: AppointmentPacket) {
+    func addAppointment(packet: Package) {
         let date = appointmentDates[packet.id] ?? Date()
         let needs = needsConsultation[packet.id] ?? false
         let appt = Appointment(name: packet.name, date: date, time: date, consultation: needs)
@@ -218,6 +218,13 @@ final class AddPatientViewModel: ObservableObject {
     // MARK: - Save / Clear
     func savePatient() {
         let dobText = dob?.formattedLong() ?? "-"
+        let patient = Patient(fullName: name)
+        patient.nationalID = nik
+        patient.dateOfBirth = dob
+        patient.gender = gender == "L" ? .male : .female
+        patient.phoneNumber = phoneNumber
+        patient.address = address
+        
         print("Saving patient: \(name) / \(nik ?? "-") / \(dobText) / \(phoneNumber) / \(address) / \(gender ?? "-")")
     }
     
@@ -232,21 +239,6 @@ final class AddPatientViewModel: ObservableObject {
         uploading = false
         uploadCompleted = false
     }
-}
-
-// MARK: - Models
-struct Appointment: Identifiable {
-    let id = UUID()
-    let name: String
-    let date: Date
-    let time: Date
-    let consultation: Bool
-}
-
-struct AppointmentPacket: Identifiable {
-    let id = UUID()
-    let name: String
-    let department: String
 }
 
 // MARK: - Date Extensions

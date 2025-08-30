@@ -64,7 +64,7 @@ class AppointmentManager {
         
         do {
             let descriptor = FetchDescriptor<Appointment>(
-                sortBy: [SortDescriptor(\.start, order: .forward)]
+                sortBy: [SortDescriptor(\.date, order: .forward)]
             )
             appointments = try context.fetch(descriptor)
         } catch {
@@ -90,13 +90,9 @@ class AppointmentManager {
         }
         
         return appointments.filter { appointment in
-            appointment.title.localizedCaseInsensitiveContains(query) ||
+            appointment.name.localizedCaseInsensitiveContains(query) ||
             appointment.patient?.fullName.localizedCaseInsensitiveContains(query) == true
         }
-    }
-    
-    func filterAppointments(by status: AppointmentStatus) -> [Appointment] {
-        return appointments.filter { $0.status == status }
     }
     
     func filterAppointments(by department: Department) -> [Appointment] {
@@ -108,13 +104,13 @@ class AppointmentManager {
         let today = Date()
         
         return appointments.filter { appointment in
-            calendar.isDate(appointment.start, inSameDayAs: today)
+            calendar.isDate(appointment.date, inSameDayAs: today)
         }
     }
     
     func upcomingAppointments() -> [Appointment] {
         let now = Date()
-        return appointments.filter { $0.start > now }
+        return appointments.filter { $0.date > now }
     }
     
     func appointmentsForPatient(_ patient: Patient) -> [Appointment] {
