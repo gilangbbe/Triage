@@ -6,103 +6,160 @@
 //
 
 import SwiftUI
-import Foundation
+import UniformTypeIdentifiers
+import PhotosUI
 
 struct Step2ConfirmationView: View {
     @ObservedObject var viewModel: AddPatientViewModel
+    @State private var selectedPhoto: PhotosPickerItem? = nil
+    @FocusState private var isFocused: Bool
     
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                Section(header: Text("Patient Information")) {
-                    
+        HStack(alignment: .top, spacing: 24) {
+            
+            VStack {
+                Spacer();
+                
+                // === Left Side (same as Step 1) ===
+                if viewModel.inputMode == .paste {
+                    PasteTextView(rawText: $viewModel.rawText, isStep1: false) {
+                        viewModel.clearInput()
+                    }
+                    .frame(maxWidth: 300) // keep width consistent
+                    .padding()
+                } else {
+                    UploadIDCardView(selectedPhoto: $selectedPhoto,
+                                     idCardImage: $viewModel.idCardImage,
+                                     uploading: $viewModel.uploading,
+                                     isStep1: false) {
+                        viewModel.clearInput()
+                    }
+                    .frame(maxWidth: 300)
+                    .padding()
+                }
+                
+                Spacer();
+            }
+            
+            // === Right Side (editable form) ===
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Confirm Patient")
+                    .font(.headline)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                
+                Group {
                     // NIK
-                    VStack(alignment: .leading) {
-                        Text("NIK")
-                        TextField("Enter NIK", text: Binding(
-                            get: { viewModel.nik ?? "" },
-                            set: { viewModel.nik = $0 }
-                        ))
-                        .keyboardType(.numberPad)
-                    }
-                    
-                    // Full Name (mandatory)
-                    VStack(alignment: .leading) {
-                        HStack(spacing: 2) {
-                            Text("Full Name")
-                            Text("*").foregroundColor(.red)
+                    CustomFormField(title: "National Identity Number", text: Binding(
+                        get: { viewModel.nik ?? "" },
+                        set: { viewModel.nik = $0 }
+                    ))
+                    .keyboardType(.numberPad)
+                    .focused($isFocused)
+                    .onAppear() {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isFocused = true
                         }
-                        TextField("Enter full name", text: $viewModel.name)
                     }
                     
-                    // Date of Birth
-                    VStack(alignment: .leading) {
-                        Text("Date of Birth")
-                        
-                        DatePicker(
-                            "Select date",
-                            selection: Binding(
-                                get: { viewModel.dob ?? Date() },   // fallback if nil
-                                set: { viewModel.dob = $0 }         // write back
-                            ),
-                            displayedComponents: .date
-                        )
+                    // Full Name
+                    CustomFormField(title: "Full Name", isRequired: true, text: $viewModel.name)
+                    
+                    // DOB
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Date of Birth".uppercased())
+                            .font(.caption)
+                            .foregroundColor(.black)
+                        DatePicker("", selection: Binding(
+                            get: { viewModel.dob ?? Date() },
+                            set: { viewModel.dob = $0 }
+                        ), displayedComponents: .date)
                         .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .environment(\.locale, Locale(identifier: "en_GB"))
                     }
                     
                     // Phone
-                    VStack(alignment: .leading) {
-                        Text("Phone Number")
-                        TextField("Enter phone number", text: $viewModel.phoneNumber)
-                            .keyboardType(.phonePad)
-                    }
+                    CustomFormField(title: "Phone Number", text: $viewModel.phoneNumber)
+                        .keyboardType(.phonePad)
                     
                     // Address
-                    VStack(alignment: .leading) {
-                        Text("Address")
-                        TextField("Enter address", text: $viewModel.address, axis: .vertical)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Address".uppercased())
+                            .font(.caption)
+                            .foregroundColor(.black)
+                        TextEditor(text: $viewModel.address)
+                            .frame(minHeight: 40, maxHeight: 100)
+                            .padding(8)
+                            .background(Color(hex: "#F9F9F9"))
+                            .cornerRadius(6)
+                            .scrollContentBackground(.hidden)
                     }
+
                     
                     // Gender
-                    VStack(alignment: .leading) {
-                        Text("Gender")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Gender".uppercased())
+                            .font(.caption)
+                            .foregroundColor(.black)
                         Picker("Gender", selection: Binding(
                             get: { viewModel.gender ?? "L" },
                             set: { viewModel.gender = $0 }
                         )) {
-                            Text("L").tag("L")
-                            Text("P").tag("P")
+                            Text("Laki-laki").tag("L")
+                            Text("Perempuan").tag("P")
                         }
                         .pickerStyle(.segmented)
                     }
                 }
             }
-            
-            Spacer()
-            
-            // ===== Step Indicators at Bottom =====
-            HStack(spacing: 0) {
-                ForEach(1...3, id: \.self) { i in
-                    HStack(spacing: 0) {
-                        Circle()
-                            .fill(i <= 2 ? Color(hex: "#0F0E46") : Color(hex: "#F0F0F7"))
-                            .frame(width: 28, height: 28)
-                            .overlay(
-                                Text("\(i)")
-                                    .foregroundColor(i <= 2 ? .white : .black)
-                            )
-                        
-                        if i < 3 {
-                            Rectangle()
-                                .fill(Color(hex: "#0F0E46"))
-                                .frame(height: 2)
-                                .frame(maxWidth: 28)
-                        }
-                    }
+            .padding()
+        }
+        .onChange(of: viewModel.idCardImage) { newImage in
+            if newImage != nil {
+                viewModel.inputMode = .idCard
+            } else {
+                viewModel.inputMode = .paste
+            }
+        }
+        .onChange(of: selectedPhoto) { newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self),
+                   let uiImage = UIImage(data: data),
+                   let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString)
+                    .appendingPathExtension("jpg") as URL? {
+                    
+                    try? data.write(to: tempURL)
+                    viewModel.idCardImage = uiImage
+                    viewModel.uploading = true
+                    viewModel.parseIDCardFromImage(fileURL: tempURL)
                 }
             }
-            .padding(.vertical, 20)
         }
     }
 }
 
+// Reusable text field
+private struct CustomFormField: View {
+    var title: String
+    var isRequired: Bool = false
+    @Binding var text: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 2) {
+                Text(title.uppercased())
+                    .font(.caption)
+                    .foregroundColor(.black)
+                if isRequired {
+                    Text("*").foregroundColor(.red)
+                }
+            }
+            TextField("", text: $text)
+                .padding(8)
+                .background(Color(hex: "#F9F9F9"))
+                .cornerRadius(6)
+        }
+    }
+}

@@ -43,7 +43,7 @@ final class AddPatientViewModel: ObservableObject {
         case 1:
             return !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || uploadCompleted
         case 2:
-            return !selectedAppointments.isEmpty
+            return !name.isEmpty
         default:
             return true
         }

@@ -18,7 +18,7 @@ struct AddPatientView: View {
                 switch step {
                 case 1: Step1PatientDetailsView(viewModel: viewModel)
                 case 2: Step2ConfirmationView(viewModel: viewModel)
-//                case 2: Step2AppointmentsView(viewModel: viewModel)
+                case 3: Step3AppointmentsView(viewModel: viewModel)
                 default: EmptyView()
                 }
             }

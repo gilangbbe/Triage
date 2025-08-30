@@ -1,13 +1,13 @@
 //
-//  Step2AppointmentsView.swift
+//  Step3AppointmentsView.swift
 //  triage
 //
-//  Created by Chiquitta Kellie on 28/08/25.
+//  Created by Chiquitta Kellie on 30/08/25.
 //
 
 import SwiftUI
 
-struct Step2AppointmentsView: View {
+struct Step3AppointmentsView: View {
     @ObservedObject var viewModel: AddPatientViewModel
     
     var body: some View {
