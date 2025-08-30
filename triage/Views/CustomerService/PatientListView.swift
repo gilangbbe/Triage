@@ -12,6 +12,7 @@ struct PatientListView: View {
     @State var selectedPatientID: UUID? = nil
     @State private var showingNotificationSheet: Bool = false
     @State private var showingAddPatientSheet = false
+    @Environment(PatientManager.self) private var patientManager
     @Environment(PatientListViewModel.self) private var viewModel
     
     // Computed property to get patients from viewModel
@@ -60,7 +61,7 @@ struct PatientListView: View {
                 NotificationSheetView()
             }
             .sheet(isPresented: $showingAddPatientSheet) {
-                AddPatientView()
+                AddPatientView(patientManager: patientManager)
                     .frame(width: 800)
             }
         } detail : {

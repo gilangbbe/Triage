@@ -35,7 +35,14 @@ final class AddPatientViewModel: ObservableObject {
     @Published var appointmentDates: [UUID: Date] = [:]
     @Published var needsConsultation: [UUID: Bool] = [:]
     
+    private var patientManager: PatientManager
+    
     var filteredPackets: [Package] { [] } // TODO
+    
+    init(patientManager: PatientManager) {
+        self.patientManager = patientManager
+    }
+    
     
     // MARK: - Validations
     func isStepValid(_ step: Int) -> Bool {
@@ -224,7 +231,8 @@ final class AddPatientViewModel: ObservableObject {
         patient.gender = gender == "L" ? .male : .female
         patient.phoneNumber = phoneNumber
         patient.address = address
-        
+        patient.registeredAt = Date()
+        patientManager.addPatient(patient)
         print("Saving patient: \(name) / \(nik ?? "-") / \(dobText) / \(phoneNumber) / \(address) / \(gender ?? "-")")
     }
     
