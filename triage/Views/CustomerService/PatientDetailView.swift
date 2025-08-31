@@ -83,18 +83,42 @@ struct PatientDetailView: View {
                             placeholder: "Enter 16 Digits",
                             value: patient.nationalID ?? "Not provided"
                         )
-                        FormField(
-                            icon: "calendar.and.person",
-                            label: "DATE OF BIRTH",
-                            placeholder: "Enter Date-Month-Year",
-                            value: formattedDateOfBirth
-                        )
-                        FormField(
-                            icon: "calendar.badge.checkmark",
-                            label: "REGISTERED DATE",
-                            placeholder: "Enter Date-Month-Year",
-                            value: formattedRegisteredDate
-                        )
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading) {
+                                FormField(
+                                    icon: "mappin.and.ellipse",
+                                    label: "PLACE",
+                                    placeholder: "Enter Place of Birth",
+                                    value: patient.placeOfBirth ?? "Not provided"
+                                )
+                            }
+                            VStack(alignment: .leading) {
+                                FormField(
+                                    icon: "calendar.and.person",
+                                    label: "DATE OF BIRTH",
+                                    placeholder: "Enter Date-Month-Year",
+                                    value: formattedDateOfBirth
+                                )
+                            }
+                        }
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading) {
+                                FormField(
+                                    icon: "tshirt.fill",
+                                    label: "GENDER",
+                                    placeholder: "Enter Gender",
+                                    value: patient.gender?.rawValue ?? "Not provided"
+                                )
+                            }
+                            VStack(alignment: .leading) {
+                                FormField(
+                                    icon: "calendar.badge.checkmark",
+                                    label: "REGISTERED DATE",
+                                    placeholder: "Enter Date-Month-Year",
+                                    value: formattedRegisteredDate
+                                )
+                            }
+                        }
                         FormField(
                             icon: "phone.fill",
                             label: "PHONE NUMBER",

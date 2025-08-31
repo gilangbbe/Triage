@@ -26,15 +26,22 @@ struct PatientListView: View {
                 
                 SegmentedControlFilter()
                 
-                List(patients) { patient in
-                    PatientRowNavigationLink(
-                            patient: patient,
-                            isSelected: selectedPatientID == patient.id
-                        )
-                        .listRowInsets(EdgeInsets())
+                ScrollViewReader { proxy in
+                    ZStack(alignment: .trailing) {
+                        List(patients) { patient in
+                            PatientRowNavigationLink(
+                                patient: patient,
+                                isSelected: selectedPatientID == patient.id
+                            )
+                            .id(patient.id) // 👈 tag rows with firstLetter
+                            .listRowInsets(EdgeInsets())
+                        }
+                        .scrollContentBackground(.hidden)
+
+                        // A–Z index on the right
+                        NameIndex(viewModel: viewModel, proxy: proxy)
+                    }
                 }
-                .padding(.horizontal, 8)
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Patient List")
             .navigationBarTitleDisplayMode(.automatic)
@@ -72,7 +79,7 @@ struct SearchBarPatient: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 18)
     }
 }
 
@@ -105,6 +112,41 @@ struct PatientRowNavigationLink: View {
         .buttonStyle(.plain)
     }
 }
+
+struct NameIndex: View {
+    @Bindable var viewModel: PatientListViewModel
+    var proxy: ScrollViewProxy
+    
+    // Always show A–Z
+    let sectionTitles = (65...90).map { String(UnicodeScalar($0)!) }
+    
+    var body: some View {
+        ScrollView() {
+            VStack(alignment: .leading) {
+                ForEach(sectionTitles, id: \.self) { letter in
+                    Button(action: {
+                        withAnimation {
+                            viewModel.selectedLetter = letter
+                            if let firstPatient = viewModel.filteredPatients.first(where: { $0.firstLetter == letter }) {
+                                proxy.scrollTo(firstPatient.id, anchor: .top)
+                            }
+                        }
+                    }) {
+                        Text(letter)
+                            .font(.caption2)
+                            .foregroundColor(viewModel.selectedLetter == letter ? .blue : .gray)
+                            .padding(.vertical, 1)
+                            .frame(width: 24, height: 20)   // 👈 bigger tappable box
+                            .contentShape(Rectangle())
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
 
 
 #Preview {
