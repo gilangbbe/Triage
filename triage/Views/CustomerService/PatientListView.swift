@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PatientListView: View {
     // Selected Patient State
-    @State var selectedPatientID: UUID? = nil
+    @State var selectedPatient: Patient? = nil
     @State private var showingNotificationSheet: Bool = false
     @Environment(PatientListViewModel.self) private var viewModel
     
@@ -25,19 +25,17 @@ struct PatientListView: View {
                 SearchBarPatient(text: $viewModel.searchText)
                 
                 SegmentedControlFilter()
-                
+
                 ScrollViewReader { proxy in
                     ZStack(alignment: .trailing) {
-                        List(patients) { patient in
-                            PatientRowNavigationLink(
-                                patient: patient,
-                                isSelected: selectedPatientID == patient.id
-                            )
-                            .id(patient.id) // 👈 tag rows with firstLetter
-                            .listRowInsets(EdgeInsets())
+                        List(patients, selection: $selectedPatient) { patient in
+                            PatientRowView(patient: patient)
+                                .id(patient.id)
+                                .listRowSeparator(.visible)
+                                .listRowInsets(EdgeInsets())
                         }
                         .scrollContentBackground(.hidden)
-
+                        .padding(.trailing, 16)
                         // A–Z index on the right
                         NameIndex(viewModel: viewModel, proxy: proxy)
                     }
@@ -64,7 +62,12 @@ struct PatientListView: View {
                 NotificationSheetView()
             }
         } detail : {
-            
+            if let patient = selectedPatient {
+                PatientDetailView(patient: patient)
+            } else {
+                Text("Select a patient")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -94,22 +97,8 @@ struct SegmentedControlFilter: View {
                 Text("Laboratorium").tag(2)
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 18)
         }
-    }
-}
-
-struct PatientRowNavigationLink: View {
-    let patient: Patient
-    let isSelected: Bool
-    
-    var body: some View {
-        NavigationLink(
-            destination: PatientDetailView(patient: patient)
-        ) {
-            PatientRowView(patient: patient)
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -126,9 +115,14 @@ struct NameIndex: View {
                 ForEach(sectionTitles, id: \.self) { letter in
                     Button(action: {
                         withAnimation {
-                            viewModel.selectedLetter = letter
-                            if let firstPatient = viewModel.filteredPatients.first(where: { $0.firstLetter == letter }) {
-                                proxy.scrollTo(firstPatient.id, anchor: .top)
+                            if viewModel.selectedLetter == letter {
+                                // 👇 tapped the same letter again → reset filter
+                                viewModel.selectedLetter = nil
+                            } else {
+                                viewModel.selectedLetter = letter
+                                if let firstPatient = viewModel.filteredPatients.first(where: { $0.firstLetter == letter }) {
+                                    proxy.scrollTo(firstPatient.id, anchor: .top)
+                                }
                             }
                         }
                     }) {
@@ -136,8 +130,7 @@ struct NameIndex: View {
                             .font(.caption2)
                             .foregroundColor(viewModel.selectedLetter == letter ? .blue : .gray)
                             .padding(.vertical, 1)
-                            .frame(width: 24, height: 20)   // 👈 bigger tappable box
-                            .contentShape(Rectangle())
+                            .frame(width: 24, height: 20)
                     }
                 }
             }
