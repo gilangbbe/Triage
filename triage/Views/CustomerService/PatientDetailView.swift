@@ -19,18 +19,6 @@ struct PatientDetailView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .padding(.bottom, 8)
-                Spacer()
-                Button(action: {
-                    // handle edit action here
-                }) {
-                    Text("Edit")
-                        .font(.body)
-                        .foregroundColor(.gray) // you can style this like a link or button
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.gray.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
             }
             HStack(alignment: .top, spacing: 16) {
                 // Patient Appointment
@@ -39,16 +27,37 @@ struct PatientDetailView: View {
                         Group {
                             HStack {
                                 Image(systemName: "exclamationmark.arrow.trianglehead.counterclockwise.rotate.90")
+                                    .foregroundColor(.brown)
                                 Text("UPCOMING APPOINTMENT")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.brown)
+                                Spacer()
+                                Button(action: {
+                                    
+                                }) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .foregroundColor(.white)
+                                        .background(.blue)
+                                        .clipShape(Capsule())
+                                }
                             }
-                            
                             VStack {
-                                ScrollView {
-                                    ForEach(0..<4, id: \.self) { i in
-                                        AppointmentListRow()
+                                if patient.appointments.isEmpty {
+                                    Text("No Upcoming Appointment")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    ScrollView {
+                                        ForEach(0..<4, id: \.self) { i in
+                                            AppointmentListRow()
+                                        }
                                     }
                                 }
                             }
+                            .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
                             .background(Color.secondary.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -62,11 +71,23 @@ struct PatientDetailView: View {
                             
                             VStack {
                                 ScrollView {
-                                    ForEach(0..<4, id: \.self) { i in
+                                    ForEach(0..<10, id: \.self) { i in
                                         AppointmentListRow()
                                     }
                                 }
+//                                if patient.appointments.isEmpty {
+//                                    Text("No Appointment History")
+//                                        .font(.headline)
+//                                        .foregroundColor(.secondary)
+//                                } else {
+//                                    ScrollView {
+//                                        ForEach(0..<10, id: \.self) { i in
+//                                            AppointmentListRow()
+//                                        }
+//                                    }
+//                                }
                             }
+                            .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
                             .background(Color.secondary.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -81,7 +102,8 @@ struct PatientDetailView: View {
                             icon: "person.text.rectangle.fill",
                             label: "NATIONAL IDENTITY NUMBER",
                             placeholder: "Enter 16 Digits",
-                            value: patient.nationalID ?? "Not provided"
+                            value: patient.nationalID ?? "Not provided",
+                            enableEditButtonDisplay: true
                         )
                         HStack(spacing: 16) {
                             VStack(alignment: .leading) {
@@ -162,27 +184,31 @@ struct PatientDetailView: View {
 
 struct AppointmentListRow: View {
     private var serviceName: String = "Medical Checkup"
-    private var date: String = "12/09/2025"
+    private var date: String = "22 Agustus 2025"
     private var time: String = "10:00 AM"
+    private var package: String = "Paket Merdeka Lite"
     
     var body: some View {
         VStack {
             HStack {
-                Text(serviceName)
-                    .font(.headline)
+                Text(date)
+                    .font(.title3)
+                    .fontWeight(.semibold)
                 Spacer()
-                Button(action: {}) {
-                    Image(systemName: "pencil.circle.fill")
-                        .foregroundColor(.gray)
-                }
+                Text(serviceName)
+                    .font(.title3)
             }
             .padding(.bottom, 4)
             HStack {
-                Text(date)
-                    .font(.title3)
-                Spacer()
                 Text(time)
                     .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text(package)
+                    .font(.subheadline)
+                    .padding(8)
+                    .background(.red.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
         }
         .padding()
@@ -196,6 +222,7 @@ struct FormField: View {
     let label: String
     let placeholder: String
     let value: String?
+    var enableEditButtonDisplay: Bool = false
     @Binding var text: String
     
     init(icon: String, label: String, placeholder: String, text: Binding<String>) {
@@ -206,18 +233,35 @@ struct FormField: View {
         self._text = text
     }
     
-    init(icon: String, label: String, placeholder: String, value: String) {
+    init(icon: String, label: String, placeholder: String, value: String, enableEditButtonDisplay: Bool = false) {
         self.icon = icon
         self.label = label
         self.placeholder = placeholder
         self.value = value
         self._text = .constant("")
+        self.enableEditButtonDisplay = enableEditButtonDisplay
     }
     
     var body: some View {
         HStack {
             Image(systemName: icon)
+                .foregroundColor(.gray)
             Text(label)
+                .foregroundColor(.gray)
+            if enableEditButtonDisplay {
+                Spacer()
+                Button(action: {
+                    // handle edit action here
+                }) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 16, weight: .semibold))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .foregroundColor(.white)
+                        .background(.blue)
+                        .clipShape(Capsule())
+                }
+            }
         }
         if let displayValue = value {
             Text(displayValue)
