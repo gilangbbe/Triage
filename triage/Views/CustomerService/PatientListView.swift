@@ -118,4 +118,5 @@ struct PatientRowNavigationLink: View {
 #Preview {
     PatientListView()
         .environment(PatientListViewModel(patientManager: PatientManager.shared))
+        .environment(PatientManager.shared)
 }
