@@ -12,6 +12,7 @@ import SwiftUI
 class PatientListViewModel {
     var searchText = ""
     var selectedGender: Gender? = nil
+    var selectedLetter: String? = nil
     var showingAddPatient = false
     
     private let patientManager: PatientManager
@@ -31,6 +32,10 @@ class PatientListViewModel {
         // Apply gender filter
         if let gender = selectedGender {
             patients = patients.filter { $0.gender == gender }
+        }
+        
+        if let letter = selectedLetter {
+            patients = patients.filter { $0.firstLetter == letter }
         }
         
         return patients

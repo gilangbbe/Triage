@@ -27,16 +27,21 @@ struct PatientListView: View {
                 SearchBarPatient(text: $viewModel.searchText)
                 
                 SegmentedControlFilter()
-                
-                List(patients) { patient in
-                    PatientRowNavigationLink(
-                        patient: patient,
-                        isSelected: selectedPatientID == patient.id
-                    )
-                    .listRowInsets(EdgeInsets())
+
+                ScrollViewReader { proxy in
+                    ZStack(alignment: .trailing) {
+                        List(patients, selection: $selectedPatientID) { patient in
+                            PatientRowView(patient: patient)
+                                .id(patient.id)
+                                .listRowSeparator(.visible)
+                                .listRowInsets(EdgeInsets())
+                        }
+                        .scrollContentBackground(.hidden)
+                        .padding(.trailing, 16)
+                        // A–Z index on the right
+                        NameIndex(viewModel: viewModel, proxy: proxy)
+                    }
                 }
-                .padding(.horizontal, 8)
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Patient List")
             .navigationBarTitleDisplayMode(.automatic)
@@ -65,7 +70,13 @@ struct PatientListView: View {
                     .frame(width: 800)
             }
         } detail : {
-            
+            if let id = selectedPatientID,
+               let patient = patients.first(where: { $0.id == id }) {
+                PatientDetailView(patient: patient)
+            } else {
+                Text("Select a patient")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -80,7 +91,7 @@ struct SearchBarPatient: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 18)
     }
 }
 
@@ -95,24 +106,49 @@ struct SegmentedControlFilter: View {
                 Text("Laboratorium").tag(2)
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 18)
         }
     }
 }
 
-struct PatientRowNavigationLink: View {
-    let patient: Patient
-    let isSelected: Bool
+struct NameIndex: View {
+    @Bindable var viewModel: PatientListViewModel
+    var proxy: ScrollViewProxy
+    
+    // Always show A–Z
+    let sectionTitles = (65...90).map { String(UnicodeScalar($0)!) }
     
     var body: some View {
-        NavigationLink(
-            destination: PatientDetailView(patient: patient)
-        ) {
-            PatientRowView(patient: patient)
+        ScrollView() {
+            VStack(alignment: .leading) {
+                ForEach(sectionTitles, id: \.self) { letter in
+                    Button(action: {
+                        withAnimation {
+                            if viewModel.selectedLetter == letter {
+                                // 👇 tapped the same letter again → reset filter
+                                viewModel.selectedLetter = nil
+                            } else {
+                                viewModel.selectedLetter = letter
+                                if let firstPatient = viewModel.filteredPatients.first(where: { $0.firstLetter == letter }) {
+                                    proxy.scrollTo(firstPatient.id, anchor: .top)
+                                }
+                            }
+                        }
+                    }) {
+                        Text(letter)
+                            .font(.caption2)
+                            .foregroundColor(viewModel.selectedLetter == letter ? .blue : .gray)
+                            .padding(.vertical, 1)
+                            .frame(width: 24, height: 20)
+                    }
+                }
+            }
         }
-        .buttonStyle(.plain)
     }
 }
+
+
+
 
 
 #Preview {

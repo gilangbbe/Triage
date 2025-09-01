@@ -12,18 +12,25 @@ struct PatientRowView: View {
     
     var body: some View {
         HStack {
-            Image(systemName: "person.circle.fill")
-                .font(.system(size: 45))
-                .foregroundColor(patient.gender == .male ? .blue.opacity(0.8) : .pink.opacity(0.8))
-            VStack (alignment: .leading, spacing: 4) {
+            Text("")
+            Circle()
+                .fill(Color.gray.opacity(0.1))  // you can swap with .secondary, .accentColor, etc.
+                .frame(width: 52, height: 52)
+                .overlay(
+                    Text(initials)
+                        .font(.title2)
+                )
+                .padding(.trailing, 8)
+            VStack (alignment: .leading, spacing: 8) {
                 Text(patient.fullName)
-                    .font(.headline)
-                Text("Born : \(formattedBirthDate)")
-                    .font(.subheadline)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                Text("DOB : \(formattedBirthDate)")
+                    .font(.callout)
+                    .foregroundColor(.gray.opacity(0.8))
             }
         }
-        .padding()
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.vertical, 12)
     }
     
     private var formattedBirthDate: String {
@@ -34,6 +41,13 @@ struct PatientRowView: View {
         } else {
             return "Unknown"
         }
+    }
+    
+    private var initials: String {
+        let components = patient.fullName.split(separator: " ")
+        let first = components.first?.first.map(String.init) ?? ""
+        let last = components.dropFirst().last?.first.map(String.init) ?? ""
+        return (first + last).uppercased()
     }
 }
 

@@ -10,7 +10,7 @@ import Foundation
 struct SharedConfiguration {
     
     // MARK: - App Group Configuration
-    static let appGroupID = "group.com.ada.triage"
+    static let appGroupID = "group.com.ada.jason.triage"
     
     // MARK: - Shared Data Keys
     struct SharedDataKeys {

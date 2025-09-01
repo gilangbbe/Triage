@@ -47,6 +47,13 @@ enum Gender: String, Codable, CaseIterable {
 
 // MARK: - Parsing Extension
 extension Patient {
+    var firstLetter: String {
+        fullName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(1)
+            .uppercased()
+    }
+    
     static func parseFromText(_ text: String) -> Patient? {
         let lines = text.components(separatedBy: .newlines)
         var fullName = ""
