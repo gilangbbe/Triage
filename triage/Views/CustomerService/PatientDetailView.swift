@@ -8,22 +8,8 @@
 import SwiftUI
 
 struct PatientDetailView: View {
-    let patient: Patient
-    @State private var NIK: String = ""
-    @State private var gender: Gender? = nil
-    @State private var DOB: Date? = nil
-    @State private var phoneNumber: String = ""
-    @State private var address: String = ""
+    @Bindable var patient: Patient
     @State private var isEditing: Bool = false
-    
-    init(patient: Patient) {
-        self.patient = patient
-        _NIK = State(initialValue: patient.nationalID ?? "Not provided")
-        _gender = State(initialValue: patient.gender)
-        _DOB = State(initialValue: patient.dateOfBirth)
-        _phoneNumber = State(initialValue: patient.phoneNumber ?? "Not provided")
-        _address = State(initialValue: patient.address ?? "Not provided")
-    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -115,7 +101,7 @@ struct PatientDetailView: View {
         .padding(.horizontal, 16)
     }
     private var formattedDateOfBirth: String {
-        if let date = DOB {
+        if let date = patient.dateOfBirth {
             let formatter = DateFormatter()
             formatter.dateStyle = .long
             return formatter.string(from: date)
@@ -171,7 +157,10 @@ struct PatientDetailView: View {
                     }
                 }
                 .padding(.leading)
-                TextField("Enter 16 Digits", text: $NIK)
+                TextField("Enter 16 Digits", text: Binding(
+                    get: { patient.nationalID ?? "" },
+                    set: { patient.nationalID = $0.isEmpty ? nil : $0 }
+                ))
                     .font(.headline)
                     .padding()
                     .foregroundColor(.black)
@@ -191,8 +180,8 @@ struct PatientDetailView: View {
                 DatePicker(
                     "Select Date of Birth",
                     selection: Binding(
-                        get: { DOB ?? Date() },
-                        set: { DOB = $0 }
+                        get: { patient.dateOfBirth ?? Date() },
+                        set: { patient.dateOfBirth = $0 }
                     ),
                     displayedComponents: .date
                 )
@@ -206,14 +195,20 @@ struct PatientDetailView: View {
                 icon: "phone.fill",
                 label: "PHONE NUMBER",
                 placeholder: "Enter Phone Number",
-                text: $phoneNumber,
+                text: Binding(
+                    get: { patient.phoneNumber ?? "" },
+                    set: { patient.phoneNumber = $0.isEmpty ? nil : $0 }
+                ),
                 isEditing: isEditing
             )
             FormField(
                 icon: "house.fill",
                 label: "ADDRESS",
                 placeholder: "Enter Address",
-                text: $address,
+                text: Binding(
+                    get: { patient.address ?? "" },
+                    set: { patient.address = $0.isEmpty ? nil : $0 }
+                ),
                 isEditing: isEditing
 
             )
@@ -221,7 +216,7 @@ struct PatientDetailView: View {
                 icon: "tshirt.fill",
                 label: "GENDER",
                 placeholder: "Enter Gender",
-                value: gender?.rawValue ?? "Not provided",
+                value: patient.gender?.rawValue ?? "Not provided",
                 isEditing: isEditing
             )
         }
