@@ -92,15 +92,15 @@ private struct WeekTimelineBoard: View {
                                     let usableW = max(0, colW - 2 * innerInset)
 
                                     ZStack(alignment: .topLeading) {
-                                        AppointmentRow(
-                                            appt: placed.appt,
-                                            day: day,
-                                            minuteHeight: minuteHeight,
-                                            cardTopInset: cardTopInset,
-                                            availableWidth: usableW
-                                        )
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.horizontal, innerInset)   // keep card off the column edge
+//                                        AppointmentRow(
+//                                            appt: placed.appt,
+//                                            day: day,
+//                                            minuteHeight: minuteHeight,
+//                                            cardTopInset: cardTopInset,
+//                                            availableWidth: usableW
+//                                        )
+//                                        .frame(maxWidth: .infinity, alignment: .leading)
+//                                        .padding(.horizontal, innerInset)   // keep card off the column edge
                                     }
                                     .frame(width: colW, height: minuteHeight * 24 * 60, alignment: .topLeading)
                                     .clipped(antialiased: true)             // prevent shadows/borders from bleeding across columns

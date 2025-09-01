@@ -21,17 +21,17 @@ struct Appt: Identifiable, Hashable {
 extension Appt {
     static func mock(on day: Date) -> [Appt] {
         let cal = Calendar.current
-        let targetDate = cal.date(from: DateComponents(year: 2025, month: 8, day: 28))!
+        let targetDate = cal.date(from: DateComponents(year: 2025, month: 9, day: 1))!
         
         guard cal.isDate(day, inSameDayAs: targetDate) else {
             return []
         }
         
         let s1 = cal.date(bySettingHour: 7, minute: 00, second: 0, of: day)!
-        let s3 = cal.date(bySettingHour: 8, minute: 35, second: 0, of: day)!
-        let e1 = cal.date(byAdding: .minute, value: 90, to: s1)!
-        let e2 = cal.date(byAdding: .minute, value: 30, to: s1)!
-        let e3 = cal.date(byAdding: .minute, value: 90, to: s3)!
+        let s3 = cal.date(bySettingHour: 8, minute: 00, second: 0, of: day)!
+        let e1 = cal.date(byAdding: .minute, value: 60, to: s1)!
+        let e2 = cal.date(byAdding: .minute, value: 60, to: s1)!
+        let e3 = cal.date(byAdding: .minute, value: 60, to: s3)!
         return [
             .init(patient: "Mr Longest Name Possible",
                   tag: "Medical Check Up",
@@ -68,25 +68,41 @@ struct CalendarView: View {
     @State private var appts: [Appt] = []
     
     var body: some View {
-        VStack(spacing: 0) {
-            Header(monthAnchor: $monthAnchor, scope: $scope)
-            if scope.rawValue == "Day" {
-                CalendarDayView(selectedDate: $selectedDate, monthAnchor: $monthAnchor, appts: $appts)
-            } else if scope.rawValue == "Week"{
-                CalendarWeekView(selectedDate: $selectedDate, monthAnchor: $monthAnchor, appts: $appts)
+        HStack(spacing: 0) {
+            SidebarPanel(selectedDate: $selectedDate, appts: appts)
+                .frame(width: 360)                          // tweak width if needed
+                .background(Color(.systemBackground))
+                .overlay(Divider(), alignment: .trailing)
+
+            VStack(spacing: 0) {
+                Header(monthAnchor: $monthAnchor, scope: $scope)
+                OverviewHeader()
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+
+                if scope.rawValue == "Day" {
+                    CalendarDayView(selectedDate: $selectedDate,
+                                    monthAnchor: $monthAnchor,
+                                    appts: $appts)
+                } else if scope.rawValue == "Week" {
+                    CalendarWeekView(selectedDate: $selectedDate,
+                                     monthAnchor: $monthAnchor,
+                                     appts: $appts)
+                }
             }
+            .background(Color(uiColor: .systemBackground))
+            .padding(.top, 8)
+            .padding(.horizontal, 24)
         }
-        .background(Color(uiColor: .systemBackground))
         .onChange(of: selectedDate) { _, newDate in
             appts = Appt.mock(on: newDate)
         }
-        .onChange(of: scope) { _, newDate in
+        .onChange(of: scope) { _, _ in
             appts = Appt.mock(on: selectedDate)
         }
         .navigationBarHidden(true)
-        .padding(.top, 8)
-        .padding(.horizontal, 24)
     }
+
 }
 
 // MARK: - Helpers
