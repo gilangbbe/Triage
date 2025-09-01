@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PatientListView: View {
     // Selected Patient State
-    @State var selectedPatient: Patient? = nil
+    @State var selectedPatientID: UUID? = nil
     @State private var showingNotificationSheet: Bool = false
     @Environment(PatientListViewModel.self) private var viewModel
     
@@ -28,7 +28,7 @@ struct PatientListView: View {
 
                 ScrollViewReader { proxy in
                     ZStack(alignment: .trailing) {
-                        List(patients, selection: $selectedPatient) { patient in
+                        List(patients, selection: $selectedPatientID) { patient in
                             PatientRowView(patient: patient)
                                 .id(patient.id)
                                 .listRowSeparator(.visible)
@@ -62,7 +62,8 @@ struct PatientListView: View {
                 NotificationSheetView()
             }
         } detail : {
-            if let patient = selectedPatient {
+            if let id = selectedPatientID,
+               let patient = patients.first(where: { $0.id == id }) {
                 PatientDetailView(patient: patient)
             } else {
                 Text("Select a patient")

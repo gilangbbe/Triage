@@ -9,8 +9,21 @@ import SwiftUI
 
 struct PatientDetailView: View {
     let patient: Patient
-    @State private var name: String = ""
-    @State private var age: String = ""
+    @State private var NIK: String = ""
+    @State private var gender: Gender? = nil
+    @State private var DOB: Date? = nil
+    @State private var phoneNumber: String = ""
+    @State private var address: String = ""
+    @State private var isEditing: Bool = false
+    
+    init(patient: Patient) {
+        self.patient = patient
+        _NIK = State(initialValue: patient.nationalID ?? "Not provided")
+        _gender = State(initialValue: patient.gender)
+        _DOB = State(initialValue: patient.dateOfBirth)
+        _phoneNumber = State(initialValue: patient.phoneNumber ?? "Not provided")
+        _address = State(initialValue: patient.address ?? "Not provided")
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -70,22 +83,22 @@ struct PatientDetailView: View {
                             }
                             
                             VStack {
-                                ScrollView {
-                                    ForEach(0..<10, id: \.self) { i in
-                                        AppointmentListRow()
+                                //                                ScrollView {
+                                //                                    ForEach(0..<10, id: \.self) { i in
+                                //                                        AppointmentListRow()
+                                //                                    }
+                                //                                }
+                                if patient.appointments.isEmpty {
+                                    Text("No Appointment History")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    ScrollView {
+                                        ForEach(0..<10, id: \.self) { i in
+                                            AppointmentListRow()
+                                        }
                                     }
                                 }
-//                                if patient.appointments.isEmpty {
-//                                    Text("No Appointment History")
-//                                        .font(.headline)
-//                                        .foregroundColor(.secondary)
-//                                } else {
-//                                    ScrollView {
-//                                        ForEach(0..<10, id: \.self) { i in
-//                                            AppointmentListRow()
-//                                        }
-//                                    }
-//                                }
                             }
                             .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
@@ -96,76 +109,16 @@ struct PatientDetailView: View {
                     .frame(maxWidth: .infinity)
                 }
                 // Patient Profile
-                Group {
-                    VStack(alignment: .leading) {
-                        FormField(
-                            icon: "person.text.rectangle.fill",
-                            label: "NATIONAL IDENTITY NUMBER",
-                            placeholder: "Enter 16 Digits",
-                            value: patient.nationalID ?? "Not provided",
-                            enableEditButtonDisplay: true
-                        )
-                        HStack(spacing: 16) {
-                            VStack(alignment: .leading) {
-                                FormField(
-                                    icon: "mappin.and.ellipse",
-                                    label: "PLACE",
-                                    placeholder: "Enter Place of Birth",
-                                    value: patient.placeOfBirth ?? "Not provided"
-                                )
-                            }
-                            VStack(alignment: .leading) {
-                                FormField(
-                                    icon: "calendar.and.person",
-                                    label: "DATE OF BIRTH",
-                                    placeholder: "Enter Date-Month-Year",
-                                    value: formattedDateOfBirth
-                                )
-                            }
-                        }
-                        HStack(spacing: 16) {
-                            VStack(alignment: .leading) {
-                                FormField(
-                                    icon: "tshirt.fill",
-                                    label: "GENDER",
-                                    placeholder: "Enter Gender",
-                                    value: patient.gender?.rawValue ?? "Not provided"
-                                )
-                            }
-                            VStack(alignment: .leading) {
-                                FormField(
-                                    icon: "calendar.badge.checkmark",
-                                    label: "REGISTERED DATE",
-                                    placeholder: "Enter Date-Month-Year",
-                                    value: formattedRegisteredDate
-                                )
-                            }
-                        }
-                        FormField(
-                            icon: "phone.fill",
-                            label: "PHONE NUMBER",
-                            placeholder: "Enter Phone Number",
-                            value: patient.phoneNumber ?? "Not provided"
-                        )
-                        FormField(
-                            icon: "house.fill",
-                            label: "ADDRESS",
-                            placeholder: "Enter Address",
-                            value: patient.address ?? "Not provided"
-                        )
-                    }
-                    .frame(maxWidth: .infinity)
-                }
+                profileSection
             }
         }
         .padding(.horizontal, 16)
     }
-    
     private var formattedDateOfBirth: String {
-        if let dateOfBirth = patient.dateOfBirth {
+        if let date = DOB {
             let formatter = DateFormatter()
             formatter.dateStyle = .long
-            return formatter.string(from: dateOfBirth)
+            return formatter.string(from: date)
         } else {
             return "Not provided"
         }
@@ -179,6 +132,100 @@ struct PatientDetailView: View {
         } else {
             return "Not provided"
         }
+    }
+
+    private var profileSection: some View {
+        VStack(alignment: .leading) {
+            // Registered Date
+            HStack {
+                Image(systemName: "calendar.badge.checkmark")
+                    .foregroundColor(.gray)
+                Text("REGISTERED DATE")
+                    .foregroundColor(.gray)
+                Spacer()
+                Text(formattedRegisteredDate)
+                    .font(.headline)
+                    .foregroundColor(.black)
+            }
+            .padding()
+            .background(Color.secondary.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.bottom, 16)
+            
+            // NIK field
+            VStack {
+                HStack {
+                    Image(systemName: "person.text.rectangle.fill")
+                        .foregroundColor(.gray)
+                    Text("NATIONAL IDENTITY NUMBER")
+                        .foregroundColor(.gray)
+                    Spacer()
+                    Button(action: { isEditing.toggle() }) {
+                        Image(systemName: isEditing ? "checkmark" : "pencil")
+                            .font(.system(size: 16, weight: .semibold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .foregroundColor(.white)
+                            .background(.blue)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(.leading)
+                TextField("Enter 16 Digits", text: $NIK)
+                    .font(.headline)
+                    .padding()
+                    .foregroundColor(.black)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(.bottom, 16)
+                    .disabled(!isEditing)
+            }
+            
+            // Date of Birth
+            HStack {
+                Image(systemName: "calendar.and.person")
+                    .foregroundColor(.gray)
+                Text("DATE OF BIRTH")
+                    .foregroundColor(.gray)
+                Spacer()
+                DatePicker(
+                    "Select Date of Birth",
+                    selection: Binding(
+                        get: { DOB ?? Date() },
+                        set: { DOB = $0 }
+                    ),
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+            }
+            .padding(.leading)
+            .padding(.bottom, 16)
+            
+            // Other fields
+            FormField(
+                icon: "phone.fill",
+                label: "PHONE NUMBER",
+                placeholder: "Enter Phone Number",
+                text: $phoneNumber,
+                isEditing: isEditing
+            )
+            FormField(
+                icon: "house.fill",
+                label: "ADDRESS",
+                placeholder: "Enter Address",
+                text: $address,
+                isEditing: isEditing
+
+            )
+            FormField(
+                icon: "tshirt.fill",
+                label: "GENDER",
+                placeholder: "Enter Gender",
+                value: gender?.rawValue ?? "Not provided",
+                isEditing: isEditing
+            )
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -222,24 +269,25 @@ struct FormField: View {
     let label: String
     let placeholder: String
     let value: String?
-    var enableEditButtonDisplay: Bool = false
     @Binding var text: String
+    var isEditing: Bool = false
     
-    init(icon: String, label: String, placeholder: String, text: Binding<String>) {
+    init(icon: String, label: String, placeholder: String, text: Binding<String>, isEditing: Bool) {
         self.icon = icon
         self.label = label
         self.placeholder = placeholder
         self.value = nil
         self._text = text
+        self.isEditing = isEditing
     }
     
-    init(icon: String, label: String, placeholder: String, value: String, enableEditButtonDisplay: Bool = false) {
+    init(icon: String, label: String, placeholder: String, value: String, isEditing: Bool) {
         self.icon = icon
         self.label = label
         self.placeholder = placeholder
         self.value = value
         self._text = .constant("")
-        self.enableEditButtonDisplay = enableEditButtonDisplay
+        self.isEditing = isEditing
     }
     
     var body: some View {
@@ -248,21 +296,8 @@ struct FormField: View {
                 .foregroundColor(.gray)
             Text(label)
                 .foregroundColor(.gray)
-            if enableEditButtonDisplay {
-                Spacer()
-                Button(action: {
-                    // handle edit action here
-                }) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 16, weight: .semibold))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .foregroundColor(.white)
-                        .background(.blue)
-                        .clipShape(Capsule())
-                }
-            }
         }
+        .padding(.leading)
         if let displayValue = value {
             Text(displayValue)
                 .font(.headline)
@@ -280,6 +315,7 @@ struct FormField: View {
                 .background(Color.secondary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(.bottom, 16)
+                .disabled(!isEditing)
         }
     }
 }
