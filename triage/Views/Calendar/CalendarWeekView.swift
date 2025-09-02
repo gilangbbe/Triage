@@ -125,7 +125,6 @@ private struct WeekTimelineBoard: View {
                     timeGutter()
                 }
                 .frame(height: minuteHeight * 24 * 60)
-                .padding(.top, 12)
             }
         }
     }

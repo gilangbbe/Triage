@@ -5,6 +5,11 @@
 //  Created by Hayya U on 29/08/25.
 //
 
+//
+//  CalendarView.swift
+//  triage
+//
+
 import SwiftUI
 
 // MARK: - Models
@@ -21,36 +26,45 @@ struct Appt: Identifiable, Hashable {
 extension Appt {
     static func mock(on day: Date) -> [Appt] {
         let cal = Calendar.current
-        let targetDate = cal.date(from: DateComponents(year: 2025, month: 9, day: 1))!
-        
-        guard cal.isDate(day, inSameDayAs: targetDate) else {
-            return []
+        let target = cal.date(from: DateComponents(year: 2025, month: 9, day: 1))!
+
+        guard cal.isDate(day, inSameDayAs: target) else { return [] }
+
+        func at(_ hour: Int, _ minute: Int = 0) -> Date {
+            cal.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
         }
-        
-        let s1 = cal.date(bySettingHour: 7, minute: 00, second: 0, of: day)!
-        let s3 = cal.date(bySettingHour: 8, minute: 00, second: 0, of: day)!
-        let e1 = cal.date(byAdding: .minute, value: 60, to: s1)!
-        let e2 = cal.date(byAdding: .minute, value: 60, to: s1)!
-        let e3 = cal.date(byAdding: .minute, value: 60, to: s3)!
+        func plus(_ minutes: Int, to d: Date) -> Date {
+            cal.date(byAdding: .minute, value: minutes, to: d)!
+        }
+
+        let s1 = at(7)
+        let s3 = at(8)
+
         return [
             .init(patient: "Mr Longest Name Possible",
-                  tag: "Medical Check Up",
+                  tag: "Medical",
                   tagIcon: "staroflife.fill",
-                  start: s1, end: e1, avatarInitial: "K"),
+                  start: s1, end: plus(60, to: s1), avatarInitial: "K"),
             
+            .init(patient: "Mr Longest Name Possible",
+                  tag: "Labor",
+                  tagIcon: "staroflife.fill",
+                  start: s1, end: plus(60, to: s1), avatarInitial: "K"),
+
             .init(patient: "Ms Short Name",
-                  tag: "Consultation",
-                  tagIcon: "startoflife.fill",
-                  start: s1, end: e2, avatarInitial: "S"),
-            
+                  tag: "Radiology",
+                  tagIcon: "staroflife.fill",            // ← fixed typo
+                  start: s1, end: plus(60, to: s1), avatarInitial: "S"),
+
             .init(patient: "Ms Test",
-                  tag: "Consultation",
-                  tagIcon: "startoflife.fill",
-                  start: s3, end: e3, avatarInitial: "S")
+                  tag: "Radiology",
+                  tagIcon: "staroflife.fill",            // ← fixed typo
+                  start: s3, end: plus(60, to: s3), avatarInitial: "S")
         ]
     }
 }
 
+// MARK: - Theme
 struct CalTheme {
     static let navy = Color(red: 16/255, green: 27/255, blue: 79/255)
     static let grid = Color.secondary.opacity(0.25)
@@ -59,51 +73,139 @@ struct CalTheme {
     static let cardBG = Color(uiColor: .secondarySystemBackground)
 }
 
+// MARK: - View
 struct CalendarView: View {
     enum Scope: String, CaseIterable { case day = "Day", week = "Week" }
+
     @Environment(\.horizontalSizeClass) private var hClass
     @State private var scope: Scope = .day
     @State private var selectedDate = Date()
     @State private var monthAnchor = Date()
     @State private var appts: [Appt] = []
-    
+
     var body: some View {
         HStack(spacing: 0) {
-            SidebarPanel(selectedDate: $selectedDate, appts: appts)
-                .frame(width: 360)                          // tweak width if needed
-                .background(Color(.systemBackground))
-                .overlay(Divider(), alignment: .trailing)
+
+            if scope == .day {
+                SidebarPanel(selectedDate: $selectedDate, appts: appts)
+                    .frame(width: 360)
+                    .background(Color(.systemBackground))
+                    .overlay(Divider(), alignment: .trailing)
+            }
 
             VStack(spacing: 0) {
-                Header(monthAnchor: $monthAnchor, scope: $scope)
-                OverviewHeader()
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                // Segmented header
+                HStack {
+                    Spacer()
+                    EnumPillSegmentedControl(
+                        selection: $scope,
+                        titles: Scope.allCases.map(\.rawValue),
+                        width: 300, height: 32,
+                        font: .callout.weight(.semibold),
+                        trackColor: Color(.systemGray6),
+                        trackStroke: Color(.systemGray4),
+                        textColor: CalTheme.navy
+                    )
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
 
-                if scope.rawValue == "Day" {
-                    CalendarDayView(selectedDate: $selectedDate,
-                                    monthAnchor: $monthAnchor,
-                                    appts: $appts)
-                } else if scope.rawValue == "Week" {
-                    CalendarWeekView(selectedDate: $selectedDate,
-                                     monthAnchor: $monthAnchor,
-                                     appts: $appts)
+                Divider().overlay(Color(.systemGray4))
+
+                Group {
+                    switch scope {
+                    case .day:
+                        CalendarDayView(
+                            selectedDate: $selectedDate,
+                            monthAnchor: $monthAnchor,
+                            appts: $appts
+                        )
+                    case .week:
+                        CalendarWeekView(
+                            selectedDate: $selectedDate,
+                            monthAnchor: $monthAnchor,
+                            appts: $appts
+                        )
+                    }
                 }
             }
             .background(Color(uiColor: .systemBackground))
             .padding(.top, 8)
             .padding(.horizontal, 24)
         }
-        .onChange(of: selectedDate) { _, newDate in
-            appts = Appt.mock(on: newDate)
-        }
-        .onChange(of: scope) { _, _ in
-            appts = Appt.mock(on: selectedDate)
-        }
+        .task { loadAppts() }
+        .onChange(of: selectedDate) { _ in loadAppts() }
+        .onChange(of: scope)        { _ in loadAppts() }
         .navigationBarHidden(true)
     }
 
+    private func loadAppts() {
+        appts = Appt.mock(on: selectedDate)
+    }
 }
+
+private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where E.AllCases: RandomAccessCollection {
+    @Binding var selection: E
+    let titles: [String]
+
+    var width: CGFloat = 200
+    var height: CGFloat = 32
+    var font: Font = .subheadline.weight(.semibold)
+    var trackColor: Color = Color(.systemGray6)
+    var trackStroke: Color = Color(.systemGray4)
+    var textColor: Color = .primary
+    private let inset: CGFloat = 5
+
+    private var index: Int {
+        Array(E.allCases).firstIndex(of: selection) ?? 0
+    }
+
+    var body: some View {
+        let all = Array(E.allCases)
+        let count = CGFloat(max(all.count, 1))
+        let innerWidth = width - inset * 2
+        let segW = innerWidth / count
+        let pillH = height - inset * 2
+
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(trackColor)
+                .overlay(Capsule().stroke(trackStroke, lineWidth: 1))
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.white)
+                    .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 3)
+                    .frame(width: segW, height: pillH)
+                    .offset(x: segW * CGFloat(index))
+            }
+            .padding(inset)
+
+            // labels
+            HStack(spacing: 0) {
+                ForEach(Array(all.enumerated()), id: \.offset) { i, value in
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                            selection = value
+                        }
+                    } label: {
+                        Text(titles[i])
+                            .font(font)
+                            .foregroundColor(selection == value ? .blue : .black)
+                            .frame(width: segW, height: height)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, inset)
+        }
+        .frame(width: width, height: height)
+        .clipShape(Capsule())
+    }
+}
+
+
 
 // MARK: - Helpers
 extension Date {
