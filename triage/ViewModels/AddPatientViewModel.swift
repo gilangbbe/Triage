@@ -34,7 +34,10 @@ final class AddPatientViewModel: ObservableObject {
     @Published var selectedServiceAppointments: [ServiceAppointment] = []
     @Published var selectedAppointment: ServiceAppointment?
     
-    init() {
+    private var patientManager: PatientManager
+    
+    init(patientManager: PatientManager) {
+        self.patientManager = patientManager
         generateDummyAppointments()
     }
     
