@@ -66,7 +66,6 @@ struct AddPatientView: View {
                         .disabled(!viewModel.isValidAll)
                     }
                 }
-
             }
         }
     }
