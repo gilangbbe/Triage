@@ -71,7 +71,7 @@ struct PatientListView: View {
             }
             .toolbar(removing: .sidebarToggle)
             .sheet(isPresented: $showingNotificationSheet) {
-                NotificationSheetView()
+//                NotificationSheetView()
             }
             .sheet(isPresented: $showingAddPatientSheet) {
                 AddPatientView(patientManager: patientManager)
