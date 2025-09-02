@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AddPatientView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var step = 1
+    @State private var step = 3
     @StateObject private var viewModel = AddPatientViewModel()
     
     var body: some View {
@@ -62,7 +62,6 @@ struct AddPatientView: View {
                         .disabled(!viewModel.isValidAll)
                     }
                 }
-
             }
         }
     }

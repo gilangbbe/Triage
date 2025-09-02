@@ -29,13 +29,70 @@ final class AddPatientViewModel: ObservableObject {
     @Published var didParseStep1: Bool = false
     @Published var idCardImage: UIImage? = nil
 
-    // MARK: - Step 2 (appointments)
-    @Published var selectedCategory = "all"
-    @Published var selectedAppointments: [Appointment] = []
-    @Published var appointmentDates: [UUID: Date] = [:]
-    @Published var needsConsultation: [UUID: Bool] = [:]
+    // MARK: - Step 3 (appointments)
+    @Published var availableServiceAppointments: [ServiceAppointment] = []
+    @Published var selectedServiceAppointments: [ServiceAppointment] = []
+    @Published var selectedAppointment: ServiceAppointment?
     
-    var filteredPackets: [AppointmentPacket] { [] } // TODO
+    init() {
+        generateDummyAppointments()
+    }
+    
+    func generateDummyAppointments() {
+        let units: [String: [String]] = [
+            "Medical Check Up": ["Paket MCU Basic", "Paket MCU Standard", "Paket MCU Premium"],
+            "Laboratory": ["Paket Lab Darah", "Paket Lab Urine", "Paket Lab Lengkap"],
+            "Radiology": ["Paket Rontgen", "Paket MRI", "Paket CT Scan"],
+            "Pharmacy": ["Paket Vitamin", "Paket Obat Harian", "Paket Suplemen"]
+        ]
+        
+        let calendar = Calendar.current
+        let today = Date()
+        
+        let workingHours = [
+            (8, 9), (9, 10), (10, 11), (11, 12),
+            (13, 14), (14, 15), (15, 16), (16, 17)
+        ]
+        
+        for (unit, packages) in units {
+            for package in packages {
+                for (startHour, endHour) in workingHours {
+                    if let start = calendar.date(bySettingHour: startHour, minute: 0, second: 0, of: today),
+                       let end = calendar.date(bySettingHour: endHour, minute: 0, second: 0, of: today) {
+                        
+                        let appointment = ServiceAppointment(
+                            name: package,
+                            unit: unit,
+                            startTime: start,
+                            endTime: end,
+                            maxSlots: 3
+                        )
+                        availableServiceAppointments.append(appointment)
+                    }
+                }
+            }
+        }
+    }
+    
+    func confirmSelectedAppointment() {
+        if let appt = selectedAppointment {
+            selectedServiceAppointments.append(appt)
+        }
+    }
+    
+    func bookAppointment(_ appointment: ServiceAppointment) {
+        guard let index = availableServiceAppointments.firstIndex(where: { $0.id == appointment.id }) else { return }
+        
+        if availableServiceAppointments[index].availableSlots > 0 {
+            availableServiceAppointments[index].bookedSlots += 1
+            selectedServiceAppointments.append(availableServiceAppointments[index])
+        }
+    }
+    
+//    func addDoctorAppointment(department: String, name: String, date: Date, start: Date, booked: Int, max: Int) {
+//        let appt = DoctorAppointment(department: department, name: name, date: date, startTime: start, bookedSlot: booked, maxSlot: max)
+//        doctorAppointments.append(appt)
+//    }
     
     // MARK: - Validations
     func isStepValid(_ step: Int) -> Bool {
@@ -44,13 +101,16 @@ final class AddPatientViewModel: ObservableObject {
             return !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || uploadCompleted
         case 2:
             return !name.isEmpty
+        case 3:
+            return !selectedServiceAppointments.isEmpty
+//            return !selectedServiceAppointments.isEmpty || !doctorAppointments.isEmpty
         default:
             return true
         }
     }
     
     var isValidAll: Bool {
-        isStepValid(1) && isStepValid(2)
+        isStepValid(1) && isStepValid(2) && isStepValid(3)
     }
     
     var isFormValid: Bool {
@@ -90,8 +150,6 @@ final class AddPatientViewModel: ObservableObject {
         return ""
     }
 
-
-    
     // MARK: - Parse pasted / OCR text into fields
     func parseFromRawText() {
         let s = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -152,8 +210,6 @@ final class AddPatientViewModel: ObservableObject {
         
         let dobLog = dob != nil ? dob!.formattedLong() : "nil"
 //        print("[AddPatientViewModel] parseFromRawText -> nik:\(nik ?? "") name:\(name) dob:\(dobLog) phone:\(phoneNumber) address:\(address) gender:\(gender ?? "")")
-        
-        print(inputMode)
     }
     
     // MARK: - OCR from image
@@ -205,20 +261,12 @@ final class AddPatientViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Appointments
-    func addAppointment(packet: AppointmentPacket) {
-        let date = appointmentDates[packet.id] ?? Date()
-        let needs = needsConsultation[packet.id] ?? false
-        let appt = Appointment(name: packet.name, date: date, time: date, consultation: needs)
-        if !selectedAppointments.contains(where: { $0.name == appt.name && Calendar.current.isDate($0.date, inSameDayAs: appt.date) }) {
-            selectedAppointments.append(appt)
-        }
-    }
-    
     // MARK: - Save / Clear
     func savePatient() {
         let dobText = dob?.formattedLong() ?? "-"
         print("Saving patient: \(name) / \(nik ?? "-") / \(dobText) / \(phoneNumber) / \(address) / \(gender ?? "-")")
+        print("Service appointments: \(selectedServiceAppointments)")
+//                print("Doctor appointments: \(doctorAppointments)")
     }
     
     func clearInput() {
@@ -231,22 +279,36 @@ final class AddPatientViewModel: ObservableObject {
         gender = nil
         uploading = false
         uploadCompleted = false
+        selectedServiceAppointments.removeAll()
+//        doctorAppointments.removeAll()
     }
 }
 
 // MARK: - Models
-struct Appointment: Identifiable {
-    let id = UUID()
+
+
+struct ServiceAppointment: Identifiable {
+    let id: UUID = UUID()
     let name: String
-    let date: Date
-    let time: Date
-    let consultation: Bool
+    let unit: String
+    let startTime: Date
+    let endTime: Date
+    var maxSlots: Int
+    var bookedSlots: Int = 0
+    
+    var availableSlots: Int {
+        maxSlots - bookedSlots
+    }
 }
 
-struct AppointmentPacket: Identifiable {
+struct DoctorAppointment: Identifiable {
     let id = UUID()
-    let name: String
     let department: String
+    let name: String
+    let date: Date
+    let startTime: Date
+    let bookedSlot: Int
+    let maxSlot: Int
 }
 
 // MARK: - Date Extensions
