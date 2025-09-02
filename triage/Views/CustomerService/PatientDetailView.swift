@@ -34,13 +34,7 @@ struct PatientDetailView: View {
                                 Button(action: {
                                     
                                 }) {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .foregroundColor(.white)
-                                        .background(.blue)
-                                        .clipShape(Capsule())
+                                    Text("Add")
                                 }
                             }
                             VStack {
@@ -69,11 +63,6 @@ struct PatientDetailView: View {
                             }
                             
                             VStack {
-                                //                                ScrollView {
-                                //                                    ForEach(0..<10, id: \.self) { i in
-                                //                                        AppointmentListRow()
-                                //                                    }
-                                //                                }
                                 if patient.appointments.isEmpty {
                                     Text("No Appointment History")
                                         .font(.headline)
@@ -131,7 +120,7 @@ struct PatientDetailView: View {
                 Spacer()
                 Text(formattedRegisteredDate)
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.gray)
             }
             .padding()
             .background(Color.secondary.opacity(0.1))
@@ -147,13 +136,7 @@ struct PatientDetailView: View {
                         .foregroundColor(.gray)
                     Spacer()
                     Button(action: { isEditing.toggle() }) {
-                        Image(systemName: isEditing ? "checkmark" : "pencil")
-                            .font(.system(size: 16, weight: .semibold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .foregroundColor(.white)
-                            .background(.blue)
-                            .clipShape(Capsule())
+                        Text(isEditing ? "Done" : "Edit")
                     }
                 }
                 .padding(.leading)
@@ -163,7 +146,6 @@ struct PatientDetailView: View {
                 ))
                     .font(.headline)
                     .padding()
-                    .foregroundColor(.black)
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.bottom, 16)
@@ -297,7 +279,6 @@ struct FormField: View {
             Text(displayValue)
                 .font(.headline)
                 .padding()
-                .foregroundColor(.black)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.secondary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -306,7 +287,6 @@ struct FormField: View {
             TextField(placeholder, text: $text)
                 .font(.headline)
                 .padding()
-                .foregroundColor(.black)
                 .background(Color.secondary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(.bottom, 16)

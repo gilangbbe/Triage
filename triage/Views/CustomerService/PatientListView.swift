@@ -30,11 +30,19 @@ struct PatientListView: View {
 
                 ScrollViewReader { proxy in
                     ZStack(alignment: .trailing) {
-                        List(patients, selection: $selectedPatientID) { patient in
-                            PatientRowView(patient: patient)
-                                .id(patient.id)
-                                .listRowSeparator(.visible)
-                                .listRowInsets(EdgeInsets())
+                        List(selection: $selectedPatientID) {
+                            ForEach(patients) { patient in
+                                PatientRowView(patient: patient)
+                                    .id(patient.id)
+                                    .listRowSeparator(.visible)
+                                    .listRowInsets(EdgeInsets())
+                            }
+                            .onDelete { indexSet in
+                                for index in indexSet {
+                                    let patient = patients[index]
+                                    viewModel.deletePatient(patient)
+                                }
+                            }
                         }
                         .scrollContentBackground(.hidden)
                         .padding(.trailing, 16)

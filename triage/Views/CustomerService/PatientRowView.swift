@@ -44,10 +44,8 @@ struct PatientRowView: View {
     }
     
     private var initials: String {
-        let components = patient.fullName.split(separator: " ")
-        let first = components.first?.first.map(String.init) ?? ""
-        let last = components.dropFirst().last?.first.map(String.init) ?? ""
-        return (first + last).uppercased()
+        let first = patient.fullName.first?.uppercased() ?? ""
+        return first
     }
 }
 
