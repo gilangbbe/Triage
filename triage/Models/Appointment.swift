@@ -14,7 +14,7 @@ final class Appointment {
     var name: String
     
     // Links
-    var patient: Patient
+    var patient: Patient?
     
     var timeSlot: TimeSlot
     var package: Package

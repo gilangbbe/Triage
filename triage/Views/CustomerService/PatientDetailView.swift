@@ -13,6 +13,19 @@ struct PatientDetailView: View {
     let historyViewModel: HistoryViewModel
     let historyManager: HistoryManager
     
+    // Computed properties to separate upcoming and completed appointments
+    private var upcomingAppointments: [Appointment] {
+        patient.appointments.filter { appointment in
+            appointment.timeSlot.date >= Calendar.current.startOfDay(for: Date())
+        }.sorted { $0.timeSlot.date < $1.timeSlot.date }
+    }
+    
+    private var completedAppointments: [Appointment] {
+        patient.appointments.filter { appointment in
+            appointment.timeSlot.date < Calendar.current.startOfDay(for: Date())
+        }.sorted { $0.timeSlot.date > $1.timeSlot.date }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -41,20 +54,18 @@ struct PatientDetailView: View {
                                 }
                             }
                             VStack {
-                                if patient.appointments.isEmpty {
-                                    ScrollView {
-                                        ForEach(0..<4, id: \.self) { i in
-                                            AppointmentListRow()
-                                        }
-                                    }
-//                                    Text("No Upcoming Appointment")
-//                                        .font(.headline)
-//                                        .foregroundColor(.secondary)
+                                if upcomingAppointments.isEmpty {
+                                    Text("No Upcoming Appointment")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
                                 } else {
                                     ScrollView {
-                                        ForEach(0..<4, id: \.self) { i in
-                                            AppointmentListRow()
+                                        LazyVStack(spacing: 8) {
+                                            ForEach(upcomingAppointments, id: \.id) { appointment in
+                                                AppointmentListRow(appointment: appointment)
+                                            }
                                         }
+                                        .padding(.horizontal, 4)
                                     }
                                 }
                             }
@@ -71,14 +82,14 @@ struct PatientDetailView: View {
                             }
                             
                             VStack {
-                                if patient.appointments.isEmpty {
+                                if completedAppointments.isEmpty {
                                     Text("No Appointment History")
                                         .font(.headline)
                                         .foregroundColor(.secondary)
                                 } else {
                                     ScrollView {
-                                        ForEach(0..<10, id: \.self) { i in
-                                            AppointmentListRow()
+                                        ForEach(completedAppointments, id: \.id) { appointment in
+                                            AppointmentListRow(appointment: appointment)
                                         }
                                     }
                                 }
@@ -116,7 +127,7 @@ struct PatientDetailView: View {
             return "Not provided"
         }
     }
-
+    
     private var profileSection: some View {
         VStack(alignment: .leading) {
             // Registered Date
@@ -157,13 +168,13 @@ struct PatientDetailView: View {
                     get: { patient.nationalID ?? "" },
                     set: { patient.nationalID = $0.isEmpty ? nil : $0 }
                 ))
-                    .font(.headline)
-                    .padding()
-                    .foregroundColor(.accentColor)
-                    .background(Color.secondary.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .padding(.bottom, 16)
-                    .disabled(!isEditing)
+                .font(.headline)
+                .padding()
+                .foregroundColor(.accentColor)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.bottom, 16)
+                .disabled(!isEditing)
             }
             
             // Date of Birth
@@ -208,7 +219,7 @@ struct PatientDetailView: View {
                     set: { patient.address = $0.isEmpty ? nil : $0 }
                 ),
                 isEditing: isEditing
-
+                
             )
             FormField(
                 icon: "tshirt.fill",
@@ -231,31 +242,28 @@ struct PatientDetailView: View {
 }
 
 struct AppointmentListRow: View {
-    private var serviceName: String = "Medical Checkup"
-    private var date: String = "22 Agustus 2025"
-    private var time: String = "10:00 AM"
-    private var package: String = "Paket Merdeka Lite"
+    var appointment: Appointment
     
     var body: some View {
         VStack {
             HStack {
-                Text(date)
+                Text(appointment.timeSlot.date.formatted(date: .long, time: .omitted))
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(.accentColor)
                 Spacer()
-                Text(serviceName)
+                Text(appointment.package.department.name)
                     .font(.title3)
                     .foregroundColor(.accentColor)
             }
             .padding(.bottom, 4)
             HStack {
-                Text(time)
+                Text(appointment.timeSlot.startTime.formatted(date: .omitted, time: .shortened))
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(.accentColor)
                 Spacer()
-                Text(package)
+                Text(appointment.package.name)
                     .font(.subheadline)
                     .padding(8)
                     .background(.red.opacity(0.3))
@@ -263,7 +271,7 @@ struct AppointmentListRow: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground)) 
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
@@ -326,7 +334,7 @@ struct FormField: View {
 
 //#Preview {
 //    let samplePatient = Patient(fullName: "John Doe")
-//    
+//
 //    return PatientDetailView(patient: samplePatient)
 //}
 

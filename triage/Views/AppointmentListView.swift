@@ -81,7 +81,7 @@ struct AppointmentRowView: View {
                 }
             }
             
-            Text("Patient: \(appointment.patient.fullName)")
+            Text("Patient: \(appointment.patient?.fullName ?? "No Name")")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

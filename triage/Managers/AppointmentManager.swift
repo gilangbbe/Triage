@@ -91,7 +91,7 @@ class AppointmentManager {
         
         return appointments.filter { appointment in
             appointment.name.localizedCaseInsensitiveContains(query) ||
-            appointment.patient.fullName.localizedCaseInsensitiveContains(query)
+            ((appointment.patient?.fullName.localizedCaseInsensitiveContains(query)) != nil)
         }
     }
     
@@ -113,7 +113,12 @@ class AppointmentManager {
         return appointments.filter { $0.timeSlot.startTime > now }
     }
     
+    func completedAppointments() -> [Appointment] {
+        let now = Date()
+        return appointments.filter { $0.timeSlot.endTime < now }
+    }
+    
     func appointmentsForPatient(_ patient: Patient) -> [Appointment] {
-        return appointments.filter { $0.patient.id == patient.id }
+        return appointments.filter { $0.patient?.id == patient.id }
     }
 }
