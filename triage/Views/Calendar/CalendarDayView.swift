@@ -45,13 +45,11 @@ private struct TimelineBoard: View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(spacing: 0) {
                 ForEach(hours, id: \.self) { h in
-                    // hour separator at top of the row
                     Rectangle()
                         .fill(Color.secondary.opacity(0.2))
                         .frame(height: 1)
 
                     HStack(alignment: .top, spacing: 0) {
-                        // FIXED gutter (no Spacer!)
                         Text(String(format: "%02d.00", h))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -60,14 +58,13 @@ private struct TimelineBoard: View {
                         // Content column
                         if let slotAppts = grouped[h], !slotAppts.isEmpty {
                             SlotBucketsRow(appts: slotAppts)
-                                .frame(maxWidth: .infinity, alignment: .leading)   // <- stick left
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, rowSideInset)
                                 .padding(.top, rowTopPadding)
                                 .padding(.bottom, rowTopPadding)
                                 .padding(.trailing, rightPad)
                         } else {
-                            // Empty hour: consistent height, still consume width
                             Color.clear
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.trailing, rightPad)

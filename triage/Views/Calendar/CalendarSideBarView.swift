@@ -14,7 +14,7 @@ struct SidebarPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // page title (optional)
+                // page title
                 Text("Schedule")
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
@@ -27,10 +27,8 @@ struct SidebarPanel: View {
                         Text("Today’s Schedule")
                             .font(.headline)
                         Spacer()
-                        // small count badge
-                        let todays = todaysAppts
-                        if !todays.isEmpty {
-                            Text("\(todays.count)")
+                        if !todaysAppts.isEmpty {
+                            Text("\(todaysAppts.count)")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
@@ -48,26 +46,10 @@ struct SidebarPanel: View {
                 }
                 .padding(.horizontal, 20)
 
-                // Section 1
-                SectionHeader(title: "NEED TO REMIND")
-                    .padding(.top, 4)
-                    .padding(.horizontal, 20)
-
+                // Flat list of reminders, sorted by priority
                 VStack(spacing: 12) {
-                    ForEach(needToRemind) { a in
-                        ReminderCard(appt: a, style: .needToRemind)
-                    }
-                }
-                .padding(.horizontal, 16)
-
-                // Section 2
-                SectionHeader(title: "REMIND AGAIN")
-                    .padding(.top, 8)
-                    .padding(.horizontal, 20)
-
-                VStack(spacing: 12) {
-                    ForEach(remindAgain) { a in
-                        ReminderCard(appt: a, style: .remindAgain)
+                    ForEach(sortedReminders) { a in
+                        ReminderCard(appt: a, style: .needToRemind) // or dynamic style if you have a flag
                     }
                 }
                 .padding(.horizontal, 16)
@@ -77,35 +59,19 @@ struct SidebarPanel: View {
         }
     }
 
-    // MARK: Derived groups (replace with real flags later)
+    // MARK: Data helpers
     private var todaysAppts: [Appt] {
         appts.filter { Calendar.current.isDate($0.start, inSameDayAs: selectedDate) }
-              .sorted { $0.start < $1.start }
     }
 
-    /// Placeholder split: morning vs afternoon
-    private var needToRemind: [Appt] {
-        todaysAppts.filter { Calendar.current.component(.hour, from: $0.start) <= 12 }
-    }
-    private var remindAgain: [Appt] {
-        todaysAppts.filter { Calendar.current.component(.hour, from: $0.start) > 12 }
+    private var sortedReminders: [Appt] {
+        // Replace this with real priority logic when available
+        todaysAppts.sorted { $0.start < $1.start }
     }
 
-    // MARK: helpers
     private func dateString(_ d: Date) -> String {
         let df = DateFormatter()
         df.dateFormat = "MMMM d, yyyy"
         return df.string(from: d)
     }
 }
-
-private struct SectionHeader: View {
-    let title: String
-    var body: some View {
-        Text(title)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 4)
-    }
-}
-

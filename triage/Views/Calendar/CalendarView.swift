@@ -26,43 +26,72 @@ struct Appt: Identifiable, Hashable {
 extension Appt {
     static func mock(on day: Date) -> [Appt] {
         let cal = Calendar.current
-        let target = cal.date(from: DateComponents(year: 2025, month: 9, day: 1))!
 
-        guard cal.isDate(day, inSameDayAs: target) else { return [] }
-
-        func at(_ hour: Int, _ minute: Int = 0) -> Date {
-            cal.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
+        func at(_ hour: Int, _ minute: Int = 0, on base: Date = day) -> Date {
+            cal.date(bySettingHour: hour, minute: minute, second: 0, of: base)!
         }
         func plus(_ minutes: Int, to d: Date) -> Date {
             cal.date(byAdding: .minute, value: minutes, to: d)!
         }
 
-        let s1 = at(7)
-        let s3 = at(8)
+        let sept1 = cal.date(from: DateComponents(year: 2025, month: 9, day: 1))!
+        let sept5 = cal.date(from: DateComponents(year: 2025, month: 9, day: 5))!
 
-        return [
-            .init(patient: "Mr Longest Name Possible",
-                  tag: "Medical",
-                  tagIcon: "staroflife.fill",
-                  start: s1, end: plus(60, to: s1), avatarInitial: "K"),
-            
-            .init(patient: "Mr Longest Name Possible",
-                  tag: "Labor",
-                  tagIcon: "staroflife.fill",
-                  start: s1, end: plus(60, to: s1), avatarInitial: "K"),
+        if cal.isDate(day, inSameDayAs: sept1) {
+            let s7 = at(7)
+            let s13 = at(13)
 
-            .init(patient: "Ms Short Name",
-                  tag: "Radiology",
-                  tagIcon: "staroflife.fill",            // ← fixed typo
-                  start: s1, end: plus(60, to: s1), avatarInitial: "S"),
+            return [
+                .init(patient: "Mr Longest Name Possible",
+                      tag: "Medical",
+                      tagIcon: "staroflife.fill",
+                      start: s7, end: plus(60, to: s7), avatarInitial: "K"),
 
-            .init(patient: "Ms Test",
-                  tag: "Radiology",
-                  tagIcon: "staroflife.fill",            // ← fixed typo
-                  start: s3, end: plus(60, to: s3), avatarInitial: "S")
-        ]
+                .init(patient: "Mr Longest Name Possible",
+                      tag: "Laboratory",
+                      tagIcon: "staroflife.fill",
+                      start: s7, end: plus(60, to: s7), avatarInitial: "K"),
+
+                .init(patient: "Ms Short Name",
+                      tag: "Radiology",
+                      tagIcon: "staroflife.fill",
+                      start: s7, end: plus(60, to: s7), avatarInitial: "S"),
+
+                .init(patient: "Ms Test",
+                      tag: "Radiology",
+                      tagIcon: "staroflife.fill",
+                      start: s13, end: plus(60, to: s13), avatarInitial: "S"),
+
+                .init(patient: "Ms Short Name",
+                      tag: "Radiology",
+                      tagIcon: "staroflife.fill",
+                      start: s7, end: plus(60, to: s7), avatarInitial: "S"),
+
+                .init(patient: "Ms Test",
+                      tag: "Radiology",
+                      tagIcon: "staroflife.fill",
+                      start: s13, end: plus(60, to: s13), avatarInitial: "S")
+            ]
+        } else if cal.isDate(day, inSameDayAs: sept5) {
+            let s10 = at(10)
+            let s11 = at(11)
+
+            return [
+                .init(patient: "John Doe",
+                      tag: "Medical",
+                      tagIcon: "staroflife.fill",
+                      start: s10, end: plus(60, to: s10), avatarInitial: "JD"),
+                .init(patient: "Jane Roe",
+                      tag: "Laboratory",
+                      tagIcon: "staroflife.fill",
+                      start: s11, end: plus(60, to: s11), avatarInitial: "JR")
+            ]
+        } else {
+            return []
+        }
     }
 }
+
 
 // MARK: - Theme
 struct CalTheme {
@@ -94,8 +123,12 @@ struct CalendarView: View {
             }
 
             VStack(spacing: 0) {
-                // Segmented header
                 HStack {
+                    
+                    if scope.rawValue == "Week" {
+                        MonthYearSelector(monthAnchor: $monthAnchor)
+                    }
+                    
                     Spacer()
                     EnumPillSegmentedControl(
                         selection: $scope,
@@ -135,12 +168,37 @@ struct CalendarView: View {
         }
         .task { loadAppts() }
         .onChange(of: selectedDate) { _ in loadAppts() }
+        .onChange(of: monthAnchor)  { _ in loadAppts() }
         .onChange(of: scope)        { _ in loadAppts() }
         .navigationBarHidden(true)
     }
 
+    // CalendarView.swift
+
     private func loadAppts() {
-        appts = Appt.mock(on: selectedDate)
+        let cal = Calendar.current
+        switch scope {
+        case .day:
+            // load only the selected day
+            appts = Appt.mock(on: selectedDate)
+
+        case .week:
+            // load ALL 7 days that the week strip shows
+            let days = week(for: monthAnchor)              // <-- helper below
+            appts = days.flatMap { Appt.mock(on: $0) }     // <-- replace with your real fetch later
+        }
+    }
+
+    // same logic your strip uses
+    private func week(for anchor: Date) -> [Date] {
+        let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: anchor)
+        let mondayStart = cal.date(
+            byAdding: .day,
+            value: -(weekday == 1 ? 6 : weekday - 2),
+            to: cal.startOfDay(for: anchor)
+        ) ?? anchor
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: mondayStart) }
     }
 }
 

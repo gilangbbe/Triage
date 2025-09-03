@@ -17,15 +17,15 @@ enum SlotKind: CaseIterable, Hashable { case medical, radiology, laboratory
         case .laboratory:  return "Laboratorium"
         }
     }
-    // card tint
+
     var tint: Color {
         switch self {
-        case .medical:     return Color(red: 0.93, green: 0.96, blue: 1.00) // light blue
-        case .radiology:   return Color(red: 0.92, green: 0.98, blue: 0.93) // light green
-        case .laboratory:  return Color(red: 1.00, green: 0.94, blue: 0.95) // light pink
+        case .medical:     return Color(red: 0.93, green: 0.96, blue: 1.00)
+        case .radiology:   return Color(red: 0.92, green: 0.98, blue: 0.93)
+        case .laboratory:  return Color(red: 1.00, green: 0.94, blue: 0.95)
         }
     }
-    // header pill tint
+
     var pillFill: Color {
         switch self {
         case .medical:     return Color(red: 0.83, green: 0.88, blue: 0.98)
@@ -48,8 +48,6 @@ extension Appt {
     }
 }
 
-
-// A single name row
 private struct SlotPatientRow: View {
     let text: String
     let textColor: Color
