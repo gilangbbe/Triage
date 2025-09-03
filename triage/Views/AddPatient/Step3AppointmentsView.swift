@@ -12,6 +12,8 @@ struct Step3AppointmentsView: View {
     
     @State private var showServiceForm = false
     @State private var showDoctorForm = false
+    @State private var editingServiceAppointment: ServiceAppointment?
+    @State private var editingDoctorAppointment: DoctorAppointment?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -40,6 +42,10 @@ struct Step3AppointmentsView: View {
                         ForEach(viewModel.selectedServiceAppointments) { appt in
                             AppointmentCard_Service(appt: appt)
                                 .padding(.bottom, 6)
+                                .onTapGesture {
+                                    editingServiceAppointment = appt
+                                    showServiceForm = true
+                                }
                         }
                     }
                 }
@@ -63,6 +69,10 @@ struct Step3AppointmentsView: View {
                         ForEach(viewModel.selectedDoctorAppointments) { appt in
                             AppointmentCard_Doctor(appt: appt)
                                 .padding(.bottom, 6)
+                                .onTapGesture {
+                                    editingDoctorAppointment = appt
+                                    showDoctorForm = true
+                                }
                         }
                     }
                 }
@@ -75,16 +85,28 @@ struct Step3AppointmentsView: View {
         .padding()
         .sheet(isPresented: $showServiceForm) {
             NavigationStack {
-                ServiceAppointmentForm(viewModel: viewModel)
+                ServiceAppointmentForm(
+                    viewModel: viewModel,
+                    existingAppointment: editingServiceAppointment
+                ) {
+                    editingServiceAppointment = nil
+                }
             }
             .presentationDetents([.medium])
         }
+
         .sheet(isPresented: $showDoctorForm) {
             NavigationStack {
-                DoctorAppointmentForm(viewModel: viewModel)
+                DoctorAppointmentForm(
+                    viewModel: viewModel,
+                    existingAppointment: editingDoctorAppointment
+                ) {
+                    editingDoctorAppointment = nil
+                }
             }
             .presentationDetents([.medium])
         }
+
     }
 }
 
@@ -118,7 +140,9 @@ struct ServiceAppointmentForm: View {
     @ObservedObject var viewModel: AddPatientViewModel
     @Environment(\.dismiss) private var dismiss
     
-    @State private var searchText = ""
+    var existingAppointment: ServiceAppointment? = nil
+    var onDismiss: () -> Void = {}
+    
     @State private var selectedUnit = ""
     @State private var selectedPackage = ""
     @State private var selectedDate = Date()
@@ -238,32 +262,47 @@ struct ServiceAppointmentForm: View {
             Spacer()
         }
         .padding()
-        .navigationTitle("New Service Appointment")
+        .navigationTitle(existingAppointment == nil ? "New Service Appointment" : "Edit Service Appointment")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if let appt = existingAppointment {
+                selectedUnit = appt.unit
+                selectedPackage = appt.name
+                selectedDate = appt.startTime
+                viewModel.selectedServiceAppointment = appt
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
-                    selectedUnit = ""
-                    selectedPackage = ""
-                    selectedDate = Date()
-                    viewModel.selectedServiceAppointment = nil
                     dismiss()
+                    onDismiss()
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Add") {
-                    if let selected = viewModel.selectedServiceAppointment {
+                Button(existingAppointment == nil ? "Add" : "Edit") {
+                    if let existing = existingAppointment {
+                        // build updated appointment from existing + new values
+                        let updated = ServiceAppointment(
+                            id: existing.id,  // preserve ID
+                            name: selectedPackage.isEmpty ? existing.name : selectedPackage,
+                            unit: selectedUnit.isEmpty ? existing.unit : selectedUnit,
+                            startTime: viewModel.selectedServiceAppointment?.startTime ?? existing.startTime,
+                            endTime: viewModel.selectedServiceAppointment?.endTime ?? existing.endTime,
+                            maxSlots: existing.maxSlots,
+                            bookedSlots: existing.bookedSlots
+                        )
+                        viewModel.updateServiceAppointment(updated)
+                    } else if let selected = viewModel.selectedServiceAppointment {
+                        // Add new booking
                         viewModel.bookServiceAppointment(selected)
                     }
-                    // Reset for next time
-                    viewModel.selectedServiceAppointment = nil
-                    selectedUnit = ""
-                    selectedPackage = ""
-                    selectedDate = Date()
                     dismiss()
+                    onDismiss()
                 }
-                .disabled(viewModel.selectedServiceAppointment == nil)
+                .disabled(existingAppointment == nil && viewModel.selectedServiceAppointment == nil)
             }
+
         }
     }
     
@@ -272,20 +311,6 @@ struct ServiceAppointmentForm: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         return formatter.string(from: date)
-    }
- 
-    private var uniqueUnits: [String] {
-        Array(Set(viewModel.availableServiceAppointments.map { $0.unit })).sorted()
-    }
-    
-    private var filteredPackages: [String] {
-        let names = viewModel.availableServiceAppointments
-            .filter { appt in
-                (selectedUnit.isEmpty || appt.unit == selectedUnit) &&
-                (searchText.isEmpty || appt.name.localizedCaseInsensitiveContains(searchText))
-            }
-            .map { $0.name }
-        return Array(Set(names)).sorted()
     }
     
     private var filteredAppointments: [ServiceAppointment] {
@@ -306,6 +331,9 @@ struct DoctorAppointmentForm: View {
     @ObservedObject var viewModel: AddPatientViewModel
     @Environment(\.dismiss) private var dismiss
 
+    var existingAppointment: DoctorAppointment? = nil
+    var onDismiss: () -> Void = {}
+    
     @State private var selectedDept: String = ""
     @State private var selectedDoctor: String = ""
     @State private var selectedDate: Date = Date()
@@ -352,18 +380,23 @@ struct DoctorAppointmentForm: View {
                 }
             }
 
-            // MARK: - Date
             VStack(alignment: .leading, spacing: 6) {
                 Text("Date".uppercased())
                     .font(.caption2)
                     .foregroundColor(Color(hex: "#0F0E46"))
-
-                DatePicker("", selection: $selectedDate, displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                DatePicker(
+                    dateString(selectedDate),
+                    selection: $selectedDate,
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.clear))
+                .cornerRadius(6)
             }
-
+            
             // MARK: - Time Slots
             VStack(alignment: .leading, spacing: 6) {
                 Text("TIME & AVAILABLE SLOT".uppercased())
@@ -409,25 +442,56 @@ struct DoctorAppointmentForm: View {
             Spacer()
         }
         .padding()
-        .navigationTitle("New Doctor Appointment")
+        .navigationTitle(existingAppointment == nil ? "New Service Appointment" : "Edit Service Appointment")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if let appt = existingAppointment {
+                selectedDept = appt.department
+                selectedDoctor = appt.name
+                selectedDate = appt.date
+                viewModel.selectedDoctorAppointment = appt
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button("Cancel") {
+                    dismiss()
+                    onDismiss()
+                }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Add") {
-                    if let appt = viewModel.selectedDoctorAppointment {
-                        viewModel.bookDoctorAppointment(appt)
-                        viewModel.selectedDoctorAppointment = nil
+                Button(existingAppointment == nil ? "Add" : "Edit") {
+                    if let existing = existingAppointment {
+                        // build updated appointment from existing + new values
+                        let updated = DoctorAppointment(
+                            id: existing.id,  // preserve ID
+                            department: selectedDept.isEmpty ? existing.department : selectedDept,
+                            name: selectedDoctor.isEmpty ? existing.name : selectedDoctor,
+                            date: selectedDate,
+                            startTime: viewModel.selectedDoctorAppointment?.startTime ?? existing.startTime,
+                            maxSlots: existing.maxSlots,
+                            bookedSlots: existing.bookedSlots
+                        )
+                        viewModel.updateDoctorAppointment(updated)
+                    } else if let selected = viewModel.selectedDoctorAppointment {
+                        // Add new booking
+                        viewModel.bookDoctorAppointment(selected)
                     }
                     dismiss()
+                    onDismiss()
                 }
-                .disabled(viewModel.selectedDoctorAppointment == nil)
+                .disabled(existingAppointment == nil && viewModel.selectedDoctorAppointment == nil)
             }
+
         }
     }
 
+    private func dateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        return formatter.string(from: date)
+    }
+    
     // MARK: - Filtered Appointments for TimePicker
     private var filteredAppointments: [DoctorAppointment] {
         viewModel.doctorAppointments.filter {
