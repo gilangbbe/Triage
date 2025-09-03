@@ -74,11 +74,9 @@ struct HistoryRow: View {
             HStack {
                 Text("")
                 Image(systemName: "square.and.pencil.circle.fill")
-                    .font(.system(size:40))
-                    .foregroundColor(.blue)
+                    .font(.system(size:30))
+                    .foregroundColor(.brown)
                 messageText
-            }
-            HStack {
                 Spacer()
                 Text(formattedTime)
                     .font(.caption)

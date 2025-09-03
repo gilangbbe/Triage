@@ -67,7 +67,7 @@ struct PatientListView: View {
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button { showingHistorySheet.toggle() } label: { Image(systemName: "bell") }
+                    Button { showingHistorySheet.toggle() } label: { Image(systemName: "text.bubble.badge.clock.fill") }
                         .accessibilityLabel(Text("History Log"))
                     Button { showingAddPatientSheet.toggle() } label: { Image(systemName: "plus") }
                         .accessibilityLabel(Text("Add Patient"))

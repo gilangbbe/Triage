@@ -20,6 +20,7 @@ struct PatientDetailView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .padding(.bottom, 8)
+                    .foregroundColor(.accentColor)
             }
             HStack(alignment: .top, spacing: 16) {
                 // Patient Appointment
@@ -41,9 +42,14 @@ struct PatientDetailView: View {
                             }
                             VStack {
                                 if patient.appointments.isEmpty {
-                                    Text("No Upcoming Appointment")
-                                        .font(.headline)
-                                        .foregroundColor(.secondary)
+                                    ScrollView {
+                                        ForEach(0..<4, id: \.self) { i in
+                                            AppointmentListRow()
+                                        }
+                                    }
+//                                    Text("No Upcoming Appointment")
+//                                        .font(.headline)
+//                                        .foregroundColor(.secondary)
                                 } else {
                                     ScrollView {
                                         ForEach(0..<4, id: \.self) { i in
@@ -121,7 +127,6 @@ struct PatientDetailView: View {
                     .foregroundColor(.gray)
                 Spacer()
                 Text(formattedRegisteredDate)
-                    .font(.headline)
                     .foregroundColor(.gray)
             }
             .padding()
@@ -154,6 +159,7 @@ struct PatientDetailView: View {
                 ))
                     .font(.headline)
                     .padding()
+                    .foregroundColor(.accentColor)
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.bottom, 16)
@@ -176,6 +182,8 @@ struct PatientDetailView: View {
                     displayedComponents: .date
                 )
                 .labelsHidden()
+                .accentColor(.accentColor)
+                .tint(.accentColor)
             }
             .padding(.leading)
             .padding(.bottom, 16)
@@ -234,15 +242,18 @@ struct AppointmentListRow: View {
                 Text(date)
                     .font(.title3)
                     .fontWeight(.semibold)
+                    .foregroundColor(.accentColor)
                 Spacer()
                 Text(serviceName)
                     .font(.title3)
+                    .foregroundColor(.accentColor)
             }
             .padding(.bottom, 4)
             HStack {
                 Text(time)
                     .font(.title3)
                     .fontWeight(.semibold)
+                    .foregroundColor(.accentColor)
                 Spacer()
                 Text(package)
                     .font(.subheadline)
@@ -252,7 +263,7 @@ struct AppointmentListRow: View {
             }
         }
         .padding()
-        .background(Color.white) // row background
+        .background(Color(.systemBackground)) 
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
@@ -298,6 +309,7 @@ struct FormField: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.secondary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+                .foregroundColor(.accentColor)
                 .padding(.bottom, 16)
         } else {
             TextField(placeholder, text: $text)
@@ -306,6 +318,7 @@ struct FormField: View {
                 .background(Color.secondary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(.bottom, 16)
+                .foregroundColor(.accentColor)
                 .disabled(!isEditing)
         }
     }
