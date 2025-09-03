@@ -10,6 +10,8 @@ import SwiftUI
 struct PatientDetailView: View {
     @Bindable var patient: Patient
     @State private var isEditing: Bool = false
+    let historyViewModel: HistoryViewModel
+    let historyManager: HistoryManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -32,7 +34,7 @@ struct PatientDetailView: View {
                                     .foregroundColor(.brown)
                                 Spacer()
                                 Button(action: {
-                                    
+                                    //
                                 }) {
                                     Text("Add")
                                 }
@@ -135,7 +137,13 @@ struct PatientDetailView: View {
                     Text("NATIONAL IDENTITY NUMBER")
                         .foregroundColor(.gray)
                     Spacer()
-                    Button(action: { isEditing.toggle() }) {
+                    Button(action: {
+                        if isEditing {
+                            recordPatientUpdateHistory()
+                        }
+                        
+                        isEditing.toggle()
+                    }) {
                         Text(isEditing ? "Done" : "Edit")
                     }
                 }
@@ -203,6 +211,14 @@ struct PatientDetailView: View {
             )
         }
         .frame(maxWidth: .infinity)
+    }
+    
+    private func recordPatientUpdateHistory() {
+        let log = History(
+            type: .patientDataUpdate(customerCareName: "Okta", patientName: patient.fullName)
+        )
+        print(log)
+        historyViewModel.addHistory(log)
     }
 }
 
@@ -295,9 +311,9 @@ struct FormField: View {
     }
 }
 
-#Preview {
-    let samplePatient = Patient(fullName: "John Doe")
-    
-    return PatientDetailView(patient: samplePatient)
-}
+//#Preview {
+//    let samplePatient = Patient(fullName: "John Doe")
+//    
+//    return PatientDetailView(patient: samplePatient)
+//}
 

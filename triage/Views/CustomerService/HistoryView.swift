@@ -11,20 +11,7 @@ import SwiftUI
 struct HistoryView: View {
     @Environment(\.dismiss) private var dismiss
     
-    let history: [History] = [
-        History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: "Lola Doe", serviceChoice: "Paket Merdeka"), timestamp: Date()),
-        History(type: .patientDataUpdate(customerCareName: "Okta", patientName: "Jane Doe"), timestamp: Date()),
-        History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: "Lola Doe", serviceChoice: "Paket Merdeka"), timestamp: Date()),
-        History(type: .patientDataUpdate(customerCareName: "Okta", patientName: "Jane Doe"), timestamp: Date()),
-        History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: "Lola Doe", serviceChoice: "Paket Merdeka"), timestamp: Date()),
-        History(type: .patientDataUpdate(customerCareName: "Okta", patientName: "Jane Doe"), timestamp: Date()),
-        History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: "Lola Doe", serviceChoice: "Paket Merdeka"), timestamp: Date()),
-        History(type: .patientDataUpdate(customerCareName: "Okta", patientName: "Jane Doe"), timestamp: Date()),
-        History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: "Lola Doe", serviceChoice: "Paket Merdeka"), timestamp: Date()),
-        History(type: .patientDataUpdate(customerCareName: "Okta", patientName: "Jane Doe"), timestamp: Date()),
-        History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: "Lola Doe", serviceChoice: "Paket Merdeka"), timestamp: Date()),
-        History(type: .patientDataUpdate(customerCareName: "Okta", patientName: "Jane Doe"), timestamp: Date()),
-    ]
+    let groupedHistory: [(date: String, logs: [History])]
     
     var body: some View {
         VStack(spacing: 0) {
@@ -49,26 +36,33 @@ struct HistoryView: View {
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("28 August 2025")
-                        .font(.headline)
-                        .padding(.vertical, 16)
-                    
-                    VStack(spacing: 0) {
-                        ForEach(Array(history.enumerated()), id: \.1.id) { index, historyLog in
-                            HistoryRow(historyLog: historyLog)
-                            if index < history.count - 1 {
-                                Divider().padding(.horizontal, 4)
+                    ForEach(groupedHistory, id: \.date) { section in
+                        Text(section.date)
+                            .font(.headline)
+                            .padding(.vertical, 16)
+                        
+                        VStack(spacing: 0) {
+                            ForEach(Array(section.logs.enumerated()), id: \.element.id) { index, log in
+                                HistoryRow(historyLog: log)
+                                
+                                // Add divider except for last log
+                                if index < section.logs.count - 1 {
+                                    Divider().padding(.horizontal, 4)
+                                }
                             }
                         }
+                        .background(Color.gray.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                    .background(Color.gray.opacity(0.05))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
             }
         }
         .padding(.horizontal)
+        .onAppear {
+            print("Grouped logs count:", groupedHistory.count)
+        }
     }
 }
 
@@ -99,6 +93,8 @@ struct HistoryRow: View {
             return Text(customerCare).bold() + Text(" updated ") + Text(patient).bold() + Text("'s patient data")
         case .serviceChoiceUpdate(let customerCare, let patient, let service):
             return Text(customerCare).bold() + Text(" updated the service choice to ") + Text(service).bold() + Text(" for ") + Text(patient).bold() + Text("'s appointment")
+        case .newPatient(patientName: let patientName):
+            return Text("New patient").bold() + Text(" has been added : ") + Text(patientName).bold()
         }
     }
     
@@ -111,6 +107,6 @@ struct HistoryRow: View {
 }
 
 
-#Preview {
-    HistoryView()
-}
+//#Preview {
+//    HistoryView()
+//}
