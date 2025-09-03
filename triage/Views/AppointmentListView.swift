@@ -46,7 +46,7 @@ struct AppointmentListView: View {
                 }
             }
             .sheet(isPresented: $showingAddAppointment) {
-                AddAppointmentView()
+                AddAppointmentView(appointmentManager: viewModel.manager)
             }
         }
     }

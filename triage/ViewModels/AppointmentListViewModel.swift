@@ -16,6 +16,10 @@ class AppointmentListViewModel {
     
     private let appointmentManager: AppointmentManager
     
+    var manager: AppointmentManager {
+        appointmentManager
+    }
+    
     init(appointmentManager: AppointmentManager) {
         self.appointmentManager = appointmentManager
     }
