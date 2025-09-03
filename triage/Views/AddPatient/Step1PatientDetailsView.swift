@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 import PhotosUI
 
 struct Step1PatientDetailsView: View {
-    @ObservedObject var viewModel: AddPatientViewModel
+    @Bindable var viewModel: AddPatientViewModel
     @State private var selectedPhoto: PhotosPickerItem? = nil
     
     var body: some View {
@@ -28,7 +28,7 @@ struct Step1PatientDetailsView: View {
             }
             
             // --- Upload Mode ---
-            UploadIDCardView(selectedPhoto: $selectedPhoto, idCardImage: $viewModel.idCardImage, uploading: $viewModel.uploading) {
+            UploadIDCardView(selectedPhoto: $selectedPhoto, idCardImage: $viewModel.idCardImage, uploading: $viewModel.isUploading) {
                 viewModel.clearInput()
             }
             .padding()
@@ -52,7 +52,7 @@ struct Step1PatientDetailsView: View {
                     
                     try? data.write(to: tempURL)
                     viewModel.idCardImage = uiImage
-                    viewModel.uploading = true
+                    viewModel.isUploading = true
                     viewModel.parseIDCardFromImage(fileURL: tempURL)
                 }
             }

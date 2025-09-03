@@ -9,64 +9,122 @@ import SwiftUI
 
 struct AddPatientView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var step = 1
-    @StateObject private var viewModel: AddPatientViewModel
+    @State private var currentStep: AddPatientViewModel.ValidationStep = .dataInput
+    @State private var viewModel: AddPatientViewModel
     
-    init(patientManager: PatientManager) {
-        _viewModel = StateObject(wrappedValue: AddPatientViewModel(patientManager: patientManager))
+    init(patientManager: PatientManager, appointmentManager: AppointmentManager, packageManager: PackageManager) {
+        _viewModel = State(wrappedValue: AddPatientViewModel(
+            patientManager: patientManager,
+            appointmentManager: appointmentManager,
+            packageManager: packageManager
+        ))
     }
     
     var body: some View {
         NavigationView {
             VStack {
-                switch step {
-                case 1: Step1PatientDetailsView(viewModel: viewModel)
-                case 2: Step2ConfirmationView(viewModel: viewModel)
-                case 3: Step3AppointmentsView(viewModel: viewModel)
-                default: EmptyView()
-                }
+                CurrentStepView(viewModel: viewModel, currentStep: currentStep)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(step == 1 ? "Cancel" : "Back") {
-                       if step == 1 {
-                           dismiss()
-                       } else {
-                           step -= 1
-                       }
-                   }
+                    Button(currentStep == .dataInput ? "Cancel" : "Back") {
+                        handleBackAction()
+                    }
                 }
+                
                 ToolbarItem(placement: .principal) {
-                    VStack(alignment: .center) {
-                        Text("STEP \(step) OF 3")
-                            .font(.caption)
-                            .foregroundColor(Color.black)
-                        Text("New Patient")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "#0F0E46"))
-                    }
+                    StepIndicatorView(currentStep: currentStep)
                 }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if step < 3 {
-                        Button("Next") {
-                            if step == 1 {
-                                viewModel.parseFromRawText()
-                                print(viewModel.isValidAll)
-                            }
-                            step += 1
-                        }
-                        .disabled(!viewModel.isStepValid(step))
-                        
-                    } else {
-                        Button("Add") {
-                            viewModel.savePatient()
-                            dismiss()
-                        }
-                        .disabled(!viewModel.isValidAll)
-                    }
+                    NextButton(
+                        viewModel: viewModel,
+                        currentStep: currentStep,
+                        onNext: handleNextAction,
+                        onSave: handleSaveAction
+                    )
                 }
             }
+        }
+    }
+    
+    // MARK: - Actions
+    private func handleBackAction() {
+        if currentStep == .dataInput {
+            dismiss()
+        } else {
+            withAnimation {
+                currentStep = AddPatientViewModel.ValidationStep(rawValue: currentStep.rawValue - 1) ?? .dataInput
+            }
+        }
+    }
+    
+    private func handleNextAction() {
+        if currentStep == .dataInput {
+            viewModel.parseFromRawText()
+        }
+        
+        withAnimation {
+            currentStep = AddPatientViewModel.ValidationStep(rawValue: currentStep.rawValue + 1) ?? .appointments
+        }
+    }
+    
+    private func handleSaveAction() {
+        viewModel.savePatient()
+        dismiss()
+    }
+}
+
+// MARK: - Supporting Views
+struct CurrentStepView: View {
+    let viewModel: AddPatientViewModel
+    let currentStep: AddPatientViewModel.ValidationStep
+    
+    var body: some View {
+        switch currentStep {
+        case .dataInput:
+            Step1PatientDetailsView(viewModel: viewModel)
+        case .confirmation:
+            Step2ConfirmationView(viewModel: viewModel)
+        case .appointments:
+            NewStep3AppointmentsView(viewModel: viewModel)
+        }
+    }
+}
+
+struct StepIndicatorView: View {
+    let currentStep: AddPatientViewModel.ValidationStep
+    
+    var body: some View {
+        VStack(alignment: .center) {
+            Text("STEP \(currentStep.rawValue) OF 3")
+                .font(.caption)
+                .foregroundColor(.black)
+            Text("New Patient")
+                .font(.headline)
+                .foregroundColor(Color(hex: "#0F0E46"))
+        }
+    }
+}
+
+struct NextButton: View {
+    let viewModel: AddPatientViewModel
+    let currentStep: AddPatientViewModel.ValidationStep
+    let onNext: () -> Void
+    let onSave: () -> Void
+    
+    var body: some View {
+        if currentStep != .appointments {
+            Button("Next") {
+                onNext()
+            }
+            .disabled(!viewModel.isStepValid(currentStep))
+        } else {
+            Button("Add") {
+                onSave()
+            }
+            .disabled(!viewModel.isFormComplete)
         }
     }
 }

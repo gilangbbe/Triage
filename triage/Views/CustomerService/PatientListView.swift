@@ -74,8 +74,12 @@ struct PatientListView: View {
 //                NotificationSheetView()
             }
             .sheet(isPresented: $showingAddPatientSheet) {
-                AddPatientView(patientManager: patientManager)
-                    .frame(width: 800)
+                AddPatientView(
+                    patientManager: patientManager,
+                    appointmentManager: AppointmentManager.shared,
+                    packageManager: PackageManager.shared
+                )
+                .frame(width: 800)
             }
         } detail : {
             if let id = selectedPatientID,

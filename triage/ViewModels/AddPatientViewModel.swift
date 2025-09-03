@@ -9,359 +9,318 @@ import SwiftUI
 import Vision
 import UIKit
 
-final class AddPatientViewModel: ObservableObject {
+@Observable
+class AddPatientViewModel {
+    // MARK: - Types
     enum InputMode {
         case paste
         case idCard
     }
     
-    // MARK: - Step 1 fields
-    @Published var rawText: String = ""          // pasted text or OCR result
-    @Published var nik: String? = nil
-    @Published var name: String = ""
-    @Published var dob: Date? = nil
-    @Published var phoneNumber: String = ""
-    @Published var address: String = ""
-    @Published var gender: String? = nil
-    @Published var uploading: Bool = false       // OCR parsing running
-    @Published var uploadCompleted: Bool = false // OCR finished
-    @Published var inputMode: InputMode = .paste
-    @Published var didParseStep1: Bool = false
-    @Published var idCardImage: UIImage? = nil
-
-    // MARK: - Step 3 (appointments)
-    @Published var tempUnit: String = ""
-    @Published var tempPackage: String = ""
-    @Published var availableServiceAppointments: [ServiceAppointment] = []
-    @Published var selectedServiceAppointments: [ServiceAppointment] = []
-    @Published var selectedServiceAppointment: ServiceAppointment?
+    enum ValidationStep: Int, CaseIterable {
+        case dataInput = 1
+        case confirmation = 2
+        case appointments = 3
+        
+        var title: String {
+            switch self {
+            case .dataInput: return "Patient Details"
+            case .confirmation: return "Confirm Patient"
+            case .appointments: return "Appointments"
+            }
+        }
+    }
     
-    @Published var tempDept: String = ""
-    @Published var tempDoctor: String = ""
-    @Published var doctorAppointments: [DoctorAppointment] = []
-    @Published var selectedDoctorAppointments: [DoctorAppointment] = []
-    @Published var selectedDoctorAppointment: DoctorAppointment?
+    // MARK: - Patient Data Properties
+    var rawText: String = ""
+    var nationalId: String? = nil
+    var fullName: String = ""
+    var dateOfBirth: Date? = nil
+    var phoneNumber: String = ""
+    var address: String = ""
+    var gender: Gender? = nil
     
-    private var patientManager: PatientManager
+    // MARK: - UI State Properties
+    var inputMode: InputMode = .paste
+    var isUploading: Bool = false
+    var uploadCompleted: Bool = false
+    var didParseStep1: Bool = false
+    var idCardImage: UIImage? = nil
     
-    init(patientManager: PatientManager) {
+    // MARK: - Appointment Properties (New System)
+    var selectedAppointments: [AppointmentSelection] = []
+    var availablePackages: [Package] = []
+    var availableTimeSlots: [TimeSlotOption] = []
+    
+    // MARK: - Dependencies
+    private let patientManager: PatientManager
+    private let appointmentManager: AppointmentManager
+    private let packageManager: PackageManager
+    private let ocrService: OCRService
+    
+    // MARK: - Initialization
+    init(patientManager: PatientManager, appointmentManager: AppointmentManager, packageManager: PackageManager) {
         self.patientManager = patientManager
-        generateDummyServiceAppointments()
-        generateDummyDoctorAppointments()
+        self.appointmentManager = appointmentManager
+        self.packageManager = packageManager
+        self.ocrService = OCRService()
+        loadAvailablePackages()
     }
     
-    func generateDummyServiceAppointments() {
-        let units: [String: [String]] = [
-            "Medical Check Up": ["Paket MCU Basic", "Paket MCU Standard", "Paket MCU Premium"],
-            "Laboratory": ["Paket Lab Darah", "Paket Lab Urine", "Paket Lab Lengkap"],
-            "Radiology": ["Paket Rontgen", "Paket MRI", "Paket CT Scan"],
-            "Pharmacy": ["Paket Vitamin", "Paket Obat Harian", "Paket Suplemen"]
-        ]
-        
-        let calendar = Calendar.current
-        let today = Date()
-        
-        let workingHours = [
-            (8, 9), (9, 10), (10, 11), (11, 12),
-            (13, 14), (14, 15), (15, 16), (16, 17)
-        ]
-        
-        for (unit, packages) in units {
-            for package in packages {
-                for (startHour, endHour) in workingHours {
-                    if let start = calendar.date(bySettingHour: startHour, minute: 0, second: 0, of: today),
-                       let end = calendar.date(bySettingHour: endHour, minute: 0, second: 0, of: today) {
-                        
-                        let appointment = ServiceAppointment(
-                            name: package,
-                            unit: unit,
-                            startTime: start,
-                            endTime: end,
-                            maxSlots: 3
-                        )
-                        availableServiceAppointments.append(appointment)
-                    }
-                }
-            }
-        }
-    }
-    
-    func generateDummyDoctorAppointments() {
-        let departments: [String: [String]] = [
-            "Cardiology": ["Dr. Andi", "Dr. Budi", "Dr. Citra"],
-            "Neurology": ["Dr. Dedi", "Dr. Eka", "Dr. Fajar"],
-            "Dermatology": ["Dr. Gita", "Dr. Hadi", "Dr. Intan"],
-            "Pediatrics": ["Dr. Jaka", "Dr. Kiki", "Dr. Lina"],
-            "Orthopedics": ["Dr. Mario", "Dr. Nia", "Dr. Oka"]
-        ]
-
-        let calendar = Calendar.current
-        let today = Date()
-        let workingHours = [9, 10, 11, 13, 14, 15] // starting hours
-
-        for (dept, doctors) in departments {
-            for doctor in doctors {
-                for dayOffset in 0..<3 { // today + 2 more days
-                    guard let date = calendar.date(byAdding: .day, value: dayOffset, to: today) else { continue }
-                    
-                    for hour in workingHours {
-                        guard let start = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date) else { continue }
-                        let appt = DoctorAppointment(
-                            department: dept,
-                            name: doctor,
-                            date: date,
-                            startTime: start,
-                            maxSlots: 3,
-                            bookedSlots: 0
-                        )
-                        doctorAppointments.append(appt)
-                    }
-                }
-            }
-        }
-    }
-    
-    func bookServiceAppointment(_ appointment: ServiceAppointment) {
-        guard let index = availableServiceAppointments.firstIndex(where: { $0.id == appointment.id }) else { return }
-        
-        if availableServiceAppointments[index].availableSlots > 0 {
-            availableServiceAppointments[index].bookedSlots += 1
-            selectedServiceAppointments.append(availableServiceAppointments[index])
-        }
-        
-        print(selectedServiceAppointments)
-    }
-    
-    func bookDoctorAppointment(_ appointment: DoctorAppointment) {
-        guard let index = doctorAppointments.firstIndex(where: { $0.id == appointment.id }) else { return }
-        if doctorAppointments[index].bookedSlots < doctorAppointments[index].maxSlots {
-            doctorAppointments[index].bookedSlots += 1
-            selectedDoctorAppointments.append(doctorAppointments[index])
-        }
-    }
-    
-    // MARK: - Update Service Appointment
-    func updateServiceAppointment(_ newAppointment: ServiceAppointment) {
-        // 1. Find the old appointment
-        if let selectedIndex = selectedServiceAppointments.firstIndex(where: { $0.id == newAppointment.id }) {
-            let oldAppointment = selectedServiceAppointments[selectedIndex]
-
-            // 2. Decrement old slot booking in availableServiceAppointments
-            if let oldAvailableIndex = availableServiceAppointments.firstIndex(where: { $0.startTime == oldAppointment.startTime &&
-                                                                                       $0.endTime == oldAppointment.endTime &&
-                                                                                       $0.unit == oldAppointment.unit &&
-                                                                                       $0.name == oldAppointment.name }) {
-                if availableServiceAppointments[oldAvailableIndex].bookedSlots > 0 {
-                    availableServiceAppointments[oldAvailableIndex].bookedSlots -= 1
-                }
-            }
-
-            // 3. Increment new slot booking in availableServiceAppointments
-            if let newAvailableIndex = availableServiceAppointments.firstIndex(where: { $0.startTime == newAppointment.startTime &&
-                                                                                       $0.endTime == newAppointment.endTime &&
-                                                                                       $0.unit == newAppointment.unit &&
-                                                                                       $0.name == newAppointment.name }) {
-                if availableServiceAppointments[newAvailableIndex].bookedSlots < availableServiceAppointments[newAvailableIndex].maxSlots {
-                    availableServiceAppointments[newAvailableIndex].bookedSlots += 1
-                    selectedServiceAppointments[selectedIndex] = availableServiceAppointments[newAvailableIndex]
-                }
-            } else {
-                // fallback: if new slot not found in available list, just replace directly
-                selectedServiceAppointments[selectedIndex] = newAppointment
-            }
-        } else {
-            // fallback: if not found, treat as booking
-            bookServiceAppointment(newAppointment)
-        }
-    }
-
-    // MARK: - Update Doctor Appointment
-    func updateDoctorAppointment(_ newAppointment: DoctorAppointment) {
-        // 1. Find the old appointment inside selectedDoctorAppointments
-        if let selectedIndex = selectedDoctorAppointments.firstIndex(where: { $0.id == newAppointment.id }) {
-            let oldAppointment = selectedDoctorAppointments[selectedIndex]
-
-            // 2. Decrement old slot booking in doctorAppointments
-            if let oldAvailableIndex = doctorAppointments.firstIndex(where: {
-                $0.department == oldAppointment.department &&
-                $0.name == oldAppointment.name &&
-                $0.date == oldAppointment.date &&
-                $0.startTime == oldAppointment.startTime
-            }) {
-                if doctorAppointments[oldAvailableIndex].bookedSlots > 0 {
-                    doctorAppointments[oldAvailableIndex].bookedSlots -= 1
-                }
-            }
-
-            // 3. Increment new slot booking in doctorAppointments
-            if let newAvailableIndex = doctorAppointments.firstIndex(where: {
-                $0.department == newAppointment.department &&
-                $0.name == newAppointment.name &&
-                $0.date == newAppointment.date &&
-                $0.startTime == newAppointment.startTime
-            }) {
-                if doctorAppointments[newAvailableIndex].bookedSlots < doctorAppointments[newAvailableIndex].maxSlots {
-                    doctorAppointments[newAvailableIndex].bookedSlots += 1
-                    selectedDoctorAppointments[selectedIndex] = doctorAppointments[newAvailableIndex]
-                }
-            } else {
-                // fallback: if new slot not found, just overwrite
-                selectedDoctorAppointments[selectedIndex] = newAppointment
-            }
-        } else {
-            // fallback: if not found, just book new
-            bookDoctorAppointment(newAppointment)
-        }
-    }
-
-
-    // MARK: - Validations
-    func isStepValid(_ step: Int) -> Bool {
+    // MARK: - Validation
+    func isStepValid(_ step: ValidationStep) -> Bool {
         switch step {
-        case 1:
-            return !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || uploadCompleted
-        case 2:
-            return !name.isEmpty
-        case 3:
-            return !selectedServiceAppointments.isEmpty || !selectedDoctorAppointments.isEmpty
-        default:
-            return true
+        case .dataInput:
+            return hasValidInput
+        case .confirmation:
+            return hasValidPatientData
+        case .appointments:
+            return hasValidAppointments
         }
+    }
+    
+    // Legacy method for int-based validation
+    func isStepValid(_ step: Int) -> Bool {
+        guard let validationStep = ValidationStep(rawValue: step) else { return false }
+        return isStepValid(validationStep)
     }
     
     var isValidAll: Bool {
-        isStepValid(1) && isStepValid(2) && isStepValid(3)
+        ValidationStep.allCases.allSatisfy { isStepValid($0) }
     }
     
-    // MARK: - Regex helper
-    private func value(for key: String, in text: String) -> String {
-        // Allow optional newline before colon
-        let escapedKey = NSRegularExpression.escapedPattern(for: key)
-        let pattern = "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)"          // normal paste
-                    + "|(?i)" + escapedKey + "\\s*\\n\\s*[:：]\\s*([^\\n]*)" // OCR
-
-        if let regex = try? NSRegularExpression(pattern: pattern) {
-            let nsText = text as NSString
-            if let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: nsText.length)) {
-                var val: String? = nil
-                if match.numberOfRanges > 1, match.range(at: 1).location != NSNotFound {
-                    val = nsText.substring(with: match.range(at: 1))
-                } else if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound {
-                    val = nsText.substring(with: match.range(at: 2))
-                }
-                if let val = val {
-                    let trimmed = val.trimmingCharacters(in: .whitespacesAndNewlines)
-                    // If it looks like another key (contains colon or known labels), treat as empty
-                    let lower = trimmed.lowercased()
-                    if trimmed.isEmpty
-                        || lower.contains("nama") || lower.contains("nik")
-                        || lower.contains("tgl") || lower.contains("alamat")
-                        || lower.contains("jenis kelamin") {
-                        return ""
-                    }
-                    return trimmed
-                }
-            }
-        }
-        return ""
+    var isFormComplete: Bool {
+        isValidAll
     }
-
-    // MARK: - Parse pasted / OCR text into fields
+    
+    private var hasValidInput: Bool {
+        !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || uploadCompleted
+    }
+    
+    private var hasValidPatientData: Bool {
+        !fullName.isEmpty
+    }
+    
+    private var hasValidAppointments: Bool {
+        !selectedAppointments.isEmpty
+    }
+    // MARK: - Data Parsing
     func parseFromRawText() {
-        let s = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !s.isEmpty else {
-            didParseStep1 = false
-            return
-        }
+        let parser = PatientDataParser()
+        let parsedData = parser.parse(from: rawText)
         
-        // --- Step 1: structured format ---
-        var nikVal = value(for: "NIK", in: s)
-        var nameVal = value(for: "Nama lengkap", in: s)
-        var dobVal = value(for: "Tgl lahir", in: s)
-        var phoneVal = value(for: "No telp", in: s)
-        var addressVal = value(for: "Alamat lengkap", in: s)
-        var genderValRaw = value(for: "Jenis kelamin (L/P)", in: s)
-        
-        // --- Step 2: fallback OCR/KTP parsing ---
-        if nameVal.isEmpty {
-            nameVal = value(for: "Nama", in: s)
-        }
-        
-        if !dobVal.isEmpty {
-            if let commaIdx = dobVal.firstIndex(of: ",") {
-                dobVal = String(dobVal[dobVal.index(after: commaIdx)...]).trimmingCharacters(in: .whitespaces)
-            }
-        }
-        
-        if addressVal.isEmpty {
-            let baseAddr = value(for: "Alamat", in: s)
-            let rtRw = value(for: "RT/RW", in: s)
-            let kel = value(for: "Kel/Desa", in: s)
-            let kec = value(for: "Kecamatan", in: s)
-            addressVal = [baseAddr, rtRw, kel, kec].filter { !$0.isEmpty }.joined(separator: ", ")
-        }
-        
-        if genderValRaw.isEmpty {
-            genderValRaw = value(for: "Jenis Kelamin", in: s)
-        }
-        
-        // --- Step 3: normalize gender ---
-        var genderVal: String? = nil
-        let g = genderValRaw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        if g.hasPrefix("L") { genderVal = "L" }
-        else if g.hasPrefix("P") { genderVal = "P" }
-        
-        // --- Step 4: parse DOB ---
-        let parsedDob = Date.parse(from: dobVal)
-        
-        // --- Step 5: assign to published properties ---
-        nik = nikVal.isEmpty ? nil : nikVal
-        name = nameVal
-        dob = parsedDob
-        phoneNumber = phoneVal
-        address = addressVal
-        gender = genderVal
-        
-        didParseStep1 = !name.isEmpty
-        
-        let dobLog = dob != nil ? dob!.formattedLong() : "nil"
-//        print("[AddPatientViewModel] parseFromRawText -> nik:\(nik ?? "") name:\(name) dob:\(dobLog) phone:\(phoneNumber) address:\(address) gender:\(gender ?? "")")
+        applyParsedData(parsedData)
+        didParseStep1 = !fullName.isEmpty
     }
     
-    // MARK: - OCR from image
     func parseIDCardFromImage(fileURL: URL) {
-        uploading = true
+        isUploading = true
         uploadCompleted = false
         didParseStep1 = false
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            defer {
-                DispatchQueue.main.async { self.uploading = false }
+        Task {
+            do {
+                let extractedText = try await ocrService.extractText(from: fileURL)
+                await MainActor.run {
+                    self.rawText = extractedText
+                    self.parseFromRawText()
+                    self.isUploading = false
+                    self.uploadCompleted = true
+                }
+            } catch {
+                await MainActor.run {
+                    self.isUploading = false
+                    self.uploadCompleted = false
+                }
+                print("OCR Error: \(error)")
+            }
+        }
+    }
+    
+    private func applyParsedData(_ data: ParsedPatientData) {
+        nationalId = data.nationalId
+        fullName = data.fullName
+        dateOfBirth = data.dateOfBirth
+        phoneNumber = data.phoneNumber
+        address = data.address
+        gender = data.gender
+    }
+    
+    // MARK: - Patient Management
+    func savePatient() {
+        let patient = createPatient()
+        patientManager.addPatient(patient)
+        
+        // Create appointments for the patient
+        createAppointments(for: patient)
+        
+        clearForm()
+    }
+    
+    private func createPatient() -> Patient {
+        let patient = Patient(fullName: fullName)
+        patient.nationalID = nationalId
+        patient.dateOfBirth = dateOfBirth
+        patient.gender = gender
+        patient.phoneNumber = phoneNumber.isEmpty ? nil : phoneNumber
+        patient.address = address.isEmpty ? nil : address
+        patient.registeredAt = Date()
+        return patient
+    }
+    
+    private func createAppointments(for patient: Patient) {
+        for appointmentSelection in selectedAppointments {
+            let timeSlot = TimeSlot(
+                date: appointmentSelection.date,
+                startTime: appointmentSelection.timeSlot.startTime,
+                endTime: appointmentSelection.timeSlot.endTime
+            )
+            
+            let appointmentTitle = "\(patient.fullName) - \(appointmentSelection.package.name)"
+            
+            let appointment = Appointment(
+                name: appointmentTitle,
+                date: appointmentSelection.date,
+                startTime: appointmentSelection.timeSlot.startTime,
+                endTime: appointmentSelection.timeSlot.endTime,
+                timeSlot: timeSlot,
+                patient: patient,
+                package: appointmentSelection.package
+            )
+            
+            appointmentManager.addAppointment(appointment)
+        }
+    }
+    
+    // MARK: - Appointment Management
+    func addAppointmentSelection(package: Package, date: Date, timeSlot: TimeSlotOption) {
+        let selection = AppointmentSelection(
+            package: package,
+            date: date,
+            timeSlot: timeSlot
+        )
+        selectedAppointments.append(selection)
+    }
+    
+    func removeAppointmentSelection(at index: Int) {
+        guard index < selectedAppointments.count else { return }
+        selectedAppointments.remove(at: index)
+    }
+    
+    func updateAppointmentSelection(at index: Int, package: Package, date: Date, timeSlot: TimeSlotOption) {
+        guard index < selectedAppointments.count else { return }
+        selectedAppointments[index] = AppointmentSelection(
+            package: package,
+            date: date,
+            timeSlot: timeSlot
+        )
+    }
+    
+    func loadAvailablePackages() {
+        availablePackages = packageManager.packages
+    }
+    
+    func updateAvailableTimeSlots(for package: Package, on date: Date) {
+        let department = package.department
+        let maxSlotsPerHour = department.maxSlot ?? 3
+        
+        // Generate time slots from 8 AM to 5 PM
+        let calendar = Calendar.current
+        let workingHours = Array(8...16) // 8 AM to 4 PM (5 PM end time)
+        
+        availableTimeSlots = workingHours.compactMap { hour in
+            guard let startTime = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date),
+                  let endTime = calendar.date(bySettingHour: hour + 1, minute: 0, second: 0, of: date) else {
+                return nil
             }
             
-            guard let data = try? Data(contentsOf: fileURL),
-                  let uiImage = UIImage(data: data),
-                  let cgImage = uiImage.cgImage else {
-                DispatchQueue.main.async { self.uploadCompleted = false }
+            // Count existing appointments for this time slot and department
+            let existingAppointments = appointmentManager.appointments.filter { appointment in
+                calendar.isDate(appointment.timeSlot.date, inSameDayAs: date) &&
+                appointment.timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
+                appointment.package.department.id == department.id
+            }
+            
+            let bookedSlots = existingAppointments.count
+            let availableSlots = maxSlotsPerHour - bookedSlots
+            
+            return TimeSlotOption(
+                startTime: startTime,
+                endTime: endTime,
+                availableSlots: max(0, availableSlots),
+                maxSlots: maxSlotsPerHour
+            )
+        }
+        
+        // Filter out fully booked slots
+        availableTimeSlots = availableTimeSlots.filter { $0.availableSlots > 0 }
+    }
+    
+    func clearInput() {
+        clearForm()
+    }
+    
+    private func clearForm() {
+        rawText = ""
+        nationalId = nil
+        fullName = ""
+        dateOfBirth = nil
+        phoneNumber = ""
+        address = ""
+        gender = nil
+        isUploading = false
+        uploadCompleted = false
+        didParseStep1 = false
+        idCardImage = nil
+        selectedAppointments.removeAll()
+        availableTimeSlots.removeAll()
+    }
+}
+
+// MARK: - Supporting Models
+struct AppointmentSelection: Identifiable {
+    let id = UUID()
+    let package: Package
+    let date: Date
+    let timeSlot: TimeSlotOption
+    
+    var displayText: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        let dateString = formatter.string(from: date)
+        
+        formatter.dateFormat = "HH:mm"
+        let timeString = "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
+        
+        return "\(package.name) on \(dateString) at \(timeString)"
+    }
+}
+
+// MARK: - Supporting Services
+class OCRService {
+    func extractText(from fileURL: URL) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            guard let cgImage = UIImage(contentsOfFile: fileURL.path)?.cgImage else {
+                continuation.resume(throwing: OCRError.invalidImage)
                 return
             }
             
-            DispatchQueue.main.async { self.idCardImage = uiImage }
-            
             let request = VNRecognizeTextRequest { request, error in
-                if let observations = request.results as? [VNRecognizedTextObservation] {
-                    let textLines = observations.compactMap { $0.topCandidates(1).first?.string }
-                    let fullText = textLines.joined(separator: "\n")
-                    DispatchQueue.main.async {
-                        self.rawText = fullText
-                        self.parseFromRawText()
-                        self.uploadCompleted = true
-//                        print("[AddPatientViewModel] OCR -> rawText: \(fullText)")
-                    }
-                } else {
-                    DispatchQueue.main.async { self.uploadCompleted = false }
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
                 }
+                
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    continuation.resume(throwing: OCRError.noTextFound)
+                    return
+                }
+                
+                let extractedText = observations.compactMap { observation in
+                    observation.topCandidates(1).first?.string
+                }.joined(separator: "\n")
+                
+                continuation.resume(returning: extractedText)
             }
             
             request.recognitionLevel = .accurate
@@ -371,103 +330,126 @@ final class AddPatientViewModel: ObservableObject {
             do {
                 try handler.perform([request])
             } catch {
-                DispatchQueue.main.async { self.uploadCompleted = false }
-                print("Vision error: \(error)")
+                continuation.resume(throwing: error)
             }
         }
     }
+}
+
+enum OCRError: Error {
+    case invalidImage
+    case noTextFound
+}
+
+// MARK: - Data Models
+struct ParsedPatientData {
+    let nationalId: String?
+    let fullName: String
+    let dateOfBirth: Date?
+    let phoneNumber: String
+    let address: String
+    let gender: Gender?
+}
+
+class PatientDataParser {
+    func parse(from text: String) -> ParsedPatientData {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else {
+            return ParsedPatientData(nationalId: nil, fullName: "", dateOfBirth: nil, phoneNumber: "", address: "", gender: nil)
+        }
+        
+        let nationalId = extractValue(for: "NIK", from: cleanText)
+        let fullName = extractValue(for: "Nama lengkap", from: cleanText)
+        let dobString = extractValue(for: "Tgl lahir", from: cleanText)
+        let phoneNumber = extractValue(for: "No telp", from: cleanText)
+        let address = extractValue(for: "Alamat lengkap", from: cleanText)
+        let genderString = extractValue(for: "Jenis kelamin", from: cleanText)
+        
+        return ParsedPatientData(
+            nationalId: nationalId.isEmpty ? nil : nationalId,
+            fullName: fullName,
+            dateOfBirth: DateParser.parse(from: dobString),
+            phoneNumber: phoneNumber,
+            address: address,
+            gender: GenderParser.parse(from: genderString)
+        )
+    }
     
-    // MARK: - Save / Clear
-    func savePatient() {
-        let dobText = dob?.formattedLong() ?? "-"
-        let patient = Patient(fullName: name)
-        patient.nationalID = nik
-        patient.dateOfBirth = dob
-        patient.gender = gender == "L" ? .male : .female
-        patient.phoneNumber = phoneNumber
-        patient.address = address
-        patient.registeredAt = Date()
-        patientManager.addPatient(patient)
-        print("Saving patient: \(name) / \(nik ?? "-") / \(dobText) / \(phoneNumber) / \(address) / \(gender ?? "-")")
-        print("Service appointments: \(selectedServiceAppointments)")
-//                print("Doctor appointments: \(doctorAppointments)")
+    private func extractValue(for key: String, from text: String) -> String {
+        let escapedKey = NSRegularExpression.escapedPattern(for: key)
+        let pattern = "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)"
+        
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return "" }
+        
+        let nsText = text as NSString
+        let range = NSRange(location: 0, length: nsText.length)
+        
+        if let match = regex.firstMatch(in: text, options: [], range: range) {
+            let matchRange = match.range(at: 1)
+            if matchRange.location != NSNotFound {
+                return nsText.substring(with: matchRange).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        
+        return ""
+    }
+}
+
+class DateParser {
+    static func parse(from string: String) -> Date? {
+        let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanString.isEmpty else { return nil }
+        
+        let formatters = [
+            createFormatter(format: "dd MMMM yyyy"),
+            createFormatter(format: "dd/MM/yyyy"),
+            createFormatter(format: "dd-MM-yyyy"),
+            createFormatter(format: "dd.MM.yyyy")
+        ]
+        
+        for formatter in formatters {
+            if let date = formatter.date(from: cleanString) {
+                return date
+            }
+        }
+        
+        return nil
     }
     
-    func clearInput() {
-        rawText = ""
-        nik = nil
-        name = ""
-        dob = nil
-        phoneNumber = ""
-        address = ""
-        gender = nil
-        uploading = false
-        uploadCompleted = false
-        selectedServiceAppointments.removeAll()
-//        doctorAppointments.removeAll()
+    private static func createFormatter(format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        formatter.locale = Locale(identifier: "id_ID")
+        return formatter
     }
 }
 
-// MARK: - Models
-
-
-struct ServiceAppointment: Identifiable {
-    let id: UUID
-    let name: String
-    let unit: String
-    let startTime: Date
-    let endTime: Date
-    let maxSlots: Int
-    var bookedSlots: Int = 0
-
-    init(id: UUID = UUID(), name: String, unit: String, startTime: Date, endTime: Date, maxSlots: Int, bookedSlots: Int = 0) {
-        self.id = id
-        self.name = name
-        self.unit = unit
-        self.startTime = startTime
-        self.endTime = endTime
-        self.maxSlots = maxSlots
-        self.bookedSlots = bookedSlots
+class GenderParser {
+    static func parse(from string: String) -> Gender? {
+        let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        
+        if cleanString.hasPrefix("L") || cleanString.contains("LAKI") || cleanString.contains("MALE") {
+            return .male
+        } else if cleanString.hasPrefix("P") || cleanString.contains("PEREMPUAN") || cleanString.contains("FEMALE") {
+            return .female
+        }
+        
+        return nil
     }
-
-    var availableSlots: Int { maxSlots - bookedSlots }
 }
 
-struct DoctorAppointment: Identifiable {
-    let id: UUID
-    let department: String
-    let name: String
-    let date: Date
-    let startTime: Date
-    var bookedSlots: Int = 0
-    let maxSlots: Int
-
-    init(id: UUID = UUID(), department: String, name: String, date: Date, startTime: Date, maxSlots: Int, bookedSlots: Int = 0) {
-        self.id = id
-        self.department = department
-        self.name = name
-        self.date = date
-        self.startTime = startTime
-        self.maxSlots = maxSlots
-        self.bookedSlots = bookedSlots
-    }
-
-    var availableSlots: Int { maxSlots - bookedSlots }
-}
-
-
-// MARK: - Date Extensions
+// MARK: - Date Extensions (Legacy support)
 extension Date {
     static func parse(from string: String) -> Date? {
-        parse(from: string, locale: Locale(identifier: "id_ID"))
-            ?? parse(from: string, locale: Locale(identifier: "en_US"))
+        DateParser.parse(from: string)
     }
     
     static func parse(from string: String, locale: Locale) -> Date? {
-        let formats = ["dd-MM-yyyy", "d-MM-yyyy", "d MMMM yyyy", "dd MMMM yyyy"]
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        
+        let formats = ["dd MMMM yyyy", "dd/MM/yyyy", "dd-MM-yyyy", "dd.MM.yyyy"]
         for format in formats {
-            let formatter = DateFormatter()
-            formatter.locale = locale
             formatter.dateFormat = format
             if let date = formatter.date(from: string) {
                 return date
@@ -478,8 +460,8 @@ extension Date {
     
     func formattedLong() -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "id_ID")
         formatter.dateFormat = "dd MMMM yyyy"
+        formatter.locale = Locale(identifier: "id_ID")
         return formatter.string(from: self)
     }
 }

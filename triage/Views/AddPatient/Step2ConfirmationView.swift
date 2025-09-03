@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 import PhotosUI
 
 struct Step2ConfirmationView: View {
-    @ObservedObject var viewModel: AddPatientViewModel
+    @Bindable var viewModel: AddPatientViewModel
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @FocusState private var isFocused: Bool
     
@@ -30,7 +30,7 @@ struct Step2ConfirmationView: View {
                 } else {
                     UploadIDCardView(selectedPhoto: $selectedPhoto,
                                      idCardImage: $viewModel.idCardImage,
-                                     uploading: $viewModel.uploading,
+                                     uploading: $viewModel.isUploading,
                                      isStep1: false) {
                         viewModel.clearInput()
                     }
@@ -50,8 +50,8 @@ struct Step2ConfirmationView: View {
                 Group {
                     // NIK
                     CustomFormField(title: "National Identity Number", text: Binding(
-                        get: { viewModel.nik ?? "" },
-                        set: { viewModel.nik = $0 }
+                        get: { viewModel.nationalId ?? "" },
+                        set: { viewModel.nationalId = $0.isEmpty ? nil : $0 }
                     ))
                     .keyboardType(.numberPad)
                     .focused($isFocused)
@@ -62,7 +62,7 @@ struct Step2ConfirmationView: View {
                     }
                     
                     // Full Name
-                    CustomFormField(title: "Full Name", isRequired: true, text: $viewModel.name)
+                    CustomFormField(title: "Full Name", isRequired: true, text: $viewModel.fullName)
                     
                     // DOB
                     VStack(alignment: .leading, spacing: 4) {
@@ -70,8 +70,8 @@ struct Step2ConfirmationView: View {
                             .font(.caption)
                             .foregroundColor(.black)
                         DatePicker("", selection: Binding(
-                            get: { viewModel.dob ?? Date() },
-                            set: { viewModel.dob = $0 }
+                            get: { viewModel.dateOfBirth ?? Date() },
+                            set: { viewModel.dateOfBirth = $0 }
                         ), displayedComponents: .date)
                         .labelsHidden()
                         .datePickerStyle(.compact)
@@ -102,11 +102,11 @@ struct Step2ConfirmationView: View {
                             .font(.caption)
                             .foregroundColor(.black)
                         Picker("Gender", selection: Binding(
-                            get: { viewModel.gender ?? "L" },
+                            get: { viewModel.gender ?? .male },
                             set: { viewModel.gender = $0 }
                         )) {
-                            Text("Laki-laki").tag("L")
-                            Text("Perempuan").tag("P")
+                            Text("Laki-laki").tag(Gender.male)
+                            Text("Perempuan").tag(Gender.female)
                         }
                         .pickerStyle(.segmented)
                     }
@@ -132,7 +132,7 @@ struct Step2ConfirmationView: View {
                     
                     try? data.write(to: tempURL)
                     viewModel.idCardImage = uiImage
-                    viewModel.uploading = true
+                    viewModel.isUploading = true
                     viewModel.parseIDCardFromImage(fileURL: tempURL)
                 }
             }

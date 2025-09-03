@@ -14,8 +14,9 @@ final class Appointment {
     var name: String
     
     // Links
-    var timeSlot: TimeSlot
     var patient: Patient
+    
+    var timeSlot: TimeSlot
     var package: Package
 
     init(id: UUID = UUID(),
