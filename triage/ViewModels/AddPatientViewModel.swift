@@ -30,18 +30,27 @@ final class AddPatientViewModel: ObservableObject {
     @Published var idCardImage: UIImage? = nil
 
     // MARK: - Step 3 (appointments)
+    @Published var tempUnit: String = ""
+    @Published var tempPackage: String = ""
     @Published var availableServiceAppointments: [ServiceAppointment] = []
     @Published var selectedServiceAppointments: [ServiceAppointment] = []
-    @Published var selectedAppointment: ServiceAppointment?
+    @Published var selectedServiceAppointment: ServiceAppointment?
+    
+    @Published var tempDept: String = ""
+    @Published var tempDoctor: String = ""
+    @Published var doctorAppointments: [DoctorAppointment] = []
+    @Published var selectedDoctorAppointments: [DoctorAppointment] = []
+    @Published var selectedDoctorAppointment: DoctorAppointment?
     
     private var patientManager: PatientManager
     
     init(patientManager: PatientManager) {
         self.patientManager = patientManager
-        generateDummyAppointments()
+        generateDummyServiceAppointments()
+        generateDummyDoctorAppointments()
     }
     
-    func generateDummyAppointments() {
+    func generateDummyServiceAppointments() {
         let units: [String: [String]] = [
             "Medical Check Up": ["Paket MCU Basic", "Paket MCU Standard", "Paket MCU Premium"],
             "Laboratory": ["Paket Lab Darah", "Paket Lab Urine", "Paket Lab Lengkap"],
@@ -77,26 +86,135 @@ final class AddPatientViewModel: ObservableObject {
         }
     }
     
-    func confirmSelectedAppointment() {
-        if let appt = selectedAppointment {
-            selectedServiceAppointments.append(appt)
+    func generateDummyDoctorAppointments() {
+        let departments: [String: [String]] = [
+            "Cardiology": ["Dr. Andi", "Dr. Budi", "Dr. Citra"],
+            "Neurology": ["Dr. Dedi", "Dr. Eka", "Dr. Fajar"],
+            "Dermatology": ["Dr. Gita", "Dr. Hadi", "Dr. Intan"],
+            "Pediatrics": ["Dr. Jaka", "Dr. Kiki", "Dr. Lina"],
+            "Orthopedics": ["Dr. Mario", "Dr. Nia", "Dr. Oka"]
+        ]
+
+        let calendar = Calendar.current
+        let today = Date()
+        let workingHours = [9, 10, 11, 13, 14, 15] // starting hours
+
+        for (dept, doctors) in departments {
+            for doctor in doctors {
+                for dayOffset in 0..<3 { // today + 2 more days
+                    guard let date = calendar.date(byAdding: .day, value: dayOffset, to: today) else { continue }
+                    
+                    for hour in workingHours {
+                        guard let start = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date) else { continue }
+                        let appt = DoctorAppointment(
+                            department: dept,
+                            name: doctor,
+                            date: date,
+                            startTime: start,
+                            maxSlots: 3,
+                            bookedSlots: 0
+                        )
+                        doctorAppointments.append(appt)
+                    }
+                }
+            }
         }
     }
     
-    func bookAppointment(_ appointment: ServiceAppointment) {
+    func bookServiceAppointment(_ appointment: ServiceAppointment) {
         guard let index = availableServiceAppointments.firstIndex(where: { $0.id == appointment.id }) else { return }
         
         if availableServiceAppointments[index].availableSlots > 0 {
             availableServiceAppointments[index].bookedSlots += 1
             selectedServiceAppointments.append(availableServiceAppointments[index])
         }
+        
+        print(selectedServiceAppointments)
     }
     
-//    func addDoctorAppointment(department: String, name: String, date: Date, start: Date, booked: Int, max: Int) {
-//        let appt = DoctorAppointment(department: department, name: name, date: date, startTime: start, bookedSlot: booked, maxSlot: max)
-//        doctorAppointments.append(appt)
-//    }
+    func bookDoctorAppointment(_ appointment: DoctorAppointment) {
+        guard let index = doctorAppointments.firstIndex(where: { $0.id == appointment.id }) else { return }
+        if doctorAppointments[index].bookedSlots < doctorAppointments[index].maxSlots {
+            doctorAppointments[index].bookedSlots += 1
+            selectedDoctorAppointments.append(doctorAppointments[index])
+        }
+    }
     
+    // MARK: - Update Service Appointment
+    func updateServiceAppointment(_ newAppointment: ServiceAppointment) {
+        // 1. Find the old appointment
+        if let selectedIndex = selectedServiceAppointments.firstIndex(where: { $0.id == newAppointment.id }) {
+            let oldAppointment = selectedServiceAppointments[selectedIndex]
+
+            // 2. Decrement old slot booking in availableServiceAppointments
+            if let oldAvailableIndex = availableServiceAppointments.firstIndex(where: { $0.startTime == oldAppointment.startTime &&
+                                                                                       $0.endTime == oldAppointment.endTime &&
+                                                                                       $0.unit == oldAppointment.unit &&
+                                                                                       $0.name == oldAppointment.name }) {
+                if availableServiceAppointments[oldAvailableIndex].bookedSlots > 0 {
+                    availableServiceAppointments[oldAvailableIndex].bookedSlots -= 1
+                }
+            }
+
+            // 3. Increment new slot booking in availableServiceAppointments
+            if let newAvailableIndex = availableServiceAppointments.firstIndex(where: { $0.startTime == newAppointment.startTime &&
+                                                                                       $0.endTime == newAppointment.endTime &&
+                                                                                       $0.unit == newAppointment.unit &&
+                                                                                       $0.name == newAppointment.name }) {
+                if availableServiceAppointments[newAvailableIndex].bookedSlots < availableServiceAppointments[newAvailableIndex].maxSlots {
+                    availableServiceAppointments[newAvailableIndex].bookedSlots += 1
+                    selectedServiceAppointments[selectedIndex] = availableServiceAppointments[newAvailableIndex]
+                }
+            } else {
+                // fallback: if new slot not found in available list, just replace directly
+                selectedServiceAppointments[selectedIndex] = newAppointment
+            }
+        } else {
+            // fallback: if not found, treat as booking
+            bookServiceAppointment(newAppointment)
+        }
+    }
+
+    // MARK: - Update Doctor Appointment
+    func updateDoctorAppointment(_ newAppointment: DoctorAppointment) {
+        // 1. Find the old appointment inside selectedDoctorAppointments
+        if let selectedIndex = selectedDoctorAppointments.firstIndex(where: { $0.id == newAppointment.id }) {
+            let oldAppointment = selectedDoctorAppointments[selectedIndex]
+
+            // 2. Decrement old slot booking in doctorAppointments
+            if let oldAvailableIndex = doctorAppointments.firstIndex(where: {
+                $0.department == oldAppointment.department &&
+                $0.name == oldAppointment.name &&
+                $0.date == oldAppointment.date &&
+                $0.startTime == oldAppointment.startTime
+            }) {
+                if doctorAppointments[oldAvailableIndex].bookedSlots > 0 {
+                    doctorAppointments[oldAvailableIndex].bookedSlots -= 1
+                }
+            }
+
+            // 3. Increment new slot booking in doctorAppointments
+            if let newAvailableIndex = doctorAppointments.firstIndex(where: {
+                $0.department == newAppointment.department &&
+                $0.name == newAppointment.name &&
+                $0.date == newAppointment.date &&
+                $0.startTime == newAppointment.startTime
+            }) {
+                if doctorAppointments[newAvailableIndex].bookedSlots < doctorAppointments[newAvailableIndex].maxSlots {
+                    doctorAppointments[newAvailableIndex].bookedSlots += 1
+                    selectedDoctorAppointments[selectedIndex] = doctorAppointments[newAvailableIndex]
+                }
+            } else {
+                // fallback: if new slot not found, just overwrite
+                selectedDoctorAppointments[selectedIndex] = newAppointment
+            }
+        } else {
+            // fallback: if not found, just book new
+            bookDoctorAppointment(newAppointment)
+        }
+    }
+
+
     // MARK: - Validations
     func isStepValid(_ step: Int) -> Bool {
         switch step {
@@ -105,8 +223,7 @@ final class AddPatientViewModel: ObservableObject {
         case 2:
             return !name.isEmpty
         case 3:
-            return !selectedServiceAppointments.isEmpty
-//            return !selectedServiceAppointments.isEmpty || !doctorAppointments.isEmpty
+            return !selectedServiceAppointments.isEmpty || !selectedDoctorAppointments.isEmpty
         default:
             return true
         }
@@ -114,10 +231,6 @@ final class AddPatientViewModel: ObservableObject {
     
     var isValidAll: Bool {
         isStepValid(1) && isStepValid(2) && isStepValid(3)
-    }
-    
-    var isFormValid: Bool {
-        !name.isEmpty
     }
     
     // MARK: - Regex helper
@@ -299,28 +412,49 @@ final class AddPatientViewModel: ObservableObject {
 
 
 struct ServiceAppointment: Identifiable {
-    let id: UUID = UUID()
+    let id: UUID
     let name: String
     let unit: String
     let startTime: Date
     let endTime: Date
-    var maxSlots: Int
+    let maxSlots: Int
     var bookedSlots: Int = 0
-    
-    var availableSlots: Int {
-        maxSlots - bookedSlots
+
+    init(id: UUID = UUID(), name: String, unit: String, startTime: Date, endTime: Date, maxSlots: Int, bookedSlots: Int = 0) {
+        self.id = id
+        self.name = name
+        self.unit = unit
+        self.startTime = startTime
+        self.endTime = endTime
+        self.maxSlots = maxSlots
+        self.bookedSlots = bookedSlots
     }
+
+    var availableSlots: Int { maxSlots - bookedSlots }
 }
 
 struct DoctorAppointment: Identifiable {
-    let id = UUID()
+    let id: UUID
     let department: String
     let name: String
     let date: Date
     let startTime: Date
-    let bookedSlot: Int
-    let maxSlot: Int
+    var bookedSlots: Int = 0
+    let maxSlots: Int
+
+    init(id: UUID = UUID(), department: String, name: String, date: Date, startTime: Date, maxSlots: Int, bookedSlots: Int = 0) {
+        self.id = id
+        self.department = department
+        self.name = name
+        self.date = date
+        self.startTime = startTime
+        self.maxSlots = maxSlots
+        self.bookedSlots = bookedSlots
+    }
+
+    var availableSlots: Int { maxSlots - bookedSlots }
 }
+
 
 // MARK: - Date Extensions
 extension Date {
