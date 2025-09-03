@@ -60,10 +60,10 @@ struct Step3AppointmentsView: View {
                     }
                     
                     ScrollView {
-                        // TODO: Hook up real doctor appointments
-                        // ForEach(viewModel.doctorAppointments) { appt in
-                        //     AppointmentCard_Doctor(appt: appt)
-                        // }
+                        ForEach(viewModel.selectedDoctorAppointments) { appt in
+                            AppointmentCard_Doctor(appt: appt)
+                                .padding(.bottom, 6)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -80,10 +80,10 @@ struct Step3AppointmentsView: View {
             .presentationDetents([.medium])
         }
         .sheet(isPresented: $showDoctorForm) {
-            // TODO: Replace with actual doctor form
-            Text("New Doctor Appointment Form")
-                .font(.title2)
-                .padding()
+            NavigationStack {
+                DoctorAppointmentForm(viewModel: viewModel)
+            }
+            .presentationDetents([.medium])
         }
     }
 }
@@ -203,12 +203,12 @@ struct ServiceAppointmentForm: View {
                     showTimePicker = true
                 } label: {
                     HStack {
-                        if let selected = viewModel.selectedAppointment {
+                        if let selected = viewModel.selectedServiceAppointment {
                             Text("\(timeString(selected.startTime)) - \(timeString(selected.endTime))")
                                 .font(.subheadline)
                                 .foregroundColor(.black)
                             Spacer()
-                            Text("\(selected.availableSlots) slot available")
+                            Text(selected.displayText)
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         } else {
@@ -220,8 +220,16 @@ struct ServiceAppointmentForm: View {
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6)) // match DatePicker block
+                    .background(Color(.systemGray6))
                     .cornerRadius(6)
+                }
+                .sheet(isPresented: $showTimePicker) {
+                    TimePickerModal(
+                        appointments: filteredAppointments,
+                        selectedAppointment: $viewModel.selectedServiceAppointment,
+                        isPresented: $showTimePicker,
+                        onConfirm: { }
+                    )
                 }
                 .disabled(selectedPackage.isEmpty)
                 .opacity(selectedPackage.isEmpty ? 0.6 : 1)
@@ -238,32 +246,24 @@ struct ServiceAppointmentForm: View {
                     selectedUnit = ""
                     selectedPackage = ""
                     selectedDate = Date()
-                    viewModel.selectedAppointment = nil
+                    viewModel.selectedServiceAppointment = nil
                     dismiss()
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Add") {
-                    if let selected = viewModel.selectedAppointment {
-                        viewModel.selectedServiceAppointments.append(selected)
+                    if let selected = viewModel.selectedServiceAppointment {
+                        viewModel.bookServiceAppointment(selected)
                     }
                     // Reset for next time
-                    viewModel.selectedAppointment = nil
+                    viewModel.selectedServiceAppointment = nil
                     selectedUnit = ""
                     selectedPackage = ""
                     selectedDate = Date()
                     dismiss()
                 }
-                .disabled(viewModel.selectedAppointment == nil)
+                .disabled(viewModel.selectedServiceAppointment == nil)
             }
-        }
-        .sheet(isPresented: $showTimePicker) {
-            TimePickerModal(
-                appointments: filteredAppointments,
-                selectedAppointment: $viewModel.selectedAppointment,
-                isPresented: $showTimePicker,
-                onConfirm: { }
-            )
         }
     }
     
@@ -302,6 +302,150 @@ struct ServiceAppointmentForm: View {
     }
 }
 
+struct DoctorAppointmentForm: View {
+    @ObservedObject var viewModel: AddPatientViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedDept: String = ""
+    @State private var selectedDoctor: String = ""
+    @State private var selectedDate: Date = Date()
+    @State private var showTimePicker = false
+    @State private var showDoctorModal = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+
+            // MARK: - Doctor Selection
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Doctor".uppercased())
+                    .font(.caption2)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+
+                Button {
+                    showDoctorModal = true
+                } label: {
+                    HStack {
+                        if selectedDoctor.isEmpty {
+                            Text("Select Doctor")
+                                .foregroundColor(.gray)
+                                .font(.subheadline)
+                        } else {
+                            Text("\(selectedDept) - \(selectedDoctor)")
+                                .foregroundColor(.black)
+                                .font(.subheadline)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(.gray)
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(6)
+                }
+                .sheet(isPresented: $showDoctorModal) {
+                    DoctorSearchModal(
+                        viewModel: viewModel,
+                        selectedDept: $selectedDept,
+                        selectedDoctor: $selectedDoctor
+                    )
+                }
+            }
+
+            // MARK: - Date
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Date".uppercased())
+                    .font(.caption2)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+
+                DatePicker("", selection: $selectedDate, displayedComponents: .date)
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            // MARK: - Time Slots
+            VStack(alignment: .leading, spacing: 6) {
+                Text("TIME & AVAILABLE SLOT".uppercased())
+                    .font(.caption2)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+
+                Button {
+                    showTimePicker = true
+                } label: {
+                    HStack {
+                        if let selected = viewModel.selectedDoctorAppointment {
+                            Text("\(timeString(selected.startTime)) - \(timeString(selected.endTime))")
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                            Spacer()
+                            Text(selected.displayText)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        } else {
+                            Text("Pick a Time")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Spacer()
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(6)
+                }
+                .sheet(isPresented: $showTimePicker) {
+                    TimePickerModal(
+                        appointments: filteredAppointments,
+                        selectedAppointment: $viewModel.selectedDoctorAppointment,
+                        isPresented: $showTimePicker,
+                        onConfirm: { }
+                    )
+                }
+                .disabled(selectedDoctor.isEmpty)
+                .opacity(selectedDoctor.isEmpty ? 0.6 : 1)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .navigationTitle("New Doctor Appointment")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Add") {
+                    if let appt = viewModel.selectedDoctorAppointment {
+                        viewModel.bookDoctorAppointment(appt)
+                        viewModel.selectedDoctorAppointment = nil
+                    }
+                    dismiss()
+                }
+                .disabled(viewModel.selectedDoctorAppointment == nil)
+            }
+        }
+    }
+
+    // MARK: - Filtered Appointments for TimePicker
+    private var filteredAppointments: [DoctorAppointment] {
+        viewModel.doctorAppointments.filter {
+            $0.department == selectedDept &&
+            $0.name == selectedDoctor &&
+            Calendar.current.isDate($0.startTime, inSameDayAs: selectedDate)
+        }
+    }
+
+    private func timeString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+}
+
+
+
 
 // MARK: - Date Extensions
 extension Date {
@@ -331,18 +475,22 @@ struct ServiceUnitSearchModal: View {
             (searchText.isEmpty || appt.name.localizedCaseInsensitiveContains(searchText))
         }
         
-        // Deduplicate by name
+        // Deduplicate by package name
         var seenNames = Set<String>()
         let distinct = filtered.filter { appt in
-            if seenNames.contains(appt.name) {
-                return false
-            } else {
-                seenNames.insert(appt.name)
-                return true
-            }
+            if seenNames.contains(appt.name) { return false }
+            seenNames.insert(appt.name)
+            return true
         }
         
-        return distinct
+        // Sort by unit first, then by package name
+        return distinct.sorted { (a, b) in
+            if a.unit == b.unit {
+                return a.name < b.name
+            } else {
+                return a.unit < b.unit
+            }
+        }
     }
     
     var uniqueUnits: [String] {
@@ -383,7 +531,6 @@ struct ServiceUnitSearchModal: View {
                 // Package list
                 List(filteredPackages) { appt in
                     let isSelected = (tempUnit == appt.unit && tempPackage == appt.name)
-                    
                     HStack {
                         Text(appt.unit)
                             .font(.subheadline)
@@ -429,7 +576,7 @@ struct ServiceUnitSearchModal: View {
                         selectedPackage = tempPackage
                         dismiss()
                     }
-                    .disabled(tempUnit.isEmpty && tempPackage.isEmpty)
+                    .disabled(tempPackage.isEmpty)
                 }
             }
             .onAppear {
@@ -441,13 +588,168 @@ struct ServiceUnitSearchModal: View {
     }
 }
 
-struct TimePickerModal: View {
-    let appointments: [ServiceAppointment]
-    @Binding var selectedAppointment: ServiceAppointment?
+struct DoctorSearchModal: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var viewModel: AddPatientViewModel
+    @Binding var selectedDept: String
+    @Binding var selectedDoctor: String
+
+    @State private var searchText = ""
+    @State private var selectedFilter: String = "All"
+    
+    // Temporary selection for this modal
+    @State private var tempDept: String = ""
+    @State private var tempDoctor: String = ""
+
+    var filteredDoctors: [DoctorAppointment] {
+        let filtered = viewModel.doctorAppointments.filter { appt in
+            (selectedFilter == "All" || appt.department == selectedFilter) &&
+            (searchText.isEmpty || appt.name.localizedCaseInsensitiveContains(searchText))
+        }
+
+        // Deduplicate by doctor name
+        var seenNames = Set<String>()
+        let distinct = filtered.filter { appt in
+            if seenNames.contains(appt.name) { return false }
+            seenNames.insert(appt.name)
+            return true
+        }
+
+        // Sort by department first, then by name
+        return distinct.sorted { (a, b) in
+            if a.department == b.department {
+                return a.name < b.name
+            } else {
+                return a.department < b.department
+            }
+        }
+    }
+
+
+    var uniqueDepartments: [String] {
+        Array(Set(viewModel.doctorAppointments.map { $0.department })).sorted()
+    }
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+
+                // Search + Department filter
+                HStack {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                        TextField("Search doctor...", text: $searchText)
+                            .autocapitalization(.words)
+                    }
+                    .padding(8)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+
+                    Menu {
+                        Button("All") { selectedFilter = "All" }
+                        ForEach(uniqueDepartments, id: \.self) { dept in
+                            Button(dept) { selectedFilter = dept }
+                        }
+                    } label: {
+                        HStack {
+                            Text(selectedFilter)
+                            Image(systemName: "chevron.down")
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    }
+                }
+                .padding()
+
+                // Doctor list
+                List(filteredDoctors) { doctor in
+                    let isSelected = (tempDoctor == doctor.name && tempDept == doctor.department)
+
+                    HStack {
+                        Text(doctor.department)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color(hex: "#0F0E46"))
+                        Text(" - ")
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "#0F0E46"))
+                        Text(doctor.name)
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "#0F0E46"))
+                        Spacer()
+                        if isSelected {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(Color(hex: "#0F0E46"))
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if isSelected {
+                            tempDoctor = ""
+                            tempDept = ""
+                        } else {
+                            tempDoctor = doctor.name
+                            tempDept = doctor.department
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+            .navigationTitle("Select Doctor")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Select") {
+                        selectedDept = tempDept
+                        selectedDoctor = tempDoctor
+                        dismiss()
+                    }
+                    .disabled(tempDoctor.isEmpty)
+                }
+            }
+            .onAppear {
+                tempDept = selectedDept
+                tempDoctor = selectedDoctor
+            }
+        }
+    }
+}
+
+
+// Protocol to unify appointments
+protocol TimeSelectable: Identifiable {
+    var startTime: Date { get }
+    var endTime: Date { get }
+    var displayText: String { get }       // optional description, e.g., available slots
+    var isSelectable: Bool { get }        // enable/disable selection
+}
+
+// Conform ServiceAppointment
+extension ServiceAppointment: TimeSelectable {
+    var displayText: String { "\(availableSlots)/3 Slot Available" }
+    var isSelectable: Bool { availableSlots > 0 }
+}
+
+// Conform DoctorAppointment (you can tweak displayText as needed)
+extension DoctorAppointment: TimeSelectable {
+    var endTime: Date { startTime.addingTimeInterval(30 * 60) } // assume 30min slot
+    var displayText: String { "\(availableSlots)/3 Slot Available" }
+    var isSelectable: Bool { true }         // assume always selectable
+}
+
+// Unified TimePickerModal
+struct TimePickerModal<T: TimeSelectable>: View {
+    let appointments: [T]
+    @Binding var selectedAppointment: T?
     @Binding var isPresented: Bool
     var onConfirm: () -> Void
 
-    @State private var tempSelection: ServiceAppointment? // temporary selection
+    @State private var tempSelection: T?
 
     var body: some View {
         NavigationStack {
@@ -460,9 +762,9 @@ struct TimePickerModal: View {
                             .font(.subheadline)
                             .foregroundColor(.black)
                         Spacer()
-                        Text("\(appointment.availableSlots)/3 Slot Available")
+                        Text(appointment.displayText)
                             .font(.subheadline)
-                            .foregroundColor(appointment.availableSlots > 0 ? .black : .red)
+                            .foregroundColor(appointment.isSelectable ? .black : .red)
                         if tempSelection?.id == appointment.id {
                             Image(systemName: "checkmark")
                                 .foregroundColor(Color(hex: "#0F0E46"))
@@ -470,7 +772,7 @@ struct TimePickerModal: View {
                     }
                     .padding(.horizontal)
                 }
-                .disabled(appointment.availableSlots == 0)
+                .disabled(!appointment.isSelectable)
             }
             .listStyle(.plain)
             .navigationTitle("Pick a Time")
@@ -479,12 +781,12 @@ struct TimePickerModal: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         isPresented = false
-                        tempSelection = nil // discard temporary selection
+                        tempSelection = nil
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Confirm") {
-                        selectedAppointment = tempSelection // commit selection
+                        selectedAppointment = tempSelection
                         onConfirm()
                         isPresented = false
                     }
@@ -501,6 +803,7 @@ struct TimePickerModal: View {
         return formatter.string(from: date)
     }
 }
+
 
 
 
@@ -564,20 +867,55 @@ struct AppointmentCard_Service: View {
 
 struct AppointmentCard_Doctor: View {
     let appt: DoctorAppointment
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(appt.name)
-                .font(.headline)
-            Text(appt.department)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            Text("\(appt.date.formatted(date: .abbreviated, time: .omitted)) • \(appt.startTime.formatted(date: .omitted, time: .shortened))")
-                .font(.footnote)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                // Date
+                Text(dateString(appt.date))
+                    .font(.headline)
+                    .bold()
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                Spacer()
+                // Doctor Name
+                Text(appt.name)
+                    .font(.headline)
+                    .bold()
+                    .foregroundColor(Color(hex: "#0F0E46"))
+            }
+            
+            HStack {
+                // Time
+                Text(timeString(appt.startTime))
+                    .font(.headline)
+                    .bold()
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                Spacer()
+                // Department
+                Text("\(appt.department)")
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .padding(.vertical, 3)
+                    .padding(.horizontal, 6)
+                    .background(Color(hex: "#FFE4E4"))
+                    .cornerRadius(3)
+            }
         }
         .padding()
+        .frame(maxWidth: .infinity)
         .background(Color(.systemGray6))
         .cornerRadius(8)
+    }
+    
+    private func dateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MMMM yyyy"
+        return formatter.string(from: date)
+    }
+    
+    private func timeString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH.mm"
+        return formatter.string(from: date)
     }
 }
