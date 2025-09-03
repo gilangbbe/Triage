@@ -25,6 +25,7 @@ struct PatientRowView: View {
                 Text(patient.fullName)
                     .font(.title3)
                     .fontWeight(.bold)
+                    .foregroundColor(.accentColor)
                 Text("DOB : \(formattedBirthDate)")
                     .font(.callout)
                     .foregroundColor(.gray.opacity(0.8))
