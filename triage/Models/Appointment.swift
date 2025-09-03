@@ -12,27 +12,23 @@ import SwiftData
 final class Appointment {
     @Attribute(.unique) var id: UUID
     var name: String
-    var date: Date
-    var time: Date
-    var consultation: Bool
-    var department: Department?
-
+    
     // Links
-    var patient: Patient?
-    var package: Package?
+    var timeSlot: TimeSlot
+    var patient: Patient
+    var package: Package
 
     init(id: UUID = UUID(),
          name: String,
          date: Date,
-         time: Date,
-         consultation: Bool,
-         patient: Patient? = nil,
-         package: Package? = nil) {
+         startTime: Date,
+         endTime: Date,
+         timeSlot: TimeSlot,
+         patient: Patient,
+         package: Package) {
         self.id = id
         self.name = name
-        self.date = date
-        self.time = time
-        self.consultation = consultation
+        self.timeSlot = timeSlot
         self.patient = patient
         self.package = package
     }

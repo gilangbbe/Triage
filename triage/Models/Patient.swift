@@ -20,12 +20,8 @@ final class Patient {
     var phoneNumber: String?
     var address: String?
 
-    // Many-to-many: assigned packages (can be empty)
-    @Relationship(deleteRule: .nullify)
-    var packages: [Package] = []
-
     // Optional: appointments (can be empty)
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \Appointment.patient)
     var appointments: [Appointment] = []
 
     // UI helpers
