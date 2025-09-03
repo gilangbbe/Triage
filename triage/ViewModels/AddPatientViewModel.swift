@@ -108,6 +108,7 @@ class AddPatientViewModel {
     func parseFromRawText() {
         let parser = PatientDataParser()
         let parsedData = parser.parse(from: rawText)
+        print(parsedData)
         
         applyParsedData(parsedData)
         didParseStep1 = !fullName.isEmpty
@@ -376,21 +377,34 @@ class PatientDataParser {
     }
     
     private func extractValue(for key: String, from text: String) -> String {
+        // Allow optional newline before colon
         let escapedKey = NSRegularExpression.escapedPattern(for: key)
-        let pattern = "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)"
+        let pattern = "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)"          // normal paste
+        + "|(?i)" + escapedKey + "\\s*\\n\\s*[:：]\\s*([^\\n]*)" // OCR
         
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return "" }
-        
-        let nsText = text as NSString
-        let range = NSRange(location: 0, length: nsText.length)
-        
-        if let match = regex.firstMatch(in: text, options: [], range: range) {
-            let matchRange = match.range(at: 1)
-            if matchRange.location != NSNotFound {
-                return nsText.substring(with: matchRange).trimmingCharacters(in: .whitespacesAndNewlines)
+        if let regex = try? NSRegularExpression(pattern: pattern) {
+            let nsText = text as NSString
+            if let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: nsText.length)) {
+                var val: String? = nil
+                if match.numberOfRanges > 1, match.range(at: 1).location != NSNotFound {
+                    val = nsText.substring(with: match.range(at: 1))
+                } else if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound {
+                    val = nsText.substring(with: match.range(at: 2))
+                }
+                if let val = val {
+                    let trimmed = val.trimmingCharacters(in: .whitespacesAndNewlines)
+                    // If it looks like another key (contains colon or known labels), treat as empty
+                    let lower = trimmed.lowercased()
+                    if trimmed.isEmpty
+                        || lower.contains("nama") || lower.contains("nik")
+                        || lower.contains("tgl") || lower.contains("alamat")
+                        || lower.contains("jenis kelamin") {
+                        return ""
+                    }
+                    return trimmed
+                }
             }
         }
-        
         return ""
     }
 }
