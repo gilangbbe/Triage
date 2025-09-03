@@ -75,17 +75,15 @@ struct AppointmentRowView: View {
             
             HStack {
                 VStack(alignment: .trailing) {
-                    Text(appointment.date, style: .date)
+                    Text(appointment.timeSlot.startTime, style: .date)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            if let patient = appointment.patient {
-                Text("Patient: \(patient.fullName)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text("Patient: \(appointment.patient.fullName)")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding(.vertical, 2)
     }

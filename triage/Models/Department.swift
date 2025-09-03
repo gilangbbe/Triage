@@ -21,5 +21,11 @@ final class Department {
         self.id = id
         self.name = name
     }
+    
+    init(id: UUID = UUID(), name: String, maxSlot: Int) {
+        self.id = id
+        self.name = name
+        self.maxSlot = maxSlot
+    }
 }
 

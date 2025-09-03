@@ -15,6 +15,10 @@ final class Package {
     var descriptionText: String?
     
     var department: Department
+    
+    // Many-to-many: assigned patients (can be empty)
+    @Relationship(deleteRule: .nullify, inverse: \Patient.packages)
+    var patients: [Patient] = []
 
     init(id: UUID = UUID(), name: String, department: Department, descriptionText: String? = nil) {
         self.id = id
