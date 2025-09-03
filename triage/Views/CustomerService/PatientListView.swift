@@ -43,6 +43,7 @@ struct PatientListView: View {
                                     .id(patient.id)
                                     .listRowSeparator(.visible)
                                     .listRowInsets(EdgeInsets())
+                                    .accessibilityHidden(true)
                             }
                             .onDelete { indexSet in
                                 for index in indexSet {
@@ -53,6 +54,10 @@ struct PatientListView: View {
                         }
                         .scrollContentBackground(.hidden)
                         .padding(.trailing, 16)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text("Patient List"))
+                        .accessibilityHint(Text("Scroll the list to view more patients"))
+                        
                         // A–Z index on the right
                         NameIndex(viewModel: patientViewModel, proxy: proxy)
                     }
@@ -63,7 +68,9 @@ struct PatientListView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button { showingHistorySheet.toggle() } label: { Image(systemName: "bell") }
+                        .accessibilityLabel(Text("History Log"))
                     Button { showingAddPatientSheet.toggle() } label: { Image(systemName: "plus") }
+                        .accessibilityLabel(Text("Add Patient"))
                 }
             }
             .toolbar(removing: .sidebarToggle)
@@ -74,6 +81,7 @@ struct PatientListView: View {
             .sheet(isPresented: $showingAddPatientSheet) {
                 AddPatientView(patientManager: patientManager)
                     .frame(width: 800)
+                    
             }
         } detail : {
             if let id = selectedPatientID,
@@ -82,6 +90,7 @@ struct PatientListView: View {
             } else {
                 Text("Select a patient")
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("Patient Detail Info"))
             }
         }
     }
@@ -98,6 +107,8 @@ struct SearchBarPatient: View {
                 .foregroundColor(.secondary)
         }
         .padding(.horizontal, 18)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Search Bar Patient"))
     }
 }
 
@@ -106,7 +117,7 @@ struct SegmentedControlFilter: View {
     
     var body : some View {
         VStack {
-            Picker("Options", selection: $selectedSegment) {
+            Picker("Select Service", selection: $selectedSegment) {
                 Text("MCU").tag(0)
                 Text("Radiology").tag(1)
                 Text("Laboratorium").tag(2)
@@ -147,8 +158,12 @@ struct NameIndex: View {
                             .padding(.vertical, 1)
                             .frame(width: 24, height: 20)
                     }
+                    
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("A-Z Index"))
+            .accessibilityHint(Text("Scroll down to find a specific alhpabetic letter and Tap it to select the corresponding patient"))
         }
     }
 }
