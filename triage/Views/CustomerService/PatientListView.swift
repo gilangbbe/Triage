@@ -31,9 +31,9 @@ struct PatientListView: View {
         
         NavigationSplitView() {
             VStack(spacing: 16) {
-                SearchBarPatient(text: $patientViewModel.searchText)
+                SearchBarPatientView(text: $patientViewModel.searchText)
                 
-                SegmentedControlFilter()
+                SegmentedControlFilterView()
 
                 ScrollViewReader { proxy in
                     ZStack(alignment: .trailing) {
@@ -59,7 +59,7 @@ struct PatientListView: View {
                         .accessibilityHint(Text("Scroll the list to view more patients"))
                         
                         // A–Z index on the right
-                        NameIndex(viewModel: patientViewModel, proxy: proxy)
+                        NameIndexView(viewModel: patientViewModel, proxy: proxy)
                     }
                 }
             }
@@ -67,7 +67,7 @@ struct PatientListView: View {
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button { showingHistorySheet.toggle() } label: { Image(systemName: "text.bubble.badge.clock.fill") }
+                    Button { showingHistorySheet.toggle() } label: { Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90") }
                         .accessibilityLabel(Text("History Log"))
                     Button { showingAddPatientSheet.toggle() } label: { Image(systemName: "plus") }
                         .accessibilityLabel(Text("Add Patient"))
@@ -89,7 +89,7 @@ struct PatientListView: View {
         } detail : {
             if let id = selectedPatientID,
                let patient = patients.first(where: { $0.id == id }) {
-                PatientDetailView(patient: patient, historyViewModel: historyViewModel, historyManager: historyManager)
+                PatientDetailView(patient: patient, historyViewModel: historyViewModel)
             } else {
                 Text("Select a patient")
                     .foregroundStyle(.secondary)
@@ -97,88 +97,4 @@ struct PatientListView: View {
             }
         }
     }
-}
-
-struct SearchBarPatient: View {
-    @Binding var text: String
-    
-    var body: some View {
-        HStack {
-            TextField("Search Patient", text: $text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 18)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Search Bar Patient"))
-    }
-}
-
-struct SegmentedControlFilter: View {
-    @State private var selectedSegment = 0
-    
-    var body : some View {
-        VStack {
-            Picker("Select Service", selection: $selectedSegment) {
-                Text("MCU").tag(0)
-                Text("Radiology").tag(1)
-                Text("Laboratorium").tag(2)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 18)
-        }
-    }
-}
-
-struct NameIndex: View {
-    @Bindable var viewModel: PatientListViewModel
-    var proxy: ScrollViewProxy
-    
-    // Always show A–Z
-    let sectionTitles = (65...90).map { String(UnicodeScalar($0)!) }
-    
-    var body: some View {
-        ScrollView() {
-            VStack(alignment: .leading) {
-                ForEach(sectionTitles, id: \.self) { letter in
-                    Button(action: {
-                        withAnimation {
-                            if viewModel.selectedLetter == letter {
-                                // 👇 tapped the same letter again → reset filter
-                                viewModel.selectedLetter = nil
-                            } else {
-                                viewModel.selectedLetter = letter
-                                if let firstPatient = viewModel.filteredPatients.first(where: { $0.firstLetter == letter }) {
-                                    proxy.scrollTo(firstPatient.id, anchor: .top)
-                                }
-                            }
-                        }
-                    }) {
-                        Text(letter)
-                            .font(.caption2)
-                            .foregroundColor(viewModel.selectedLetter == letter ? .blue : .gray)
-                            .padding(.vertical, 1)
-                            .frame(width: 24, height: 20)
-                    }
-                    
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("A-Z Index"))
-            .accessibilityHint(Text("Scroll down to find a specific alhpabetic letter and Tap it to select the corresponding patient"))
-        }
-    }
-}
-
-
-
-
-
-#Preview {
-    PatientListView()
-        .environment(PatientListViewModel(patientManager: PatientManager.shared))
-        .environment(PatientManager.shared)
-        .environment(HistoryManager.shared)
-        .environment(HistoryViewModel(historyManager: HistoryManager.shared))
 }

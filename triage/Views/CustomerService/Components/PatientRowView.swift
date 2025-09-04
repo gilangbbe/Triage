@@ -49,8 +49,3 @@ struct PatientRowView: View {
         return first
     }
 }
-
-#Preview {
-    let samplePatient = Patient(fullName: "John Doe")
-    PatientRowView(patient: samplePatient)
-}

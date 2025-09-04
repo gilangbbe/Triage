@@ -71,7 +71,7 @@ struct PatientDetailView: View {
                             }
                             .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
-                            .background(Color.secondary.opacity(0.1))
+                            .background(Color.placeholder)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .padding(.bottom, 16)
                         }
@@ -96,7 +96,7 @@ struct PatientDetailView: View {
                             }
                             .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
-                            .background(Color.secondary.opacity(0.1))
+                            .background(Color.placeholder)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
@@ -141,7 +141,7 @@ struct PatientDetailView: View {
                     .foregroundColor(.gray)
             }
             .padding()
-            .background(Color.secondary.opacity(0.1))
+            .background(Color.placeholder)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .padding(.bottom, 16)
             
@@ -168,13 +168,13 @@ struct PatientDetailView: View {
                     get: { patient.nationalID ?? "" },
                     set: { patient.nationalID = $0.isEmpty ? nil : $0 }
                 ))
-                .font(.headline)
-                .padding()
-                .foregroundColor(.accentColor)
-                .background(Color.secondary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .padding(.bottom, 16)
-                .disabled(!isEditing)
+                    .font(.headline)
+                    .padding()
+                    .foregroundColor(isEditing ? .accentColor : .gray)
+                    .background(Color.placeholder)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(.bottom, 16)
+                    .disabled(!isEditing)
             }
             
             // Date of Birth
@@ -200,7 +200,7 @@ struct PatientDetailView: View {
             .padding(.bottom, 16)
             
             // Other fields
-            FormField(
+            FormFieldView(
                 icon: "phone.fill",
                 label: "PHONE NUMBER",
                 placeholder: "Enter Phone Number",
@@ -210,7 +210,7 @@ struct PatientDetailView: View {
                 ),
                 isEditing: isEditing
             )
-            FormField(
+            FormFieldView(
                 icon: "house.fill",
                 label: "ADDRESS",
                 placeholder: "Enter Address",
@@ -221,7 +221,7 @@ struct PatientDetailView: View {
                 isEditing: isEditing
                 
             )
-            FormField(
+            FormFieldView(
                 icon: "tshirt.fill",
                 label: "GENDER",
                 placeholder: "Enter Gender",
