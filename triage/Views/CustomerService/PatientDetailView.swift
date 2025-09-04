@@ -44,7 +44,7 @@ struct PatientDetailView: View {
                                 if patient.appointments.isEmpty {
                                     ScrollView {
                                         ForEach(0..<4, id: \.self) { i in
-                                            AppointmentListRow()
+                                            AppointmentListRowView()
                                         }
                                     }
 //                                    Text("No Upcoming Appointment")
@@ -53,14 +53,14 @@ struct PatientDetailView: View {
                                 } else {
                                     ScrollView {
                                         ForEach(0..<4, id: \.self) { i in
-                                            AppointmentListRow()
+                                            AppointmentListRowView()
                                         }
                                     }
                                 }
                             }
                             .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
-                            .background(Color.secondary.opacity(0.1))
+                            .background(Color.placeholder)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .padding(.bottom, 16)
                         }
@@ -78,14 +78,14 @@ struct PatientDetailView: View {
                                 } else {
                                     ScrollView {
                                         ForEach(0..<10, id: \.self) { i in
-                                            AppointmentListRow()
+                                            AppointmentListRowView()
                                         }
                                     }
                                 }
                             }
                             .frame(maxWidth: .infinity, minHeight: 280)
                             .padding()
-                            .background(Color.secondary.opacity(0.1))
+                            .background(Color.placeholder)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
@@ -130,7 +130,7 @@ struct PatientDetailView: View {
                     .foregroundColor(.gray)
             }
             .padding()
-            .background(Color.secondary.opacity(0.1))
+            .background(Color.placeholder)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .padding(.bottom, 16)
             
@@ -159,8 +159,8 @@ struct PatientDetailView: View {
                 ))
                     .font(.headline)
                     .padding()
-                    .foregroundColor(.accentColor)
-                    .background(Color.secondary.opacity(0.1))
+                    .foregroundColor(isEditing ? .accentColor : .gray)
+                    .background(Color.placeholder)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.bottom, 16)
                     .disabled(!isEditing)
@@ -189,7 +189,7 @@ struct PatientDetailView: View {
             .padding(.bottom, 16)
             
             // Other fields
-            FormField(
+            FormFieldView(
                 icon: "phone.fill",
                 label: "PHONE NUMBER",
                 placeholder: "Enter Phone Number",
@@ -199,7 +199,7 @@ struct PatientDetailView: View {
                 ),
                 isEditing: isEditing
             )
-            FormField(
+            FormFieldView(
                 icon: "house.fill",
                 label: "ADDRESS",
                 placeholder: "Enter Address",
@@ -210,7 +210,7 @@ struct PatientDetailView: View {
                 isEditing: isEditing
 
             )
-            FormField(
+            FormFieldView(
                 icon: "tshirt.fill",
                 label: "GENDER",
                 placeholder: "Enter Gender",
@@ -229,104 +229,3 @@ struct PatientDetailView: View {
         historyViewModel.addHistory(log)
     }
 }
-
-struct AppointmentListRow: View {
-    private var serviceName: String = "Medical Checkup"
-    private var date: String = "22 Agustus 2025"
-    private var time: String = "10:00 AM"
-    private var package: String = "Paket Merdeka Lite"
-    
-    var body: some View {
-        VStack {
-            HStack {
-                Text(date)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.accentColor)
-                Spacer()
-                Text(serviceName)
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
-            }
-            .padding(.bottom, 4)
-            HStack {
-                Text(time)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.accentColor)
-                Spacer()
-                Text(package)
-                    .font(.subheadline)
-                    .padding(8)
-                    .background(.red.opacity(0.3))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground)) 
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-    }
-}
-
-struct FormField: View {
-    let icon: String
-    let label: String
-    let placeholder: String
-    let value: String?
-    @Binding var text: String
-    var isEditing: Bool = false
-    
-    init(icon: String, label: String, placeholder: String, text: Binding<String>, isEditing: Bool) {
-        self.icon = icon
-        self.label = label
-        self.placeholder = placeholder
-        self.value = nil
-        self._text = text
-        self.isEditing = isEditing
-    }
-    
-    init(icon: String, label: String, placeholder: String, value: String, isEditing: Bool) {
-        self.icon = icon
-        self.label = label
-        self.placeholder = placeholder
-        self.value = value
-        self._text = .constant("")
-        self.isEditing = isEditing
-    }
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.gray)
-            Text(label)
-                .foregroundColor(.gray)
-        }
-        .padding(.leading)
-        if let displayValue = value {
-            Text(displayValue)
-                .font(.headline)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.secondary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .foregroundColor(.accentColor)
-                .padding(.bottom, 16)
-        } else {
-            TextField(placeholder, text: $text)
-                .font(.headline)
-                .padding()
-                .background(Color.secondary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .padding(.bottom, 16)
-                .foregroundColor(.accentColor)
-                .disabled(!isEditing)
-        }
-    }
-}
-
-//#Preview {
-//    let samplePatient = Patient(fullName: "John Doe")
-//    
-//    return PatientDetailView(patient: samplePatient)
-//}
-
