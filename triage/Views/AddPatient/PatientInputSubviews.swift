@@ -16,32 +16,23 @@ struct PasteTextView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if isStep1 {
-                Text("Please fill in the Patient’s details")
-                    .font(.headline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
-            } else {
-                Text("")
-                    .font(.headline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
-            }
+            Text(isStep1 ? "Please fill in the Patient’s details" : "Pasted Data")
+                .font(.headline)
+                .foregroundColor(Color(hex: "#0F0E46").opacity(isStep1 ? 1 : 0.5))
             
             ZStack(alignment: .topLeading) {
                 CustomTextEditor(text: $rawText)
-                    .background(Color(hex: "#F9F9F9"))
+                    .disabled(!isStep1)
+                    .background(isStep1 ? Color(hex: "#F0F0F7") : Color(hex: "#F9F9F9"))
                     .cornerRadius(8)
                     .overlay(
-                        Group {
-                            if isStep1 {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(hex: "#F9F9F9"), lineWidth: 1)
-                            } else {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .strokeBorder(Color(hex: "#0F0E46"),
-                                                  style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                    .background(Color(hex: "#F0F0F7").opacity(0.3))
-                            }
-                        }
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(
+                                isStep1 ? Color(hex: "#F0F0F7") : Color.black.opacity(0.2),
+                                style: isStep1
+                                    ? StrokeStyle(lineWidth: 1)
+                                    : StrokeStyle(lineWidth: 1, dash: [4])
+                            )
                     )
                     .frame(minHeight: 220)
                     .focused($isFocused)
@@ -62,7 +53,7 @@ struct PasteTextView: View {
                     Alamat lengkap:
                     Jenis kelamin (L/P):
                     """)
-                    .foregroundColor(Color(hex: "#0F0E46").opacity(0.4))
+                    .foregroundColor(Color(hex: "#0F0E46").opacity(isStep1 ? 0.4 : 0.2))
                     .font(.system(size: 16))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 10)
@@ -71,6 +62,7 @@ struct PasteTextView: View {
         }
     }
 }
+
 
 struct CustomTextEditor: UIViewRepresentable {
     @Binding var text: String
@@ -111,21 +103,16 @@ struct UploadIDCardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if isStep1 {
-                Text("Please attach Patient ID Card here")
-                    .font(.headline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
-            } else {
-                Text("")
-                    .font(.headline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
-            }
+            Text(isStep1 ? "Please attach Patient ID Card here" : "Uploaded Data")
+                .font(.headline)
+                .foregroundColor(Color(hex: "#0F0E46").opacity(isStep1 ? 1 : 0.5))
             
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color(hex: "#0F0E46"),
+                    .strokeBorder(isStep1 ? Color(hex: "#0F0E46") : Color.black.opacity(0.2),
                                   style: StrokeStyle(lineWidth: 1, dash: [4]))
-                    .background(Color(hex: "#F0F0F7").opacity(0.3))
+                    .background(isStep1 ? Color(hex: "#F0F0F7").opacity(0.3)
+                                        : Color(hex: "#F9F9F9").opacity(0.5))
                 
                 VStack(spacing: 12) {
                     if uploading {
@@ -141,7 +128,7 @@ struct UploadIDCardView: View {
                     } else {
                         Text("Choose an image or drag/drop it here")
                             .font(.subheadline)
-                            .foregroundColor(.black)
+                            .foregroundColor(isStep1 ? Color(hex: "#0F0E46") : .secondary)
                         Text("JPEG, PNG up to 10 MB")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -185,5 +172,6 @@ struct UploadIDCardView: View {
                 .padding()
             }
         }
+        .opacity(isStep1 ? 1 : 0.95)
     }
 }
