@@ -356,52 +356,74 @@ class PatientDataParser {
     func parse(from text: String) -> ParsedPatientData {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            return ParsedPatientData(nationalId: nil, fullName: "", dateOfBirth: nil, phoneNumber: "", address: "", gender: nil)
+            return ParsedPatientData(
+                nationalId: nil,
+                fullName: "",
+                dateOfBirth: nil,
+                phoneNumber: "",
+                address: "",
+                gender: nil
+            )
         }
-        
-        let nationalId = extractValue(for: "NIK", from: cleanText)
-        let fullName = extractValue(for: "Nama lengkap", from: cleanText)
-        let dobString = extractValue(for: "Tgl lahir", from: cleanText)
-        let phoneNumber = extractValue(for: "No telp", from: cleanText)
-        let address = extractValue(for: "Alamat lengkap", from: cleanText)
-        let genderString = extractValue(for: "Jenis kelamin", from: cleanText)
-        
+
+        let nationalId = extractValue(for: ["NIK"], from: cleanText)
+        let fullName   = extractValue(for: ["Nama lengkap", "Nama"], from: cleanText)
+        var dobString  = extractValue(for: ["Tgl lahir", "Tempat/Tgl Lahir"], from: cleanText)
+        let phone      = extractValue(for: ["No telp"], from: cleanText)
+        var address    = extractValue(for: ["Alamat lengkap", "Alamat"], from: cleanText)
+        let genderStr  = extractValue(for: ["Jenis kelamin", "Jenis kelamin (L/P)", "Jenis Kelamin"], from: cleanText)
+
+        // Handle DOB with comma case
+        if !dobString.isEmpty, let commaIdx = dobString.firstIndex(of: ",") {
+            dobString = String(dobString[dobString.index(after: commaIdx)...]).trimmingCharacters(in: .whitespaces)
+        }
+
+        // Fallback: build full address if only partial pieces are available
+        if address.isEmpty {
+            let rtRw = extractValue(for: ["RT/RW"], from: cleanText)
+            let kel  = extractValue(for: ["Kel/Desa"], from: cleanText)
+            let kec  = extractValue(for: ["Kecamatan"], from: cleanText)
+            address = [address, rtRw, kel, kec].filter { !$0.isEmpty }.joined(separator: ", ")
+        }
+
         return ParsedPatientData(
             nationalId: nationalId.isEmpty ? nil : nationalId,
             fullName: fullName,
             dateOfBirth: DateParser.parse(from: dobString),
-            phoneNumber: phoneNumber,
+            phoneNumber: phone,
             address: address,
-            gender: GenderParser.parse(from: genderString)
+            gender: GenderParser.parse(from: genderStr)
         )
     }
     
-    private func extractValue(for key: String, from text: String) -> String {
-        // Allow optional newline before colon
-        let escapedKey = NSRegularExpression.escapedPattern(for: key)
-        let pattern = "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)"          // normal paste
-        + "|(?i)" + escapedKey + "\\s*\\n\\s*[:：]\\s*([^\\n]*)" // OCR
-        
-        if let regex = try? NSRegularExpression(pattern: pattern) {
-            let nsText = text as NSString
-            if let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: nsText.length)) {
-                var val: String? = nil
-                if match.numberOfRanges > 1, match.range(at: 1).location != NSNotFound {
-                    val = nsText.substring(with: match.range(at: 1))
-                } else if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound {
-                    val = nsText.substring(with: match.range(at: 2))
-                }
-                if let val = val {
-                    let trimmed = val.trimmingCharacters(in: .whitespacesAndNewlines)
-                    // If it looks like another key (contains colon or known labels), treat as empty
-                    let lower = trimmed.lowercased()
-                    if trimmed.isEmpty
-                        || lower.contains("nama") || lower.contains("nik")
-                        || lower.contains("tgl") || lower.contains("alamat")
-                        || lower.contains("jenis kelamin") {
-                        return ""
+    private func extractValue(for keys: [String], from text: String) -> String {
+        for key in keys {
+            let escapedKey = NSRegularExpression.escapedPattern(for: key)
+            let pattern =
+                "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)" +                // normal paste
+                "|(?i)" + escapedKey + "\\s*\\n\\s*[:：]\\s*([^\\n]*)"          // OCR with newline
+
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let nsText = text as NSString
+                if let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: nsText.length)) {
+                    var val: String? = nil
+                    if match.numberOfRanges > 1, match.range(at: 1).location != NSNotFound {
+                        val = nsText.substring(with: match.range(at: 1))
+                    } else if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound {
+                        val = nsText.substring(with: match.range(at: 2))
                     }
-                    return trimmed
+                    if let val = val {
+                        let trimmed = val.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let lower = trimmed.lowercased()
+                        // Prevent capturing next key as value
+                        if trimmed.isEmpty
+                            || lower.contains("nama") || lower.contains("nik")
+                            || lower.contains("tgl") || lower.contains("alamat")
+                            || lower.contains("jenis kelamin") {
+                            continue
+                        }
+                        return trimmed
+                    }
                 }
             }
         }
@@ -411,17 +433,38 @@ class PatientDataParser {
 
 class DateParser {
     static func parse(from string: String) -> Date? {
-        let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        var cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanString.isEmpty else { return nil }
         
-        let formatters = [
-            createFormatter(format: "dd MMMM yyyy"),
-            createFormatter(format: "dd/MM/yyyy"),
-            createFormatter(format: "dd-MM-yyyy"),
-            createFormatter(format: "dd.MM.yyyy")
+        // If contains a comma, assume it's "City, dd-MM-yyyy"
+        if let commaIdx = cleanString.firstIndex(of: ",") {
+            cleanString = String(cleanString[cleanString.index(after: commaIdx)...]).trimmingCharacters(in: .whitespaces)
+        }
+        
+        // Normalize multiple spaces
+        cleanString = cleanString.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        
+        let formats = [
+            "d MMMM yyyy",   // 1 Januari 2000
+            "dd MMMM yyyy",  // 01 Januari 2000
+            "d-M-yyyy",      // 1-1-2000
+            "dd-MM-yyyy",    // 01-01-2000
+            "d/M/yyyy",      // 1/1/2000
+            "dd/MM/yyyy",    // 01/01/2000
+            "dd.MM.yyyy"     // 01.01.2000
         ]
         
-        for formatter in formatters {
+        // Try Indonesian first
+        for format in formats {
+            let formatter = createFormatter(format: format, locale: "id_ID")
+            if let date = formatter.date(from: cleanString) {
+                return date
+            }
+        }
+        
+        // Fallback: English months
+        for format in formats {
+            let formatter = createFormatter(format: format, locale: "en_US_POSIX")
             if let date = formatter.date(from: cleanString) {
                 return date
             }
@@ -430,21 +473,22 @@ class DateParser {
         return nil
     }
     
-    private static func createFormatter(format: String) -> DateFormatter {
+    private static func createFormatter(format: String, locale: String) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = format
-        formatter.locale = Locale(identifier: "id_ID")
+        formatter.locale = Locale(identifier: locale)
         return formatter
     }
 }
 
 class GenderParser {
     static func parse(from string: String) -> Gender? {
-        let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !cleanString.isEmpty else { return nil }
         
-        if cleanString.hasPrefix("L") || cleanString.contains("LAKI") || cleanString.contains("MALE") {
+        if cleanString.hasPrefix("l") || cleanString.contains("laki") || cleanString.contains("pria") || cleanString.contains("male") {
             return .male
-        } else if cleanString.hasPrefix("P") || cleanString.contains("PEREMPUAN") || cleanString.contains("FEMALE") {
+        } else if cleanString.hasPrefix("p") || cleanString.contains("perempuan") || cleanString.contains("wanita") || cleanString.contains("female") {
             return .female
         }
         
