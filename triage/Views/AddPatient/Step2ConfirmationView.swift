@@ -15,10 +15,9 @@ struct Step2ConfirmationView: View {
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        HStack(alignment: .top, spacing: 24) {
+        HStack(alignment: .top, spacing: 0) {
             
             VStack {
-                Spacer();
                 
                 // === Left Side (same as Step 1) ===
                 if viewModel.inputMode == .paste {
@@ -38,12 +37,12 @@ struct Step2ConfirmationView: View {
                     .padding()
                 }
                 
-                Spacer();
+//                Spacer();
             }
             
             // === Right Side (editable form) ===
             VStack(alignment: .leading, spacing: 16) {
-                Text("Confirm Patient")
+                Text("Confirm Patient Information")
                     .font(.headline)
                     .foregroundColor(Color(hex: "#0F0E46"))
                 
@@ -68,7 +67,7 @@ struct Step2ConfirmationView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Date of Birth".uppercased())
                             .font(.caption)
-                            .foregroundColor(.black)
+                            .foregroundColor(Color(hex: "#0F0E46"))
                         DatePicker("", selection: Binding(
                             get: { viewModel.dateOfBirth ?? Date() },
                             set: { viewModel.dateOfBirth = $0 }
@@ -86,7 +85,7 @@ struct Step2ConfirmationView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Address".uppercased())
                             .font(.caption)
-                            .foregroundColor(.black)
+                            .foregroundColor(Color(hex: "#0F0E46"))
                         TextEditor(text: $viewModel.address)
                             .frame(minHeight: 40, maxHeight: 100)
                             .padding(8)
@@ -100,7 +99,7 @@ struct Step2ConfirmationView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Gender".uppercased())
                             .font(.caption)
-                            .foregroundColor(.black)
+                            .foregroundColor(Color(hex: "#0F0E46"))
                         Picker("Gender", selection: Binding(
                             get: { viewModel.gender ?? .male },
                             set: { viewModel.gender = $0 }
@@ -151,7 +150,7 @@ private struct CustomFormField: View {
             HStack(spacing: 2) {
                 Text(title.uppercased())
                     .font(.caption)
-                    .foregroundColor(.black)
+                    .foregroundColor(Color(hex: "#0F0E46"))
                 if isRequired {
                     Text("*").foregroundColor(.red)
                 }
