@@ -82,14 +82,15 @@ struct PatientListView: View {
                 AddPatientView(
                     patientManager: patientManager,
                     appointmentManager: AppointmentManager.shared,
-                    packageManager: PackageManager.shared
+                    packageManager: PackageManager.shared,
+                    historyViewModel: historyViewModel
                 )
                 .frame(width: 800)
             }
         } detail : {
             if let id = selectedPatientID,
                let patient = patients.first(where: { $0.id == id }) {
-                PatientDetailView(patient: patient, historyViewModel: historyViewModel)
+                PatientDetailView(patient: patient, historyViewModel: historyViewModel, historyManager: historyManager)
             } else {
                 Text("Select a patient")
                     .foregroundStyle(.secondary)

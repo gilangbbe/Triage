@@ -11,13 +11,15 @@ struct AddPatientView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var currentStep: AddPatientViewModel.ValidationStep = .dataInput
     @State private var viewModel: AddPatientViewModel
+    var historyViewModel: HistoryViewModel
     
-    init(patientManager: PatientManager, appointmentManager: AppointmentManager, packageManager: PackageManager) {
+    init(patientManager: PatientManager, appointmentManager: AppointmentManager, packageManager: PackageManager, historyViewModel: HistoryViewModel) {
         _viewModel = State(wrappedValue: AddPatientViewModel(
             patientManager: patientManager,
             appointmentManager: appointmentManager,
-            packageManager: packageManager
+            packageManager: packageManager,
         ))
+        self.historyViewModel = historyViewModel
     }
     
     var body: some View {
@@ -41,6 +43,7 @@ struct AddPatientView: View {
                     NextButton(
                         viewModel: viewModel,
                         currentStep: currentStep,
+                        historyViewModel: historyViewModel,
                         onNext: handleNextAction,
                         onSave: handleSaveAction
                     )
@@ -111,6 +114,7 @@ struct StepIndicatorView: View {
 struct NextButton: View {
     let viewModel: AddPatientViewModel
     let currentStep: AddPatientViewModel.ValidationStep
+    let historyViewModel: HistoryViewModel
     let onNext: () -> Void
     let onSave: () -> Void
     
@@ -123,6 +127,7 @@ struct NextButton: View {
         } else {
             Button("Add") {
                 onSave()
+                recordNewPatient(patientName: viewModel.fullName)
             }
             .disabled(!viewModel.isFormComplete)
         }
