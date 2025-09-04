@@ -79,14 +79,14 @@ struct PatientListView: View {
                 HistoryView(groupedHistory: historyLogs)
             }
             .sheet(isPresented: $showingAddPatientSheet) {
-                AddPatientView(patientManager: patientManager)
+                AddPatientView(patientManager: patientManager, historyViewModel: historyViewModel)
                     .frame(width: 800)
                     
             }
         } detail : {
             if let id = selectedPatientID,
                let patient = patients.first(where: { $0.id == id }) {
-                PatientDetailView(patient: patient, historyViewModel: historyViewModel, historyManager: historyManager)
+                PatientDetailView(patient: patient, historyViewModel: historyViewModel)
             } else {
                 Text("Select a patient")
                     .foregroundStyle(.secondary)

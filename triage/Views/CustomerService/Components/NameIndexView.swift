@@ -41,6 +41,7 @@ struct NameIndexView: View {
                 }
             }
             .background(Color.gray.opacity(0.1))
+            .clipShape(Capsule())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("A-Z Index"))
             .accessibilityHint(Text("Scroll down to find a specific alhpabetic letter and Tap it to select the corresponding patient"))

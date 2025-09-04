@@ -11,8 +11,10 @@ struct AddPatientView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var step = 1
     @StateObject private var viewModel: AddPatientViewModel
+    var historyViewModel: HistoryViewModel
     
-    init(patientManager: PatientManager) {
+    init(patientManager: PatientManager, historyViewModel: HistoryViewModel) {
+        self.historyViewModel = historyViewModel
         _viewModel = StateObject(wrappedValue: AddPatientViewModel(patientManager: patientManager))
     }
     
@@ -62,6 +64,7 @@ struct AddPatientView: View {
                         Button("Add") {
                             viewModel.savePatient()
                             dismiss()
+                            recordNewPatient(patientName: viewModel.name)
                         }
                         .disabled(!viewModel.isValidAll)
                     }
@@ -69,6 +72,14 @@ struct AddPatientView: View {
 
             }
         }
+    }
+    
+    private func recordNewPatient(patientName: String) {
+        let log = History(
+            type: .newPatient(patientName: patientName)
+        )
+        print(log)
+        historyViewModel.addHistory(log)
     }
 }
 

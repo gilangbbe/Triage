@@ -11,7 +11,6 @@ struct PatientDetailView: View {
     @Bindable var patient: Patient
     @State private var isEditing: Bool = false
     let historyViewModel: HistoryViewModel
-    let historyManager: HistoryManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -42,14 +41,9 @@ struct PatientDetailView: View {
                             }
                             VStack {
                                 if patient.appointments.isEmpty {
-                                    ScrollView {
-                                        ForEach(0..<4, id: \.self) { i in
-                                            AppointmentListRowView()
-                                        }
-                                    }
-//                                    Text("No Upcoming Appointment")
-//                                        .font(.headline)
-//                                        .foregroundColor(.secondary)
+                                    Text("No Upcoming Appointment")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
                                 } else {
                                     ScrollView {
                                         ForEach(0..<4, id: \.self) { i in
