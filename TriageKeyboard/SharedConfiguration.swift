@@ -2,7 +2,7 @@
 //  SharedConfiguration.swift
 //  TriageKeyboard
 //
-//  Created by Developer on 28/08/25.
+//  Created by Gilang Banyu Biru Erassunu on 28/08/25.
 //
 
 import Foundation

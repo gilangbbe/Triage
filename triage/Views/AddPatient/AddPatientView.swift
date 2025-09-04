@@ -91,7 +91,7 @@ struct CurrentStepView: View {
         case .confirmation:
             Step2ConfirmationView(viewModel: viewModel)
         case .appointments:
-            NewStep3AppointmentsView(viewModel: viewModel)
+            Step3AppointmentsView(viewModel: viewModel)
         }
     }
 }

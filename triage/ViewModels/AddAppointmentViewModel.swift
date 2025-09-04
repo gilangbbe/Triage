@@ -2,7 +2,7 @@
 //  AddAppointmentViewModel.swift
 //  triage
 //
-//  Created by GitHub Copilot on 03/09/25.
+//  Created by Gilang Banyu Biru Erassunu on 03/09/25.
 //
 
 import Foundation
