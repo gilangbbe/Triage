@@ -111,85 +111,94 @@ struct CalendarView: View {
     @State private var selectedDate = Date()
     @State private var monthAnchor = Date()
     @State private var appts: [Appt] = []
+    @State private var showLog = false
+    @State private var logEntries: [ReminderEntry] = []
+    
 
     var body: some View {
-        HStack(spacing: 0) {
+        ZStack {
+            HStack(spacing: 0) {
 
-            if scope == .day {
-                SidebarPanel(selectedDate: $selectedDate, appts: appts)
-                    .frame(width: 360)
-                    .background(Color(.systemBackground))
-                    .overlay(Divider(), alignment: .trailing)
-            }
-
-            VStack(spacing: 0) {
-                HStack {
-                    
-                    if scope.rawValue == "Week" {
-                        MonthYearSelector(monthAnchor: $monthAnchor)
-                    }
-                    
-                    Spacer()
-                    EnumPillSegmentedControl(
-                        selection: $scope,
-                        titles: Scope.allCases.map(\.rawValue),
-                        width: 300, height: 32,
-                        font: .callout.weight(.semibold),
-                        trackColor: Color(.systemGray6),
-                        trackStroke: Color(.systemGray4),
-                        textColor: CalTheme.navy
-                    )
+                if scope == .day {
+                    SidebarPanel(selectedDate: $selectedDate, showLog: $showLog, logEntries: $logEntries, appts: appts)
+                        .frame(width: 360)
+                        .background(Color(.systemBackground))
+                        .overlay(Divider(), alignment: .trailing)
                 }
+
+                VStack(spacing: 0) {
+                    HStack {
+                        
+                        if scope.rawValue == "Week" {
+                            MonthYearSelector(monthAnchor: $monthAnchor)
+                        }
+                        
+                        Spacer()
+                        EnumPillSegmentedControl(
+                            selection: $scope,
+                            titles: Scope.allCases.map(\.rawValue),
+                            width: 300, height: 32,
+                            font: .callout.weight(.semibold),
+                            trackColor: Color(.systemGray6),
+                            trackStroke: Color(.systemGray4),
+                            textColor: CalTheme.navy
+                        )
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+
+                    Divider().overlay(Color(.systemGray4))
+
+                    Group {
+                        switch scope {
+                        case .day:
+                            CalendarDayView(
+                                selectedDate: $selectedDate,
+                                monthAnchor: $monthAnchor,
+                                appts: $appts,
+                            )
+                        case .week:
+                            CalendarWeekView(
+                                selectedDate: $selectedDate,
+                                monthAnchor: $monthAnchor,
+                                appts: $appts
+                            )
+                        }
+                    }
+                }
+                .background(Color(uiColor: .systemBackground))
+                .padding(.top, 8)
                 .padding(.horizontal, 24)
-                .padding(.vertical, 12)
-
-                Divider().overlay(Color(.systemGray4))
-
-                Group {
-                    switch scope {
-                    case .day:
-                        CalendarDayView(
-                            selectedDate: $selectedDate,
-                            monthAnchor: $monthAnchor,
-                            appts: $appts
-                        )
-                    case .week:
-                        CalendarWeekView(
-                            selectedDate: $selectedDate,
-                            monthAnchor: $monthAnchor,
-                            appts: $appts
-                        )
-                    }
-                }
             }
-            .background(Color(uiColor: .systemBackground))
-            .padding(.top, 8)
-            .padding(.horizontal, 24)
+            .task { loadAppts() }
+            .onChange(of: selectedDate) { _ in loadAppts() }
+            .onChange(of: monthAnchor)  { _ in loadAppts() }
+            .onChange(of: scope)        { _ in loadAppts() }
+            .navigationBarHidden(true)
+            
+            if showLog {
+                ReminderLogView(entries: logEntries) {
+                    withAnimation(.easeInOut(duration: 0.2)) { showLog = false }
+                }
+                .zIndex(1)
+            }
         }
-        .task { loadAppts() }
-        .onChange(of: selectedDate) { _ in loadAppts() }
-        .onChange(of: monthAnchor)  { _ in loadAppts() }
-        .onChange(of: scope)        { _ in loadAppts() }
-        .navigationBarHidden(true)
     }
 
     // CalendarView.swift
 
     private func loadAppts() {
-        let cal = Calendar.current
+        _ = Calendar.current
         switch scope {
         case .day:
-            // load only the selected day
             appts = Appt.mock(on: selectedDate)
 
         case .week:
-            // load ALL 7 days that the week strip shows
-            let days = week(for: monthAnchor)              // <-- helper below
-            appts = days.flatMap { Appt.mock(on: $0) }     // <-- replace with your real fetch later
+            let days = week(for: monthAnchor)
+            appts = days.flatMap { Appt.mock(on: $0) }
         }
     }
 
-    // same logic your strip uses
     private func week(for anchor: Date) -> [Date] {
         let cal = Calendar.current
         let weekday = cal.component(.weekday, from: anchor)
@@ -239,7 +248,6 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
             }
             .padding(inset)
 
-            // labels
             HStack(spacing: 0) {
                 ForEach(Array(all.enumerated()), id: \.offset) { i, value in
                     Button {

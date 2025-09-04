@@ -18,11 +18,9 @@ struct OverviewHeader: View {
 
                 Button {
                 } label: {
-                    Image(systemName: "plus")
+                    Text("Add")
                         .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 24)
-                        .background(RoundedRectangle(cornerSize: CGSize(width:24,height:24)).fill(Color(.systemBlue)))
+                        .foregroundStyle(Color.blue)
                 }
                 .buttonStyle(.plain)
             }

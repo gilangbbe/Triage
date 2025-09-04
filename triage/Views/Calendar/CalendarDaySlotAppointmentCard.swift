@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: - 3 fixed buckets
 enum SlotKind: CaseIterable, Hashable { case medical, radiology, laboratory
 
     var title: String {
@@ -36,14 +35,13 @@ enum SlotKind: CaseIterable, Hashable { case medical, radiology, laboratory
     var textColor: Color { Color(red: 0.07, green: 0.10, blue: 0.27) }
 }
 
-// MARK: - Map your appointment tag to a SlotKind
 extension Appt {
     var slotKind: SlotKind {
         let t = tag.lowercased()
         if t.contains("medical")   { return .medical }
         if t.contains("radio")     { return .radiology }
         if t.contains("lab")       { return .laboratory }
-        if t.contains("consult")   { return .radiology }   // <— so your sample “Consultation” shows up
+        if t.contains("consult")   { return .radiology }
         return .medical
     }
 }
@@ -102,6 +100,7 @@ private struct SlotBucketCard: View {
                 Text(titleText)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(navy)
+                    .lineLimit(1)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 8).fill(pillTint))
@@ -122,32 +121,28 @@ private struct SlotBucketCard: View {
                 .buttonStyle(.plain)
             }
 
-            // Names (1 when collapsed, up to 3 when expanded)
             let show = isExpanded ? min(3, patients.count) : min(1, patients.count)
             if show > 0 {
                 VStack(spacing: 0) {
                     ForEach(0..<show, id: \.self) { i in
                         HStack {
                             Text(patients[i].patient)
-                                .font(.body.weight(.semibold))
+                                .font(.body)
                                 .foregroundStyle(navy)
                                 .lineLimit(1)
                             Spacer()
                         }
-                        .padding(.vertical, 10)
+                        .padding(8)
                         if i < show - 1 {
                             Divider().overlay(navy.opacity(0.08))
                         }
                     }
                 }
-                // Let content define height so row can grow/shrink
                 .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(cardTint))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(navy.opacity(0.06)))
-        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill(cardTint))
     }
 }
 
@@ -155,13 +150,12 @@ private struct SlotBucketCard: View {
 struct SlotBucketsRow: View {
     let appts: [Appt]
 
-    // Map tags -> card kind
     private func kind(for tag: String) -> SlotBucketCard.Kind? {
         let t = tag.lowercased()
         if t.contains("medical")   { return .medical }
         if t.contains("radiolog")  { return .radiology }
         if t.contains("labor")     { return .lab }
-        return .medical // default if needed
+        return .medical
     }
 
     var body: some View {

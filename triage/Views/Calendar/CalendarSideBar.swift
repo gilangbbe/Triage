@@ -9,19 +9,33 @@ import SwiftUI
 
 struct SidebarPanel: View {
     @Binding var selectedDate: Date
+    @Binding var showLog: Bool
+    @Binding var logEntries: [ReminderEntry]
     let appts: [Appt]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // page title
-                Text("Schedule")
-                    .font(.largeTitle.weight(.bold))
-                    .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
-                    .padding(.top, 16)
-                    .padding(.horizontal, 20)
+                HStack {
+                    Text("Schedule")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
+                    Spacer()
+                    Button {
+                        logEntries = buildLog(from: appts, asOf: selectedDate)
+                        withAnimation(.easeInOut(duration: 0.2)) { showLog = true }
+                    } label: {
+                        Label("Reminder Log", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                            .labelStyle(.iconOnly)
+                            .font(.title3.weight(.semibold))
+                            .padding(10)
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.top, 6)
+                }
+                .padding(.top, 16)
+                .padding(.horizontal, 20)
 
-                // "Today's Schedule" header
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("Today’s Schedule")
@@ -40,22 +54,36 @@ struct SidebarPanel: View {
                         }
                     }
 
-                    Text(dateString(selectedDate))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    DaySelector(date: $selectedDate)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
                 }
                 .padding(.horizontal, 20)
 
-                // Flat list of reminders, sorted by priority
+
                 VStack(spacing: 12) {
                     ForEach(sortedReminders) { a in
-                        ReminderCard(appt: a, style: .needToRemind) // or dynamic style if you have a flag
+                        ReminderCard(appt: a, style: .needToRemind)
                     }
                 }
                 .padding(.horizontal, 16)
 
                 Spacer(minLength: 24)
             }
+        }
+    }
+    
+    private func buildLog(from appts: [Appt], asOf day: Date) -> [ReminderEntry] {
+        let cal = Calendar.current
+        let todays = appts.filter { cal.isDate($0.start, inSameDayAs: day) }
+        let sentBase = cal.date(byAdding: .day, value: -1, to: day) ?? day
+        let sentAt = cal.date(bySettingHour: 7, minute: 36, second: 0, of: sentBase) ?? sentBase
+
+        return todays.map {
+            ReminderEntry(patientName: $0.patient,
+                          apptKind: $0.tag,
+                          apptDate: $0.start,
+                          sentAt: sentAt)
         }
     }
 
