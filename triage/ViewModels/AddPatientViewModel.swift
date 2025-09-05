@@ -296,7 +296,7 @@ struct AppointmentSelection: Identifiable {
         formatter.dateFormat = "HH:mm"
         let timeString = "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
         
-        return "\(package?.name ?? "Deleted Package") on \(dateString) at \(timeString)"
+        return "\(package?.name ?? "Unknown Package") on \(dateString) at \(timeString)"
     }
 }
 

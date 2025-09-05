@@ -40,7 +40,7 @@ struct HealthCareCatalogView: View {
             HStack {
                 Text("Setting Up the Healthcare Catalog")
                     .font(.headline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color.accent)
                 
                 Spacer()
                 
@@ -148,7 +148,7 @@ struct SectionView: View {
                 Button("Add") {
                     onAdd()
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(Color.accent)
             }
             
             VStack(alignment: .leading, spacing: 0) {
@@ -238,4 +238,5 @@ struct PackageRowView: View {
 
 #Preview {
     HealthCareCatalogView()
+        .environment(PackageManager.shared)
 }

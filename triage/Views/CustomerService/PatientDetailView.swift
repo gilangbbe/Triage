@@ -263,7 +263,7 @@ struct AppointmentListRow: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.accentColor)
                 Spacer()
-                Text(appointment.package?.name ?? "Deleted Package")
+                Text(appointment.package?.name ?? "Unkown Package")
                     .font(.subheadline)
                     .padding(8)
                     .background(.red.opacity(0.3))

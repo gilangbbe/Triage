@@ -275,4 +275,5 @@ struct PlaceholderDetailView: View {
 
 #Preview {
     SettingsView()
+        .environment(PackageManager.shared)
 }
