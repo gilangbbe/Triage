@@ -92,9 +92,9 @@ struct SettingsView: View {
             case .packages:
                 HealthCareCatalogView()
             case .setupInstructions:
-                PlaceholderDetailView(title: "Setup Instructions", description: "Keyboard extension setup guide")
+                KeyboardInstructionView()
             case .quickReplies:
-                PlaceholderDetailView(title: "Quick Replies", description: "Manage quick reply templates")
+                QuickRepliesPaneView()
             case .none:
                 PlaceholderDetailView(title: "Settings", description: "Select a settings category")
             }
@@ -276,4 +276,5 @@ struct PlaceholderDetailView: View {
 #Preview {
     SettingsView()
         .environment(PackageManager.shared)
+        .environment(QuickReplyManager.shared)
 }
