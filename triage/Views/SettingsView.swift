@@ -2,260 +2,277 @@
 //  SettingsView.swift
 //  triage
 //
-//  Created by Gilang Banyu Biru Erassunu on 22/08/25.
+//  Created by Gilang Banyu Biru Erassunu on 05/09/25.
 //
 
 import SwiftUI
-import SwiftData
 
-struct SettingsView: View {
-    @Environment(PatientManager.self) private var patientManager
-    @Environment(QuickReplyManager.self) private var quickReplyManager
-    @State private var showingClearAllAlert = false
-    @State private var showingKeyboardInstructions = false
+struct NewSettingsView: View {
+    // Single customer care profile
+    @State private var fullName: String = "Ayu Lestari Wulandari"
+    @State private var role: String = "Customer Care Coordinator"
+    @State private var phone: String = "08123456789"
+    @State private var email: String = "ayulestariwu@ciputrahospital.com"
+    
+    // Navigation state
+    @State private var selectedSection: SettingsSection? = .profile
+    
+    enum SettingsSection: String, CaseIterable, Identifiable {
+        case profile = "Customer Care Profile"
+        case packages = "Add Healthcare Catalog"
+        case setupInstructions = "Setup Instructions"
+        case quickReplies = "Quick Replies"
+        
+        var id: String { rawValue }
+        
+        var category: String {
+            switch self {
+            case .profile: return "USER PROFILE"
+            case .packages: return "SERVICE SETUP"
+            case .setupInstructions, .quickReplies: return "KEYBOARD EXTENSION"
+            }
+        }
+    }
     
     var body: some View {
-        NavigationView {
-            List {
-                Section("Keyboard Extension") {
-                    Button("Setup Instructions") {
-                        showingKeyboardInstructions = true
+        NavigationSplitView {
+            VStack(spacing: 16) {
+                ScrollViewReader { proxy in
+                    List(selection: $selectedSection) {
+                        // Profile Section
+                        Section("CUSTOMER CARE IDENTITY") {
+                            ProfileRowView(
+                                fullName: fullName,
+                                isSelected: selectedSection == .profile
+                            )
+                            .tag(SettingsSection.profile)
+                        }
+                        
+                        // Service Setup Section
+                        Section("SERVICE SETUP") {
+                            SettingsRowView(
+                                section: .packages,
+                                isSelected: selectedSection == .packages
+                            )
+                        }
+                        
+                        // Keyboard Extension Section
+                        Section("KEYBOARD EXTENSION") {
+                            SettingsRowView(
+                                section: .setupInstructions,
+                                isSelected: selectedSection == .setupInstructions
+                            )
+                            SettingsRowView(
+                                section: .quickReplies,
+                                isSelected: selectedSection == .quickReplies
+                            )
+                        }
                     }
-                    .foregroundColor(.blue)
-                    
-                    NavigationLink("Quick Replies") {
-                        QuickRepliesView()
-                    }
-                    
-                    NavigationLink("Test Parsing") {
-                        TestParsingView()
-                    }
-                }
-                
-                Section("Data Management") {
-                    Button("Export Data") {
-                        exportData()
-                    }
-                    .foregroundColor(.blue)
-                    
-                    Button("Clear All Patients") {
-                        showingClearAllAlert = true
-                    }
-                    .foregroundColor(.red)
-                }
-                
-                Section("About") {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text(AppConfiguration.appVersion)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("App Group ID")
-                        Spacer()
-                        Text(AppConfiguration.appGroupID)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Settings")
-        }
-        .alert("Clear All Patients", isPresented: $showingClearAllAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Clear All", role: .destructive) {
-                clearAllPatients()
+            .navigationBarTitleDisplayMode(.automatic)
+            .toolbar(removing: .sidebarToggle)
+            .onAppear {
+                if selectedSection == nil {
+                    selectedSection = .profile
+                }
             }
-        } message: {
-            Text("This action cannot be undone. All patient records will be permanently deleted.")
+        } detail: {
+            // Detail View
+            switch selectedSection {
+            case .profile:
+                ProfileDetailView(
+                    fullName: $fullName,
+                    role: $role,
+                    phone: $phone,
+                    email: $email
+                )
+            case .packages:
+                PlaceholderDetailView(title: "Add Health Care Catalog", description: "Configure medical service packages")
+            case .setupInstructions:
+                PlaceholderDetailView(title: "Setup Instructions", description: "Keyboard extension setup guide")
+            case .quickReplies:
+                PlaceholderDetailView(title: "Quick Replies", description: "Manage quick reply templates")
+            case .none:
+                PlaceholderDetailView(title: "Settings", description: "Select a settings category")
+            }
         }
-        .sheet(isPresented: $showingKeyboardInstructions) {
-            KeyboardInstructionsView()
-        }
+        .navigationSplitViewStyle(.balanced)
     }
     
-    private func exportData() {
-        let patients = patientManager.patients
-        let patientData = patients.map { patient in
-            PatientData(
-                id: patient.id.uuidString,
-                fullName: patient.fullName,
-                nationalID: patient.nationalID,
-                dateOfBirth: patient.dateOfBirth,
-                gender: patient.gender?.rawValue,
-                placeOfBirth: patient.placeOfBirth,
-                phoneNumber: patient.phoneNumber,
-                address: patient.address
-            )
-        }
-        
-        guard let data = try? JSONEncoder().encode(patientData),
-              let jsonString = String(data: data, encoding: .utf8) else {
-            return
-        }
-        
-        // Simple sharing - for now just print to console
-        print("Patient data exported:")
-        print(jsonString)
-    }
-    
-    private func clearAllPatients() {
-        patientManager.clearAllPatients()
+    // MARK: - Helper Functions
+    private func initials(_ name: String) -> String {
+        let comps = name.split(separator: " ")
+        let first = comps.first?.first.map(String.init) ?? ""
+        let second = comps.dropFirst().first?.first.map(String.init) ?? ""
+        return (first + second).uppercased()
     }
 }
 
-struct KeyboardInstructionsView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Setting Up the Keyboard Extension")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    VStack(alignment: .leading, spacing: 16) {
-                        InstructionStep(number: 1, title: "Enable the Keyboard", description: "Go to Settings > General > Keyboard > Keyboards > Add New Keyboard and select 'Triage Parser'")
-                        
-                        InstructionStep(number: 2, title: "Allow Full Access", description: "In the keyboard settings, enable 'Allow Full Access' for the Triage Parser keyboard")
-                        
-                        InstructionStep(number: 3, title: "Using the Extension", description: "When typing in any app, switch to the Triage Parser keyboard and paste customer messages to parse them automatically")
-                    }
-                    
-                    Text("Supported Format:")
-                        .font(.headline)
-                        .padding(.top)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("name: John Doe")
-                        Text("email: john@example.com")
-                        Text("address: 123 Main Street")
-                        Text("phone: +1234567890")
-                        Text("order: 2x Coffee, 1x Sandwich")
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(8)
-                    
-                    Text("The parser is flexible and will work with variations like 'nama', 'alamat', 'hp', etc.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .italic()
-                }
-                .padding()
-            }
-            .navigationTitle("Keyboard Setup")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
+// MARK: - Supporting Views
 
-struct InstructionStep: View {
-    let number: Int
-    let title: String
-    let description: String
+struct SettingsRowView: View {
+    let section: NewSettingsView.SettingsSection
+    let isSelected: Bool
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text("\(number)")
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(width: 24, height: 24)
-                .background(Color.blue)
-                .clipShape(Circle())
+        HStack(spacing: 12) {
+            Text(section.rawValue)
+                .fontWeight(.medium)
+                .foregroundStyle(isSelected ? .white : .primary)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            isSelected ? Color.accentColor : Color.placeholder,
+            in: RoundedRectangle(cornerRadius: 8)
+        )
+        .tag(section)
+    }
+}
+
+struct ProfileRowView: View {
+    let fullName: String
+    let isSelected: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(.systemGray5))
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Text(initials(fullName))
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(isSelected ? .white : .primary)
+                )
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(fullName)
                     .font(.headline)
-                
-                Text(description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-}
-
-struct TestParsingView: View {
-    @State private var testText = """
-    name: John Doe
-    nik: 1234567890123456
-    dob: 15/08/1990
-    gender: Man
-    place of birth: Jakarta
-    phone: +62-812-3456-7890
-    address: Jl. Sudirman No. 123, Jakarta Pusat
-    """
-    @State private var parsedPatient: Patient?
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Test the patient parsing functionality by entering sample text:")
-                .font(.headline)
-            
-            TextEditor(text: $testText)
-                .frame(height: 150)
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-            
-            Button("Parse Text") {
-                parsedPatient = Patient.parseFromText(testText)
-            }
-            .buttonStyle(.borderedProminent)
-            
-            if let patient = parsedPatient {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Parsed Result:")
-                        .font(.headline)
-                    
-                    Text("Name: \(patient.fullName)")
-                    if let nik = patient.nationalID {
-                        Text("NIK: \(nik)")
-                    }
-                    if let dob = patient.dateOfBirth {
-                        Text("Date of Birth: \(dob, style: .date)")
-                    }
-                    if let gender = patient.gender {
-                        Text("Gender: \(gender.rawValue)")
-                    }
-                    if let birthPlace = patient.placeOfBirth {
-                        Text("Place of Birth: \(birthPlace)")
-                    }
-                    if let phone = patient.phoneNumber {
-                        Text("Phone: \(phone)")
-                    }
-                    if let address = patient.address {
-                        Text("Address: \(address)")
-                    }
-                }
-                .padding()
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(8)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(isSelected ? .white : .primary)
             }
             
             Spacer()
         }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            isSelected ? Color.accentColor : Color.placeholder,
+            in: RoundedRectangle(cornerRadius: 8)
+        )
+    }
+    
+    private func initials(_ name: String) -> String {
+        let comps = name.split(separator: " ")
+        let first = comps.first?.first.map(String.init) ?? ""
+        let second = comps.dropFirst().first?.first.map(String.init) ?? ""
+        return (first + second).uppercased()
+    }
+}
+
+struct ProfileDetailView: View {
+    @Binding var fullName: String
+    @Binding var role: String
+    @Binding var phone: String
+    @Binding var email: String
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                labeledField(
+                    title: "FULL NAME",
+                    placeholder: "Full name",
+                    text: $fullName
+                )
+                
+                labeledField(
+                    title: "ROLE/POSITION",
+                    placeholder: "Role or position",
+                    text: $role
+                )
+                
+                labeledField(
+                    title: "PHONE NUMBER",
+                    placeholder: "Phone number",
+                    text: $phone,
+                    keyboard: .numberPad
+                )
+                
+                labeledField(
+                    title: "WORK EMAIL",
+                    placeholder: "name@company.com",
+                    text: $email,
+                    keyboard: .emailAddress
+                )
+                
+                Spacer(minLength: 40)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+        }
+        .navigationTitle("Profile Settings")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func labeledField(
+        title: String,
+        placeholder: String,
+        text: Binding<String>,
+        keyboard: UIKeyboardType = .default
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            
+            TextField(placeholder, text: text)
+                .textInputAutocapitalization(.never)
+                .keyboardType(keyboard)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 14)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+}
+
+struct PlaceholderDetailView: View {
+    let title: String
+    let description: String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "gear")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            
+            Text(title)
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text(description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Text("Coming soon")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 8)
+        }
         .padding()
-        .navigationTitle("Test Patient Parsing")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 #Preview {
-    SettingsView()
-        .environment(PatientManager.shared)
-        .environment(QuickReplyManager.shared)
+    NewSettingsView()
 }
