@@ -21,6 +21,15 @@ struct AddPackageView: View {
     @State private var availableDepartments: [Department] = []
     @State private var showingDepartmentPicker = false
     
+    // Pre-selected department (when adding from a department group)
+    let preselectedDepartment: Department?
+    
+    init(preselectedDepartment: Department? = nil) {
+        self.preselectedDepartment = preselectedDepartment
+        // Initialize selectedDepartment with preselected value
+        _selectedDepartment = State(initialValue: preselectedDepartment)
+    }
+    
     var body: some View {
         NavigationView {
             Form {
@@ -36,22 +45,30 @@ struct AddPackageView: View {
                         HStack {
                             Text(selectedDepartment.name)
                             Spacer()
-                            Button("Change") {
-                                showingDepartmentPicker = true
+                            if preselectedDepartment == nil {
+                                Button("Change") {
+                                    showingDepartmentPicker = true
+                                }
+                                .foregroundColor(.blue)
+                            } else {
+                                Text("(Pre-selected)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            .foregroundColor(.blue)
                         }
-                    } else {
+                    } else if preselectedDepartment == nil {
                         Button("Select Department") {
                             showingDepartmentPicker = true
                         }
                     }
                     
-                    TextField("Or create new department", text: $departmentName)
-                        .disabled(selectedDepartment != nil)
-                    
-                    if !departmentName.isEmpty && selectedDepartment == nil {
-                        Stepper("Max slots per hour: \(departmentMaxSlot)", value: $departmentMaxSlot, in: 1...10)
+                    if preselectedDepartment == nil {
+                        TextField("Or create new department", text: $departmentName)
+                            .disabled(selectedDepartment != nil)
+                        
+                        if !departmentName.isEmpty && selectedDepartment == nil {
+                            Stepper("Max slots per hour: \(departmentMaxSlot)", value: $departmentMaxSlot, in: 1...10)
+                        }
                     }
                 }
                 

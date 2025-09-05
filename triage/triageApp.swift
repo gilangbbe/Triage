@@ -40,6 +40,7 @@ struct triageApp: App {
                 .environment(PackageManager.shared)
                 .environment(QuickReplyManager.shared)
                 .environment(HistoryManager.shared)
+                .environment(DepartmentManager.shared)
                 .onAppear {
                     // Set model context for managers
                     let context = modelContainer.mainContext
@@ -48,6 +49,7 @@ struct triageApp: App {
                     PackageManager.shared.setModelContext(context)
                     QuickReplyManager.shared.setModelContext(context)
                     HistoryManager.shared.setModelContext(context)
+                    DepartmentManager.shared.setModelContext(context)
                     
                     // Check for new data from keyboard extension when app becomes active
                     NotificationCenter.default.addObserver(

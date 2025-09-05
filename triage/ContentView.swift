@@ -13,6 +13,7 @@ struct ContentView: View {
     @Environment(PackageManager.self) private var packageManager
     @Environment(QuickReplyManager.self) private var quickReplyManager
     @Environment(HistoryManager.self) private var historyManager
+    @Environment(DepartmentManager.self) private var departmentManager
     
     @State private var patientListViewModel: PatientListViewModel?
     @State private var appointmentListViewModel: AppointmentListViewModel?
@@ -70,4 +71,5 @@ struct ContentView: View {
         .environment(PackageManager.shared)
         .environment(QuickReplyManager.shared)
         .environment(HistoryManager.shared)
+        .environment(DepartmentManager.shared)
 }

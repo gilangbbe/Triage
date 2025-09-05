@@ -9,11 +9,13 @@ import SwiftUI
 
 struct HealthCareCatalogView: View {
     @Environment(PackageManager.self) private var packageManager
+    @Environment(DepartmentManager.self) private var departmentManager
     @Environment(\.modelContext) private var modelContext
     
     @State private var searchText: String = ""
     @State private var showingAddPackage = false
-    @State private var selectedDepartment: String? = nil
+    @State private var showingAddDepartment = false
+    @State private var selectedDepartmentForPackage: Department? = nil
     
     // Group packages by department
     private var groupedPackages: [String: [Package]] {
@@ -26,23 +28,35 @@ struct HealthCareCatalogView: View {
         }
     }
     
-    // Department categories with their display names
-    private let departmentCategories = [
-        "Medical Check Up": "MEDICAL CHECK UP",
-        "Radiology": "RADIOLOGY", 
-        "Laboratory": "LABORATORIUM"
+    // Get all departments (including those without packages)
+    private var allDepartments: [Department] {
+        return departmentManager.departments.sorted { $0.name < $1.name }
+    }
+    
+    // Department categories with their display names and colors
+    private let departmentConfig: [String: (displayName: String, color: Color)] = [
+        "Medical Check Up": ("MEDICAL CHECK UP", Color.blue.opacity(0.1)),
+        "Radiology": ("RADIOLOGY", Color.green.opacity(0.1)), 
+        "Laboratory": ("LABORATORIUM", Color.red.opacity(0.1))
     ]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             
-            // Title + Search side by side
+            // Title + Search + Add Department
             HStack {
-                Text("Setting Up the Healthcare Catalog")
+                Text("Healthcare Catalog & Department Management")
                     .font(.headline)
                     .foregroundColor(Color.accent)
                 
                 Spacer()
+                
+                // Add Department Button
+                Button("+ Department") {
+                    showingAddDepartment = true
+                }
+                .foregroundColor(Color.accent)
+                .font(.subheadline)
                 
                 HStack {
                     TextField("Search", text: $searchText)
@@ -60,40 +74,27 @@ struct HealthCareCatalogView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    // Display packages grouped by department
-                    ForEach(Array(departmentCategories.keys.sorted()), id: \.self) { departmentKey in
-                        let displayTitle = departmentCategories[departmentKey] ?? departmentKey.uppercased()
-                        let packages = groupedPackages[departmentKey] ?? []
-                        let color = colorForDepartment(departmentKey)
+                    // Display all departments (including empty ones)
+                    ForEach(allDepartments, id: \.id) { department in
+                        let packages = groupedPackages[department.name] ?? []
+                        let config = departmentConfig[department.name] ?? (department.name.uppercased(), Color.purple.opacity(0.1))
                         
-                        SectionView(
-                            title: displayTitle,
+                        DepartmentSectionView(
+                            department: department,
+                            displayTitle: config.displayName,
                             packages: packages,
-                            color: color,
-                            onAdd: {
-                                selectedDepartment = departmentKey
+                            color: config.color,
+                            onAddPackage: {
+                                selectedDepartmentForPackage = department
                                 showingAddPackage = true
                             },
-                            onDelete: { package in
-                                packageManager.deletePackage(package)
-                            }
-                        )
-                    }
-                    
-                    // Show other departments that don't match predefined categories
-                    let otherDepartments = groupedPackages.keys.filter { !departmentCategories.keys.contains($0) }
-                    ForEach(Array(otherDepartments.sorted()), id: \.self) { departmentName in
-                        let packages = groupedPackages[departmentName] ?? []
-                        
-                        SectionView(
-                            title: departmentName.uppercased(),
-                            packages: packages,
-                            color: Color.purple.opacity(0.1),
-                            onAdd: {
-                                selectedDepartment = departmentName
-                                showingAddPackage = true
+                            onEditDepartment: {
+                                // TODO: Implement edit department if needed
                             },
-                            onDelete: { package in
+                            onDeleteDepartment: {
+                                departmentManager.deleteDepartment(department)
+                            },
+                            onDeletePackage: { package in
                                 packageManager.deletePackage(package)
                             }
                         )
@@ -104,30 +105,111 @@ struct HealthCareCatalogView: View {
         .padding()
         .onAppear {
             packageManager.setModelContext(modelContext)
+            departmentManager.setModelContext(modelContext)
         }
         .sheet(isPresented: $showingAddPackage) {
-            AddPackageView()
+            AddPackageView(preselectedDepartment: selectedDepartmentForPackage)
                 .onDisappear {
-                    selectedDepartment = nil
+                    selectedDepartmentForPackage = nil
                 }
         }
-    }
-    
-    // Helper function to get color for each department
-    private func colorForDepartment(_ department: String) -> Color {
-        switch department {
-        case "Medical Check Up":
-            return Color.blue.opacity(0.1)
-        case "Radiology":
-            return Color.green.opacity(0.1)
-        case "Laboratory":
-            return Color.red.opacity(0.1)
-        default:
-            return Color.purple.opacity(0.1)
+        .sheet(isPresented: $showingAddDepartment) {
+            AddDepartmentView()
         }
     }
 }
 
+struct DepartmentSectionView: View {
+    let department: Department
+    let displayTitle: String
+    let packages: [Package]
+    let color: Color
+    let onAddPackage: () -> Void
+    let onEditDepartment: () -> Void
+    let onDeleteDepartment: () -> Void
+    let onDeletePackage: (Package) -> Void
+    
+    @State private var showingDeleteAlert = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(displayTitle)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.gray)
+                    
+                    Text("Max \(department.maxSlot ?? 3) slots/hour")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 12) {
+                    Button("+ Package") {
+                        onAddPackage()
+                    }
+                    .foregroundColor(Color.accent)
+                    .font(.subheadline)
+                    
+                    Menu {
+                        Button("Edit Department") {
+                            onEditDepartment()
+                        }
+                        
+                        Button("Delete Department", role: .destructive) {
+                            showingDeleteAlert = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 0) {
+                if packages.isEmpty {
+                    Text("No packages in this department")
+                        .foregroundColor(.secondary)
+                        .italic()
+                        .padding(.vertical, 16)
+                        .padding(.horizontal)
+                } else {
+                    ForEach(packages, id: \.id) { package in
+                        PackageRowView(
+                            package: package,
+                            onDelete: {
+                                onDeletePackage(package)
+                            }
+                        )
+                        
+                        if package.id != packages.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+            .background(color)
+            .cornerRadius(8)
+        }
+        .alert("Delete Department", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                onDeleteDepartment()
+            }
+        } message: {
+            if packages.isEmpty {
+                Text("Are you sure you want to delete '\(department.name)' department? This action cannot be undone.")
+            } else {
+                Text("Are you sure you want to delete '\(department.name)' department? This will also delete \(packages.count) package(s) and cancel all related appointments. This action cannot be undone.")
+            }
+        }
+    }
+}
+
+// Keep the original SectionView for backward compatibility if needed
 struct SectionView: View {
     let title: String
     let packages: [Package]
@@ -239,4 +321,5 @@ struct PackageRowView: View {
 #Preview {
     HealthCareCatalogView()
         .environment(PackageManager.shared)
+        .environment(DepartmentManager.shared)
 }
