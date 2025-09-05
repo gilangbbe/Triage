@@ -96,7 +96,7 @@ class AppointmentManager {
     }
     
     func filterAppointments(by department: Department) -> [Appointment] {
-        return appointments.filter { $0.package.department.id == department.id }
+        return appointments.filter { $0.package?.department.id == department.id }
     }
     
     func todaysAppointments() -> [Appointment] {

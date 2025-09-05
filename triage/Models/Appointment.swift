@@ -17,7 +17,9 @@ final class Appointment {
     var patient: Patient?
     
     var timeSlot: TimeSlot
-    var package: Package
+    
+    // Optional package - can be nil if package is deleted
+    var package: Package?
 
     init(id: UUID = UUID(),
          name: String,
@@ -26,7 +28,7 @@ final class Appointment {
          endTime: Date,
          timeSlot: TimeSlot,
          patient: Patient,
-         package: Package) {
+         package: Package?) {
         self.id = id
         self.name = name
         self.timeSlot = timeSlot

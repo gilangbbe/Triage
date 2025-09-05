@@ -146,7 +146,7 @@ struct ModernAppointmentCard: View {
                     .foregroundColor(Color(hex: "#0F0E46"))
                 Spacer()
                 // Package Name
-                Text(appointment.package.name)
+                Text(appointment.package?.name ?? "Deleted Package")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#0F0E46"))
             }
@@ -159,7 +159,7 @@ struct ModernAppointmentCard: View {
                     .foregroundColor(Color(hex: "#0F0E46"))
                 Spacer()
                 // Department tag - similar to old design
-                Text(appointment.package.department.name)
+                Text(appointment.package?.department.name ?? "Unknown")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#0F0E46"))
                     .padding(.vertical, 3)

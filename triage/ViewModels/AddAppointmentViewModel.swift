@@ -93,7 +93,7 @@ class AddAppointmentViewModel {
             let existingAppointments = appointmentManager.appointments.filter { appointment in
                 calendar.isDate(appointment.timeSlot.date, inSameDayAs: appointmentDate) &&
                 appointment.timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
-                appointment.package.department.id == department.id
+                appointment.package?.department.id == department.id
             }
             
             let bookedSlots = existingAppointments.count

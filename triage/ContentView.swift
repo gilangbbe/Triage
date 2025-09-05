@@ -40,15 +40,6 @@ struct ContentView: View {
                     }
             }
             
-            if let packageListViewModel = packageListViewModel {
-                PackageListView()
-                    .environment(packageListViewModel)
-                    .tabItem {
-                        Image(systemName: "square.stack.3d.up")
-                        Text("Packages")
-                    }
-            }
-            
             SettingsView()
                 .tabItem {
                     Image(systemName: "gear")

@@ -171,13 +171,16 @@ class AddPatientViewModel {
     
     private func createAppointments(for patient: Patient) {
         for appointmentSelection in selectedAppointments {
+            // Skip appointments with deleted packages
+            guard let package = appointmentSelection.package else { continue }
+            
             let timeSlot = TimeSlot(
                 date: appointmentSelection.date,
                 startTime: appointmentSelection.timeSlot.startTime,
                 endTime: appointmentSelection.timeSlot.endTime
             )
             
-            let appointmentTitle = "\(patient.fullName) - \(appointmentSelection.package.name)"
+            let appointmentTitle = "\(patient.fullName) - \(package.name)"
             
             let appointment = Appointment(
                 name: appointmentTitle,
@@ -186,7 +189,7 @@ class AddPatientViewModel {
                 endTime: appointmentSelection.timeSlot.endTime,
                 timeSlot: timeSlot,
                 patient: patient,
-                package: appointmentSelection.package
+                package: package
             )
             
             appointmentManager.addAppointment(appointment)
@@ -239,7 +242,7 @@ class AddPatientViewModel {
             let existingAppointments = appointmentManager.appointments.filter { appointment in
                 calendar.isDate(appointment.timeSlot.date, inSameDayAs: date) &&
                 appointment.timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
-                appointment.package.department.id == department.id
+                appointment.package?.department.id == department.id
             }
             
             let bookedSlots = existingAppointments.count
@@ -281,7 +284,7 @@ class AddPatientViewModel {
 // MARK: - Supporting Models
 struct AppointmentSelection: Identifiable {
     let id = UUID()
-    let package: Package
+    let package: Package?
     let date: Date
     let timeSlot: TimeSlotOption
     
@@ -293,7 +296,7 @@ struct AppointmentSelection: Identifiable {
         formatter.dateFormat = "HH:mm"
         let timeString = "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
         
-        return "\(package.name) on \(dateString) at \(timeString)"
+        return "\(package?.name ?? "Deleted Package") on \(dateString) at \(timeString)"
     }
 }
 
