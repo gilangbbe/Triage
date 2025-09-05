@@ -55,7 +55,6 @@ struct QuickRepliesPaneView: View {
             }
         }
         .padding(24)
-        .background(Color(uiColor: .systemGroupedBackground))
         .sheet(isPresented: $showingAddSheet) {
             AddQuickReplyView()
         }

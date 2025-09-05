@@ -11,12 +11,12 @@ struct KeyboardInstructionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-
+                
                 // Title
                 Text("Setting Up the Keyboard Extension")
                     .font(.headline)
                     .foregroundStyle(Color(hex: "#0F0E46"))
-
+                
                 // Steps Card
                 VStack(alignment: .leading, spacing: 16) {
                     StepRow(
@@ -41,14 +41,14 @@ struct KeyboardInstructionView: View {
                         .fill(Color(.systemBackground))
                         .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                 )
-
+                
                 // Supported Format
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Supported Patient Format:")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
-
+                    
                     VStack(alignment: .leading, spacing: 6) {
                         Text("NIK: 1234567890123456")
                         Text("Nama lengkap: Biru")
@@ -62,11 +62,13 @@ struct KeyboardInstructionView: View {
                     .italic()
                 }
                 .padding(.top, 8)
-
+                
                 Spacer(minLength: 24)
             }
-            .padding(24)
+            .frame(maxWidth: 600, alignment: .leading) // keeps it left-aligned
+            .padding(.horizontal, 24)
         }
+        .frame(maxWidth: .infinity, alignment: .leading) // push to left
     }
 }
 
@@ -76,7 +78,7 @@ private struct StepRow: View {
     let number: Int
     let title: String
     let detail: String
-
+    
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             NumberBadge(number: number)
