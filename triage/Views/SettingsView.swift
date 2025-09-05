@@ -90,7 +90,7 @@ struct SettingsView: View {
                     email: $email
                 )
             case .packages:
-                PlaceholderDetailView(title: "Add Health Care Catalog", description: "Configure medical service packages")
+                HealthCareCatalogView()
             case .setupInstructions:
                 PlaceholderDetailView(title: "Setup Instructions", description: "Keyboard extension setup guide")
             case .quickReplies:
