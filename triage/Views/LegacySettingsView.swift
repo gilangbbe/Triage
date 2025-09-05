@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-struct SettingsView: View {
+struct LegacySettingsView: View {
     @Environment(PatientManager.self) private var patientManager
     @Environment(QuickReplyManager.self) private var quickReplyManager
     @State private var showingClearAllAlert = false

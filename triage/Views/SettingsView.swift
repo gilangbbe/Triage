@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct NewSettingsView: View {
+struct SettingsView: View {
     // Single customer care profile
     @State private var fullName: String = "Ayu Lestari Wulandari"
     @State private var role: String = "Customer Care Coordinator"
@@ -114,7 +114,7 @@ struct NewSettingsView: View {
 // MARK: - Supporting Views
 
 struct SettingsRowView: View {
-    let section: NewSettingsView.SettingsSection
+    let section: SettingsView.SettingsSection
     let isSelected: Bool
     
     var body: some View {
@@ -274,5 +274,5 @@ struct PlaceholderDetailView: View {
 }
 
 #Preview {
-    NewSettingsView()
+    SettingsView()
 }
