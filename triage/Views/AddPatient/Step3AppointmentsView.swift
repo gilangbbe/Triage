@@ -244,6 +244,7 @@ struct EmptyAppointmentState: View {
     }
 }
 
+// MARK: - Appointment Selection Sheet
 struct AppointmentSelectionSheet: View {
     @Bindable var viewModel: AddPatientViewModel
     @Environment(\.dismiss) private var dismiss
@@ -251,8 +252,13 @@ struct AppointmentSelectionSheet: View {
     @State private var selectedPackage: Package? = nil
     @State private var selectedDate = Date()
     @State private var selectedTimeSlot: TimeSlotOption? = nil
-    @State private var showPackageModal = false
     @State private var showTimePicker = false
+    
+    // Search and filter states
+    @State private var searchText = ""
+    @State private var selectedFilter: String = "All"
+    @State private var isSearchFocused = false
+    @FocusState private var isTextFieldFocused: Bool
     
     let editingAppointment: AppointmentSelection?
     let onSave: (Package, Date, TimeSlotOption) -> Void
@@ -266,191 +272,7 @@ struct AppointmentSelectionSheet: View {
         editingAppointment != nil
     }
     
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                
-                // Step 1: Package Selection
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Medical Service Package")
-                        .font(.subheadline)
-                        .bold()
-                        .foregroundColor(Color(hex: "#0F0E46"))
-                    
-                    Button(action: { showPackageModal = true }) {
-                        HStack {
-                            if selectedPackage == nil {
-                                HStack {
-                                    Image(systemName: "magnifyingglass")
-                                        .foregroundColor(.gray)
-                                    Text("Select Medical Service Package")
-                                        .foregroundColor(.gray)
-                                        .font(.subheadline)
-                                }
-                            } else {
-                                HStack {
-                                    Text(selectedPackage?.department.name ?? "")
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(Color(hex: "#0F0E46"))
-                                    Text(" - ")
-                                        .font(.subheadline)
-                                        .foregroundColor(Color(hex: "#0F0E46"))
-                                    Text(selectedPackage?.name ?? "")
-                                        .font(.subheadline)
-                                        .foregroundColor(Color(hex: "#0F0E46"))
-                                }
-                            }
-                            Spacer()
-                        }
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                    .sheet(isPresented: $showPackageModal) {
-                        PackageSearchModal(
-                            viewModel: viewModel,
-                            selectedPackage: $selectedPackage
-                        )
-                    }
-                }
-                
-                // Step 2: Date
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("DATE".uppercased())
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "#0F0E46"))
-                    DatePicker(
-                        dateString(selectedDate),
-                        selection: $selectedDate,
-                        in: Date()...,
-                        displayedComponents: .date
-                    )
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.clear))
-                    .cornerRadius(6)
-                }
-                
-                // Step 3: Time
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("TIME & AVAILABLE SLOT".uppercased())
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "#0F0E46"))
-                    
-                    Button {
-                        showTimePicker = true
-                    } label: {
-                        HStack {
-                            if let selected = selectedTimeSlot {
-                                Text(timeString(selected))
-                                    .font(.subheadline)
-                                    .foregroundColor(.black)
-                                Spacer()
-                                Text("\(selected.availableSlots)/\(selected.maxSlots) Slot Available")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                            } else {
-                                Text("Pick a Time")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Spacer()
-                            }
-                        }
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(6)
-                    }
-                    .sheet(isPresented: $showTimePicker) {
-                        TimeSlotPickerModal(
-                            timeSlots: viewModel.availableTimeSlots,
-                            selectedTimeSlot: $selectedTimeSlot,
-                            isPresented: $showTimePicker
-                        )
-                    }
-                    .disabled(selectedPackage == nil)
-                    .opacity(selectedPackage == nil ? 0.6 : 1)
-                }
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle(isEditing ? "Edit Service Appointment" : "New Service Appointment")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                // Pre-populate if editing
-                if let editing = editingAppointment {
-                    selectedPackage = editing.package
-                    selectedDate = editing.date
-                    selectedTimeSlot = editing.timeSlot
-                }
-                
-                if let package = selectedPackage {
-                    viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onCancel()
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "Update" : "Add") {
-                        if let package = selectedPackage,
-                           let timeSlot = selectedTimeSlot {
-                            onSave(package, selectedDate, timeSlot)
-                        }
-                    }
-                    .disabled(!canSave)
-                }
-            }
-        }
-        .onChange(of: selectedPackage) { package in
-            if let package = package {
-                viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
-            }
-            selectedTimeSlot = nil
-        }
-        .onChange(of: selectedDate) { date in
-            if let package = selectedPackage {
-                viewModel.updateAvailableTimeSlots(for: package, on: date)
-            }
-            selectedTimeSlot = nil
-        }
-    }
-    
-    // Helper functions
-    private func dateString(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM/yyyy"
-        return formatter.string(from: date)
-    }
-    
-    private func timeString(_ timeSlot: TimeSlotOption) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
-    }
-}
-
-// MARK: - Package Search Modal (inspired by ServiceUnitSearchModal)
-struct PackageSearchModal: View {
-    @Environment(\.dismiss) var dismiss
-    @Bindable var viewModel: AddPatientViewModel
-    @Binding var selectedPackage: Package?
-    
-    @State private var searchText = ""
-    @State private var selectedFilter: String = "All"
-    @State private var tempPackage: Package? = nil
-    
+    // Filtered packages for search
     var filteredPackages: [Package] {
         let filtered = viewModel.availablePackages.filter { package in
             (selectedFilter == "All" || package.department.name == selectedFilter) &&
@@ -470,122 +292,347 @@ struct PackageSearchModal: View {
         Array(Set(viewModel.availablePackages.map { $0.department.name })).sorted()
     }
     
+    var shouldShowPackageList: Bool {
+        isTextFieldFocused || !searchText.isEmpty
+    }
+    
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Search + filter
-                HStack {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                        TextField("Search package...", text: $searchText)
-                    }
-                    .padding(8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+            ZStack {
+                VStack(spacing: 16) {
                     
-                    Menu {
-                        Button("All") { selectedFilter = "All" }
-                        ForEach(uniqueDepartments, id: \.self) { dept in
-                            Button(dept) { selectedFilter = dept }
-                        }
-                    } label: {
+                    // Step 1: Package Selection with Search & Filter
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Medical Service Package")
+                            .font(.subheadline)
+                            .bold()
+                            .foregroundColor(Color(hex: "#0F0E46"))
+                        
+                        // Search and Filter Row
                         HStack {
-                            Text(selectedFilter)
-                            Image(systemName: "chevron.down")
+                            // Search TextField
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.gray)
+                                TextField("Search medical service package...", text: $searchText)
+                                    .font(.subheadline)
+                                    .focused($isTextFieldFocused)
+                                    .onTapGesture {
+                                        isTextFieldFocused = true
+                                    }
+                                
+                                // Clear button
+                                if !searchText.isEmpty {
+                                    Button {
+                                        searchText = ""
+                                        selectedPackage = nil
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(6)
+                            
+                            // Filter Menu
+                            Menu {
+                                Button("All") { selectedFilter = "All" }
+                                ForEach(uniqueDepartments, id: \.self) { dept in
+                                    Button(dept) { selectedFilter = dept }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(selectedFilter)
+                                        .font(.subheadline)
+                                    Image(systemName: "chevron.down")
+                                }
+                                .foregroundColor(Color(hex: "#0F0E46"))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(6)
+                            }
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                        
+                        // Selected Package Display (when not searching)
+                        if let package = selectedPackage, !shouldShowPackageList {
+                            HStack {
+                                Text(package.department.name)
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                Text(" - ")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                Text(package.name)
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                Spacer()
+                                Button {
+                                    selectedPackage = nil
+                                    searchText = ""
+                                    isTextFieldFocused = true
+                                } label: {
+                                    Image(systemName: "xmark.circle")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding(10)
+                            .background(Color(.systemGray6).opacity(0.5))
+                            .cornerRadius(6)
+                        }
                     }
+                    
+                    // Step 2: Date (always visible, disabled when no package selected)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("DATE".uppercased())
+                            .font(.caption2)
+                            .foregroundColor(selectedPackage != nil ? Color(hex: "#0F0E46") : .gray)
+                        
+                        DatePicker(
+                            dateString(selectedDate),
+                            selection: $selectedDate,
+                            in: Date()...,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(.clear))
+                        .cornerRadius(6)
+                        .disabled(selectedPackage == nil || shouldShowPackageList)
+                        .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
+                    }
+                    
+                    // Step 3: Time (always visible, disabled when no package selected)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("TIME & AVAILABLE SLOT".uppercased())
+                            .font(.caption2)
+                            .foregroundColor(selectedPackage != nil ? Color(hex: "#0F0E46") : .gray)
+                        
+                        Button {
+                            if selectedPackage != nil && !shouldShowPackageList {
+                                showTimePicker = true
+                            }
+                        } label: {
+                            HStack {
+                                if let selected = selectedTimeSlot, selectedPackage != nil {
+                                    Text(timeString(selected))
+                                        .font(.subheadline)
+                                        .foregroundColor(.black)
+                                    Spacer()
+                                    Text("\(selected.availableSlots)/\(selected.maxSlots) Slot Available")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                } else {
+                                    Text(selectedPackage == nil ? "Select a package first" : "Pick a Time")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                    Spacer()
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(6)
+                        }
+                        .disabled(selectedPackage == nil || shouldShowPackageList)
+                        .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
+                        .sheet(isPresented: $showTimePicker) {
+                            TimeSlotPickerModal(
+                                timeSlots: viewModel.availableTimeSlots,
+                                selectedTimeSlot: $selectedTimeSlot,
+                                isPresented: $showTimePicker
+                            )
+                        }
+                    }
+                    
+                    Spacer()
                 }
                 .padding()
+                .navigationTitle(isEditing ? "Edit Service Appointment" : "New Service Appointment")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            onCancel()
+                            dismiss()
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(isEditing ? "Update" : "Add") {
+                            if let package = selectedPackage,
+                               let timeSlot = selectedTimeSlot {
+                                onSave(package, selectedDate, timeSlot)
+                            }
+                        }
+                        .disabled(!canSave)
+                    }
+                }
                 
-                // Package list
-                List(filteredPackages) { package in
-                    let isSelected = (tempPackage?.id == package.id)
-                    HStack {
-                        Text(package.department.name)
-                            .foregroundColor(Color(hex: "#0F0E46"))
-                        Text(" - ")
-                            .foregroundColor(Color(hex: "#0F0E46"))
-                        Text(package.name)
-                            .foregroundColor(Color(hex: "#0F0E46"))
+                // Package List Overlay (shows when searching or focused)
+                if shouldShowPackageList {
+                    VStack(spacing: 0) {
+                        // Push overlay to below search field
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(height: 82) // Height for title + search field
+                        
+                        // Package list positioned directly below search field
+                        HStack {
+                            VStack(spacing: 0) {
+                                if filteredPackages.isEmpty {
+                                    Text("No packages found")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                } else {
+                                    ScrollView {
+                                        LazyVStack(spacing: 1) {
+                                            ForEach(filteredPackages, id: \.id) { package in
+                                                PackageListRow(package: package) {
+                                                    selectedPackage = package
+                                                    searchText = ""
+                                                    isTextFieldFocused = false
+                                                    selectedTimeSlot = nil
+                                                    viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+                                                }
+                                                Divider()
+                                            }
+                                        }
+                                    }
+                                    .frame(maxHeight: 200)
+                                }
+                            }
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            
+                            // Spacer to align with filter button
+                            Spacer().frame(width: 0)
+                        }
+                        .padding(.horizontal)
+                        
                         Spacer()
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                        }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if isSelected {
-                            tempPackage = nil
-                        } else {
-                            tempPackage = package
-                        }
-                    }
-                }
-                .listStyle(.plain)
-            }
-            .navigationTitle("Select Medical Service Package")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Select") {
-                        selectedPackage = tempPackage
-                        dismiss()
-                    }
-                    .disabled(tempPackage == nil)
+                    .background(
+                        Color.black.opacity(0.1)
+                            .onTapGesture {
+                                isTextFieldFocused = false
+                            }
+                    )
                 }
             }
             .onAppear {
-                tempPackage = selectedPackage
+                setupInitialState()
+            }
+            .onChange(of: selectedDate) { date in
+                handleDateChange(date)
             }
         }
     }
+    
+    // MARK: - Helper Methods
+    private func setupInitialState() {
+        if let editing = editingAppointment {
+            selectedPackage = editing.package
+            selectedDate = editing.date
+            selectedTimeSlot = editing.timeSlot
+            searchText = ""
+        }
+        
+        if let package = selectedPackage {
+            viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+        }
+    }
+    
+    private func handleDateChange(_ date: Date) {
+        if let package = selectedPackage {
+            viewModel.updateAvailableTimeSlots(for: package, on: date)
+            selectedTimeSlot = nil // Reset time slot when date changes
+        }
+    }
+    
+    // Helper functions
+    private func dateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        return formatter.string(from: date)
+    }
+    
+    private func timeString(_ timeSlot: TimeSlotOption) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
+    }
 }
 
-// MARK: - Time Slot Picker Modal (inspired by TimePickerModal)
+// MARK: - Package List Row Component
+struct PackageListRow: View {
+    let package: Package
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack {
+                Text(package.department.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                Text(" - ")
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                Text(package.name)
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#0F0E46"))
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Time Slot Picker Modal
 struct TimeSlotPickerModal: View {
     let timeSlots: [TimeSlotOption]
     @Binding var selectedTimeSlot: TimeSlotOption?
     @Binding var isPresented: Bool
     
-    @State private var tempSelection: TimeSlotOption?
+    @State private var selectedIndex: Int = 0
     
     var body: some View {
         NavigationStack {
-            List(timeSlots, id: \.id) { timeSlot in
-                Button {
-                    tempSelection = timeSlot
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
+            VStack(spacing: 20) {
+                // Apple-style picker
+                Picker("Time Slot", selection: $selectedIndex) {
+                    ForEach(Array(timeSlots.enumerated()), id: \.offset) { index, timeSlot in
+                        HStack(spacing: 12) {
+                            // Time display
                             Text(timeString(timeSlot))
-                                .font(.headline)
-                                .foregroundColor(.black)
-                            Text(timeSlot.displayText)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .font(.title2)
+                                .fontWeight(.medium)
+                                .foregroundColor(timeSlot.availableSlots > 0 ? .primary : .secondary)
+                            
+                            // Availability display
+                            Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) Slot Available")
+                                .font(.title3)
+                                .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
                         }
-                        Spacer()
-                        if tempSelection?.id == timeSlot.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                        }
+                        .tag(index)
                     }
-                    .padding(.horizontal)
                 }
-                .disabled(timeSlot.availableSlots <= 0)
-                .opacity(timeSlot.availableSlots > 0 ? 1.0 : 0.6)
+                .pickerStyle(.wheel)
+                .frame(height: 180)
             }
-            .listStyle(.plain)
+            .padding()
             .navigationTitle("Pick a Time")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -596,16 +643,22 @@ struct TimeSlotPickerModal: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Confirm") {
-                        selectedTimeSlot = tempSelection
+                        if selectedIndex < timeSlots.count && timeSlots[selectedIndex].availableSlots > 0 {
+                            selectedTimeSlot = timeSlots[selectedIndex]
+                        }
                         isPresented = false
                     }
-                    .disabled(tempSelection == nil)
+                    .disabled(selectedIndex >= timeSlots.count || timeSlots[selectedIndex].availableSlots <= 0)
                 }
             }
         }
-        .presentationDetents([.height(300)])
+        .presentationDetents([.height(400)])
         .onAppear {
-            tempSelection = selectedTimeSlot
+            // Set initial selection based on current selectedTimeSlot
+            if let current = selectedTimeSlot,
+               let index = timeSlots.firstIndex(where: { $0.id == current.id }) {
+                selectedIndex = index
+            }
         }
     }
     
