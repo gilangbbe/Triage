@@ -20,6 +20,19 @@ struct Step3AppointmentsView: View {
     let onAppointmentSaved: ((Package, Date, TimeSlotOption) -> Void)?
     let onDismiss: (() -> Void)?
     
+    // Local state for standalone mode appointments
+    @State private var standalonePackageAppointments: [AppointmentSelection] = []
+    @State private var standaloneDoctorAppointments: [AppointmentSelection] = []
+    
+    // Computed properties to get appropriate appointments based on mode
+    private var packageAppointments: [AppointmentSelection] {
+        isStandaloneMode ? standalonePackageAppointments : viewModel.selectedAppointments
+    }
+    
+    private var doctorAppointments: [AppointmentSelection] {
+        isStandaloneMode ? standaloneDoctorAppointments : viewModel.selectedDoctorAppointments
+    }
+    
     init(
         viewModel: AddPatientViewModel,
         isStandaloneMode: Bool = false,
@@ -36,6 +49,20 @@ struct Step3AppointmentsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            
+            // Done and Cancel buttons for standalone mode
+            if isStandaloneMode {
+                HStack(spacing: 12) {
+                    Button("Cancel") {
+                        onDismiss?()
+                    }
+                    Spacer()
+                    
+                    Button("Done") {
+                        onDismiss?()
+                    }
+                }
+            }
             
             // Title - matching old design
             Text(isStandaloneMode ? "Add Appointment" : "Patient Appointment")
@@ -58,7 +85,7 @@ struct Step3AppointmentsView: View {
                     }
                     
                     ScrollView {
-                        ForEach(Array(viewModel.selectedAppointments.enumerated()), id: \.element.id) { index, appointment in
+                        ForEach(Array(packageAppointments.enumerated()), id: \.element.id) { index, appointment in
                             ModernAppointmentCard(
                                 appointment: appointment,
                                 onTap: {
@@ -66,13 +93,20 @@ struct Step3AppointmentsView: View {
                                     showAppointmentForm = true
                                 },
                                 onDelete: {
-                                    viewModel.removeAppointmentSelection(at: index)
+                                    if isStandaloneMode {
+                                        let appointmentToDelete = standalonePackageAppointments[index]
+                                        standalonePackageAppointments.remove(at: index)
+                                        // Also delete from patient's actual appointments
+                                        deleteFromPatientAppointments(appointmentToDelete)
+                                    } else {
+                                        viewModel.removeAppointmentSelection(at: index)
+                                    }
                                 }
                             )
                             .padding(.bottom, 6)
                         }
                         
-                        if viewModel.selectedAppointments.isEmpty {
+                        if packageAppointments.isEmpty {
                             EmptyAppointmentState()
                         }
                     }
@@ -94,7 +128,7 @@ struct Step3AppointmentsView: View {
                     }
                     
                     ScrollView {
-                        ForEach(Array(viewModel.selectedDoctorAppointments.enumerated()), id: \.element.id) { index, appointment in
+                        ForEach(Array(doctorAppointments.enumerated()), id: \.element.id) { index, appointment in
                             ModernAppointmentCard(
                                 appointment: appointment,
                                 onTap: {
@@ -102,13 +136,20 @@ struct Step3AppointmentsView: View {
                                     showDoctorAppointmentForm = true
                                 },
                                 onDelete: {
-                                    viewModel.removeDoctorAppointmentSelection(at: index)
+                                    if isStandaloneMode {
+                                        let appointmentToDelete = standaloneDoctorAppointments[index]
+                                        standaloneDoctorAppointments.remove(at: index)
+                                        // Also delete from patient's actual appointments
+                                        deleteFromPatientAppointments(appointmentToDelete)
+                                    } else {
+                                        viewModel.removeDoctorAppointmentSelection(at: index)
+                                    }
                                 }
                             )
                             .padding(.bottom, 6)
                         }
                         
-                        if viewModel.selectedDoctorAppointments.isEmpty {
+                        if doctorAppointments.isEmpty {
                             DoctorAppointmentPlaceholder()
                         }
                     }
@@ -120,17 +161,6 @@ struct Step3AppointmentsView: View {
             Spacer()
         }
         .padding()
-        .navigationTitle(isStandaloneMode ? "Add Appointment" : "Patient Appointment")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if isStandaloneMode {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onDismiss?()
-                    }
-                }
-            }
-        }
         .sheet(isPresented: $showAppointmentForm) {
             AppointmentSelectionSheet(
                 viewModel: viewModel,
@@ -142,8 +172,14 @@ struct Step3AppointmentsView: View {
                         editingAppointment = nil
                     } else {
                         if isStandaloneMode {
+                            // Add to local state and save to patient
+                            let appointmentSelection = AppointmentSelection(
+                                package: package,
+                                date: date,
+                                timeSlot: timeSlot
+                            )
+                            standalonePackageAppointments.append(appointmentSelection)
                             onAppointmentSaved?(package, date, timeSlot)
-                            onDismiss?()
                         } else {
                             viewModel.addAppointmentSelection(package: package, date: date, timeSlot: timeSlot)
                         }
@@ -166,8 +202,14 @@ struct Step3AppointmentsView: View {
                         editingDoctorAppointment = nil
                     } else {
                         if isStandaloneMode {
+                            // Add to local state and save to patient
+                            let appointmentSelection = AppointmentSelection(
+                                package: package,
+                                date: date,
+                                timeSlot: timeSlot
+                            )
+                            standaloneDoctorAppointments.append(appointmentSelection)
                             onAppointmentSaved?(package, date, timeSlot)
-                            onDismiss?()
                         } else {
                             viewModel.addDoctorAppointmentSelection(package: package, date: date, timeSlot: timeSlot)
                         }
@@ -178,6 +220,58 @@ struct Step3AppointmentsView: View {
                     editingDoctorAppointment = nil
                 }
             )
+        }
+        .onAppear {
+            if isStandaloneMode, let patient = patient {
+                populateExistingAppointments(for: patient)
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func populateExistingAppointments(for patient: Patient) {
+        // Get upcoming appointments only
+        let upcomingAppointments = patient.appointments.filter { appointment in
+            appointment.timeSlot.date >= Calendar.current.startOfDay(for: Date())
+        }
+        
+        // Separate into packages and doctors
+        for appointment in upcomingAppointments {
+            guard let package = appointment.package else { continue }
+            
+            let timeSlotOption = TimeSlotOption(
+                startTime: appointment.timeSlot.startTime,
+                endTime: appointment.timeSlot.endTime,
+                availableSlots: 1,
+                maxSlots: 1
+            )
+            
+            let appointmentSelection = AppointmentSelection(
+                package: package,
+                date: appointment.timeSlot.date,
+                timeSlot: timeSlotOption
+            )
+            
+            // Check if it's a doctor appointment or package appointment
+            if package.department.name == "Doctor" {
+                standaloneDoctorAppointments.append(appointmentSelection)
+            } else {
+                standalonePackageAppointments.append(appointmentSelection)
+            }
+        }
+    }
+    
+    private func deleteFromPatientAppointments(_ appointmentSelection: AppointmentSelection) {
+        guard let patient = patient else { return }
+        
+        // Find the matching appointment in the patient's appointments
+        if let appointmentToDelete = patient.appointments.first(where: { appointment in
+            appointment.timeSlot.date == appointmentSelection.date &&
+            appointment.timeSlot.startTime == appointmentSelection.timeSlot.startTime &&
+            appointment.package?.id == appointmentSelection.package?.id
+        }) {
+            // Remove from AppointmentManager  
+            AppointmentManager.shared.deleteAppointment(appointmentToDelete)
         }
     }
 }
