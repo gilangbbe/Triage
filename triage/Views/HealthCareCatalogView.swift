@@ -13,9 +13,16 @@ struct HealthCareCatalogView: View {
     @Environment(\.modelContext) private var modelContext
     
     @State private var searchText: String = ""
-    @State private var showingAddPackage = false
     @State private var showingAddDepartment = false
     @State private var selectedDepartmentForPackage: Department? = nil
+    
+    // Computed property for sheet presentation
+    private var showingAddPackage: Binding<Bool> {
+        Binding(
+            get: { selectedDepartmentForPackage != nil },
+            set: { if !$0 { selectedDepartmentForPackage = nil } }
+        )
+    }
     
     // Group packages by department
     private var groupedPackages: [String: [Package]] {
@@ -37,7 +44,7 @@ struct HealthCareCatalogView: View {
     private let departmentConfig: [String: (displayName: String, color: Color)] = [
         "Medical Check Up": ("MEDICAL CHECK UP", Color.blue.opacity(0.1)),
         "Radiology": ("RADIOLOGY", Color.green.opacity(0.1)), 
-        "Laboratory": ("LABORATORIUM", Color.red.opacity(0.1))
+        "Laboratory": ("LABORATORY", Color.red.opacity(0.1))
     ]
     
     var body: some View {
@@ -86,7 +93,6 @@ struct HealthCareCatalogView: View {
                             color: config.color,
                             onAddPackage: {
                                 selectedDepartmentForPackage = department
-                                showingAddPackage = true
                             },
                             onEditDepartment: {
                                 // TODO: Implement edit department if needed
@@ -107,11 +113,10 @@ struct HealthCareCatalogView: View {
             packageManager.setModelContext(modelContext)
             departmentManager.setModelContext(modelContext)
         }
-        .sheet(isPresented: $showingAddPackage) {
-            AddPackageView(preselectedDepartment: selectedDepartmentForPackage)
-                .onDisappear {
-                    selectedDepartmentForPackage = nil
-                }
+        .sheet(isPresented: showingAddPackage) {
+            if let department = selectedDepartmentForPackage {
+                AddPackageView(department: department)
+            }
         }
         .sheet(isPresented: $showingAddDepartment) {
             AddDepartmentView()
