@@ -10,8 +10,14 @@ import SwiftUI
 struct PatientDetailView: View {
     @Bindable var patient: Patient
     @State private var isEditing: Bool = false
+    @State private var showingAddAppointment = false
+    
     let historyViewModel: HistoryViewModel
     let historyManager: HistoryManager
+    
+    @Environment(PackageManager.self) private var packageManager
+    @Environment(AppointmentManager.self) private var appointmentManager
+    @Environment(PatientManager.self) private var patientManager
     
     // Computed properties to separate upcoming and completed appointments
     private var upcomingAppointments: [Appointment] {
@@ -48,7 +54,7 @@ struct PatientDetailView: View {
                                     .foregroundColor(.brown)
                                 Spacer()
                                 Button(action: {
-                                    //
+                                    showingAddAppointment = true
                                 }) {
                                     Text("Add")
                                 }
@@ -107,6 +113,19 @@ struct PatientDetailView: View {
             }
         }
         .padding(.horizontal, 16)
+        .sheet(isPresented: $showingAddAppointment) {
+            Step3AppointmentsView(
+                viewModel: createAppointmentViewModel(),
+                isStandaloneMode: true,
+                patient: patient,
+                onAppointmentSaved: { package, date, timeSlot in
+                    saveAppointment(package: package, date: date, timeSlot: timeSlot)
+                },
+                onDismiss: {
+                    showingAddAppointment = false
+                }
+            )
+        }
     }
     private var formattedDateOfBirth: String {
         if let date = patient.dateOfBirth {
@@ -238,6 +257,39 @@ struct PatientDetailView: View {
         )
         print(log)
         historyViewModel.addHistory(log)
+    }
+    
+    // MARK: - Appointment Management
+    private func createAppointmentViewModel() -> AddPatientViewModel {
+        // Create a minimal view model just for appointment management
+        let viewModel = AddPatientViewModel(
+            patientManager: patientManager,
+            appointmentManager: appointmentManager,
+            packageManager: packageManager
+        )
+        return viewModel
+    }
+    
+    private func saveAppointment(package: Package, date: Date, timeSlot: TimeSlotOption) {
+        let timeSlotModel = TimeSlot(
+            date: date,
+            startTime: timeSlot.startTime,
+            endTime: timeSlot.endTime
+        )
+        
+        let appointmentTitle = "\(patient.fullName) - \(package.name)"
+        
+        let appointment = Appointment(
+            name: appointmentTitle,
+            date: date,
+            startTime: timeSlot.startTime,
+            endTime: timeSlot.endTime,
+            timeSlot: timeSlotModel,
+            patient: patient,
+            package: package
+        )
+        
+        appointmentManager.addAppointment(appointment)
     }
 }
 
