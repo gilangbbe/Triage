@@ -15,6 +15,7 @@ struct HealthCareCatalogView: View {
     @State private var searchText: String = ""
     @State private var showingAddDepartment = false
     @State private var selectedDepartmentForPackage: Department? = nil
+    @State private var editingDepartment: Department? = nil
     
     // Computed property for sheet presentation
     private var showingAddPackage: Binding<Bool> {
@@ -95,7 +96,7 @@ struct HealthCareCatalogView: View {
                                 selectedDepartmentForPackage = department
                             },
                             onEditDepartment: {
-                                // TODO: Implement edit department if needed
+                                editingDepartment = department
                             },
                             onDeleteDepartment: {
                                 departmentManager.deleteDepartment(department)
@@ -121,6 +122,84 @@ struct HealthCareCatalogView: View {
         .sheet(isPresented: $showingAddDepartment) {
             AddDepartmentView()
         }
+        .sheet(item: $editingDepartment) { department in
+            EditDepartmentView(department: department)
+        }
+    }
+}
+
+// MARK: - Edit Department View
+struct EditDepartmentView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(DepartmentManager.self) private var departmentManager
+    
+    let department: Department
+    
+    @State private var name: String
+    @State private var maxSlot: Int
+    @State private var showingDeleteAlert = false
+    
+    init(department: Department) {
+        self.department = department
+        _name = State(initialValue: department.name)
+        _maxSlot = State(initialValue: department.maxSlot ?? 3)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Department Details") {
+                    TextField("Department Name", text: $name)
+                        .textInputAutocapitalization(.words)
+                    
+                    Stepper("Max slots per hour: \(maxSlot)", value: $maxSlot, in: 1...10)
+                }
+                
+                Section {
+                    Button("Delete Department", role: .destructive) {
+                        showingDeleteAlert = true
+                    }
+                }
+                
+                Section(footer: Text("Changes will affect all packages in this department.")) {
+                    EmptyView()
+                }
+            }
+            .navigationTitle("Edit Department")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .alert("Delete Department", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    departmentManager.deleteDepartment(department)
+                    dismiss()
+                }
+            } message: {
+                Text("Are you sure you want to delete '\(department.name)' department? This will also delete all packages and cancel related appointments. This action cannot be undone.")
+            }
+        }
+    }
+    
+    private func saveChanges() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        department.name = trimmedName
+        department.maxSlot = maxSlot
+        
+        departmentManager.updateDepartment(department)
+        dismiss()
     }
 }
 
