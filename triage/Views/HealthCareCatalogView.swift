@@ -232,11 +232,19 @@ struct DepartmentSectionView: View {
                 Spacer()
                 
                 HStack(spacing: 12) {
-                    Button("+ Package") {
-                        onAddPackage()
+                    if department.name == "Doctor" {
+                        Button("+ Doctor") {
+                            onAddPackage()
+                        }
+                        .foregroundColor(Color.accent)
+                        .font(.subheadline)
+                    } else {
+                        Button("+ Package") {
+                            onAddPackage()
+                        }
+                        .foregroundColor(Color.accent)
+                        .font(.subheadline)
                     }
-                    .foregroundColor(Color.accent)
-                    .font(.subheadline)
                     
                     Menu {
                         Button("Edit Department") {

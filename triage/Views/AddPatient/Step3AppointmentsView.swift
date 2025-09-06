@@ -7,10 +7,17 @@
 
 import SwiftUI
 
+enum AppointmentType {
+    case package
+    case doctor
+}
+
 struct Step3AppointmentsView: View {
     @Bindable var viewModel: AddPatientViewModel
     @State private var showAppointmentForm = false
     @State private var editingAppointment: AppointmentSelection? = nil
+    @State private var showDoctorAppointmentForm = false
+    @State private var editingDoctorAppointment: AppointmentSelection? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -68,12 +75,25 @@ struct Step3AppointmentsView: View {
                         .foregroundColor(Color(hex: "#0F0E46"))
                     
                     AddRowButton(title: "+ Add Doctor") {
-                        // TODO: Implement doctor appointment functionality
+                        showDoctorAppointmentForm = true
                     }
                     
                     ScrollView {
-                        VStack(spacing: 12) {
-                            // Placeholder for future doctor appointments
+                        ForEach(Array(viewModel.selectedDoctorAppointments.enumerated()), id: \.element.id) { index, appointment in
+                            ModernAppointmentCard(
+                                appointment: appointment,
+                                onTap: {
+                                    editingDoctorAppointment = appointment
+                                    showDoctorAppointmentForm = true
+                                },
+                                onDelete: {
+                                    viewModel.removeDoctorAppointmentSelection(at: index)
+                                }
+                            )
+                            .padding(.bottom, 6)
+                        }
+                        
+                        if viewModel.selectedDoctorAppointments.isEmpty {
                             DoctorAppointmentPlaceholder()
                         }
                     }
@@ -89,6 +109,7 @@ struct Step3AppointmentsView: View {
             AppointmentSelectionSheet(
                 viewModel: viewModel,
                 editingAppointment: editingAppointment,
+                appointmentType: .package,
                 onSave: { package, date, timeSlot in
                     if editingAppointment != nil {
                         // Handle editing logic here
@@ -100,6 +121,25 @@ struct Step3AppointmentsView: View {
                 },
                 onCancel: {
                     editingAppointment = nil
+                }
+            )
+        }
+        .sheet(isPresented: $showDoctorAppointmentForm) {
+            AppointmentSelectionSheet(
+                viewModel: viewModel,
+                editingAppointment: editingDoctorAppointment,
+                appointmentType: .doctor,
+                onSave: { package, date, timeSlot in
+                    if editingDoctorAppointment != nil {
+                        // Handle editing logic here
+                        editingDoctorAppointment = nil
+                    } else {
+                        viewModel.addDoctorAppointmentSelection(package: package, date: date, timeSlot: timeSlot)
+                    }
+                    showDoctorAppointmentForm = false
+                },
+                onCancel: {
+                    editingDoctorAppointment = nil
                 }
             )
         }
@@ -146,7 +186,9 @@ struct ModernAppointmentCard: View {
                     .foregroundColor(Color(hex: "#0F0E46"))
                 Spacer()
                 // Package Name
-                Text(appointment.package?.name ?? "Unknown Package")
+                let packageName = appointment.package?.name ?? "Unknown Package"
+                let displayName = appointment.package?.department.name == "Doctor" ? "Dr. \(packageName)" : packageName
+                Text(displayName)
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#0F0E46"))
             }
@@ -170,9 +212,15 @@ struct ModernAppointmentCard: View {
             
             // Availability info
             HStack {
-                Text("\(appointment.timeSlot.availableSlots)/\(appointment.timeSlot.maxSlots) slots")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if appointment.timeSlot.maxSlots == 1 {
+                    Text("Doctor appointment")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("\(appointment.timeSlot.availableSlots)/\(appointment.timeSlot.maxSlots) slots")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
                 Button(action: onDelete) {
                     Image(systemName: "trash")
@@ -199,7 +247,12 @@ struct ModernAppointmentCard: View {
     private func timeString(_ date: Date, timeSlot: TimeSlotOption) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH.mm"
-        return formatter.string(from: timeSlot.startTime)
+        if timeSlot.maxSlots == 1 { // This indicates it's a doctor appointment
+            return formatter.string(from: timeSlot.startTime)
+        } else {
+            let endTime = formatter.string(from: timeSlot.endTime)
+            return "\(formatter.string(from: timeSlot.startTime)) - \(endTime)"
+        }
     }
 }
 
@@ -211,11 +264,11 @@ struct DoctorAppointmentPlaceholder: View {
                 .font(.system(size: 32))
                 .foregroundColor(.gray)
             
-            Text("Doctor appointments")
+            Text("No doctor appointments")
                 .font(.subheadline)
                 .foregroundColor(.gray)
             
-            Text("Coming soon")
+            Text("Add a doctor to get started")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -261,6 +314,7 @@ struct AppointmentSelectionSheet: View {
     @FocusState private var isTextFieldFocused: Bool
     
     let editingAppointment: AppointmentSelection?
+    let appointmentType: AppointmentType
     let onSave: (Package, Date, TimeSlotOption) -> Void
     let onCancel: () -> Void
     
@@ -274,7 +328,11 @@ struct AppointmentSelectionSheet: View {
     
     // Filtered packages for search
     var filteredPackages: [Package] {
-        let filtered = viewModel.availablePackages.filter { package in
+        let basePackages = appointmentType == .doctor 
+            ? viewModel.availablePackages.filter { $0.department.name == "Doctor" }
+            : viewModel.availablePackages.filter { $0.department.name != "Doctor" }
+        
+        let filtered = basePackages.filter { package in
             (selectedFilter == "All" || package.department.name == selectedFilter) &&
             (searchText.isEmpty || package.name.localizedCaseInsensitiveContains(searchText))
         }
@@ -289,7 +347,10 @@ struct AppointmentSelectionSheet: View {
     }
     
     var uniqueDepartments: [String] {
-        Array(Set(viewModel.availablePackages.map { $0.department.name })).sorted()
+        let basePackages = appointmentType == .doctor 
+            ? viewModel.availablePackages.filter { $0.department.name == "Doctor" }
+            : viewModel.availablePackages.filter { $0.department.name != "Doctor" }
+        return Array(Set(basePackages.map { $0.department.name })).sorted()
     }
     
     var shouldShowPackageList: Bool {
@@ -303,7 +364,7 @@ struct AppointmentSelectionSheet: View {
                     
                     // Step 1: Package Selection with Search & Filter
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Medical Service Package")
+                        Text(appointmentType == .doctor ? "Doctor's Appointment" : "Medical Service Package")
                             .font(.subheadline)
                             .bold()
                             .foregroundColor(Color(hex: "#0F0E46"))
@@ -314,7 +375,7 @@ struct AppointmentSelectionSheet: View {
                             HStack {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(.gray)
-                                TextField("Search medical service package...", text: $searchText)
+                                TextField(appointmentType == .doctor ? "Search doctor name..." : "Search medical service package...", text: $searchText)
                                     .font(.subheadline)
                                     .focused($isTextFieldFocused)
                                     .onTapGesture {
@@ -424,11 +485,17 @@ struct AppointmentSelectionSheet: View {
                                         .font(.subheadline)
                                         .foregroundColor(.black)
                                     Spacer()
-                                    Text("\(selected.availableSlots)/\(selected.maxSlots) Slot Available")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
+                                    if appointmentType == .doctor {
+                                        Text(selected.availableSlots > 0 ? "Available" : "Unavailable")
+                                            .font(.subheadline)
+                                            .foregroundColor(selected.availableSlots > 0 ? .gray : .red)
+                                    } else {
+                                        Text("\(selected.availableSlots)/\(selected.maxSlots) Slot Available")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                    }
                                 } else {
-                                    Text(selectedPackage == nil ? "Select a package first" : "Pick a Time")
+                                    Text(selectedPackage == nil ? "Select a \(appointmentType == .doctor ? "doctor" : "package") first" : "Pick a Time")
                                         .font(.subheadline)
                                         .foregroundColor(.gray)
                                     Spacer()
@@ -445,7 +512,8 @@ struct AppointmentSelectionSheet: View {
                             TimeSlotPickerModal(
                                 timeSlots: viewModel.availableTimeSlots,
                                 selectedTimeSlot: $selectedTimeSlot,
-                                isPresented: $showTimePicker
+                                isPresented: $showTimePicker,
+                                appointmentType: appointmentType
                             )
                         }
                     }
@@ -453,7 +521,7 @@ struct AppointmentSelectionSheet: View {
                     Spacer()
                 }
                 .padding()
-                .navigationTitle(isEditing ? "Edit Service Appointment" : "New Service Appointment")
+                .navigationTitle(isEditing ? (appointmentType == .doctor ? "Edit Doctor Appointment" : "Edit Service Appointment") : (appointmentType == .doctor ? "New Doctor Appointment" : "New Service Appointment"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -500,7 +568,11 @@ struct AppointmentSelectionSheet: View {
                                                     searchText = ""
                                                     isTextFieldFocused = false
                                                     selectedTimeSlot = nil
-                                                    viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+                                                    if appointmentType == .doctor {
+                                                        viewModel.updateAvailableDoctorTimeSlots(for: package, on: selectedDate)
+                                                    } else {
+                                                        viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+                                                    }
                                                 }
                                                 Divider()
                                             }
@@ -547,13 +619,21 @@ struct AppointmentSelectionSheet: View {
         }
         
         if let package = selectedPackage {
-            viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+            if appointmentType == .doctor {
+                viewModel.updateAvailableDoctorTimeSlots(for: package, on: selectedDate)
+            } else {
+                viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+            }
         }
     }
     
     private func handleDateChange(_ date: Date) {
         if let package = selectedPackage {
-            viewModel.updateAvailableTimeSlots(for: package, on: date)
+            if appointmentType == .doctor {
+                viewModel.updateAvailableDoctorTimeSlots(for: package, on: date)
+            } else {
+                viewModel.updateAvailableTimeSlots(for: package, on: date)
+            }
             selectedTimeSlot = nil // Reset time slot when date changes
         }
     }
@@ -568,7 +648,11 @@ struct AppointmentSelectionSheet: View {
     private func timeString(_ timeSlot: TimeSlotOption) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
+        if appointmentType == .doctor {
+            return formatter.string(from: timeSlot.startTime)
+        } else {
+            return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
+        }
     }
 }
 
@@ -605,6 +689,7 @@ struct TimeSlotPickerModal: View {
     let timeSlots: [TimeSlotOption]
     @Binding var selectedTimeSlot: TimeSlotOption?
     @Binding var isPresented: Bool
+    let appointmentType: AppointmentType
     
     @State private var selectedIndex: Int = 0
     
@@ -622,9 +707,15 @@ struct TimeSlotPickerModal: View {
                                 .foregroundColor(timeSlot.availableSlots > 0 ? .primary : .secondary)
                             
                             // Availability display
-                            Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) Slot Available")
-                                .font(.title3)
-                                .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
+                            if appointmentType == .doctor {
+                                Text(timeSlot.availableSlots > 0 ? "Available" : "Unavailable")
+                                    .font(.title3)
+                                    .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
+                            } else {
+                                Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) Slot Available")
+                                    .font(.title3)
+                                    .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
+                            }
                         }
                         .tag(index)
                     }
@@ -665,7 +756,11 @@ struct TimeSlotPickerModal: View {
     private func timeString(_ timeSlot: TimeSlotOption) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
+        if appointmentType == .doctor {
+            return formatter.string(from: timeSlot.startTime)
+        } else {
+            return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
+        }
     }
 }
 
