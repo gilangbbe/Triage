@@ -270,7 +270,7 @@ struct Step3AppointmentsView: View {
             appointment.timeSlot.startTime == appointmentSelection.timeSlot.startTime &&
             appointment.package?.id == appointmentSelection.package?.id
         }) {
-            // Remove from AppointmentManager  
+            // Remove from AppointmentManager
             AppointmentManager.shared.deleteAppointment(appointmentToDelete)
         }
     }
@@ -342,15 +342,6 @@ struct ModernAppointmentCard: View {
             
             // Availability info
             HStack {
-                if appointment.timeSlot.maxSlots == 1 {
-                    Text("Doctor appointment")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("\(appointment.timeSlot.availableSlots)/\(appointment.timeSlot.maxSlots) slots")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
                 Spacer()
                 Button(action: onDelete) {
                     Image(systemName: "trash")
@@ -377,12 +368,8 @@ struct ModernAppointmentCard: View {
     private func timeString(_ date: Date, timeSlot: TimeSlotOption) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH.mm"
-        if timeSlot.maxSlots == 1 { // This indicates it's a doctor appointment
-            return formatter.string(from: timeSlot.startTime)
-        } else {
-            let endTime = formatter.string(from: timeSlot.endTime)
-            return "\(formatter.string(from: timeSlot.startTime)) - \(endTime)"
-        }
+    
+        return formatter.string(from: timeSlot.startTime)
     }
 }
 

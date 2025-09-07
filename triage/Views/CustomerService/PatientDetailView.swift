@@ -125,6 +125,7 @@ struct PatientDetailView: View {
                     showingAddAppointment = false
                 }
             )
+            .frame(width: 800)
         }
     }
     private var formattedDateOfBirth: String {
