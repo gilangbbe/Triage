@@ -75,15 +75,15 @@ private struct DayCell: View {
 
             Text(dayString(date))
                 .font(.body.weight(.semibold))
-                .foregroundStyle(isSelected ? .white : CalTheme.navy)
+                .foregroundStyle(isSelected ? .white : Color.primary)
                 .frame(width: 36, height: 36)
                 .background(
-                    Circle().fill(isSelected ? CalTheme.navy
-                                             : (isToday ? CalTheme.navy.opacity(0.12) : .clear))
+                    Circle().fill(isSelected ? Color(.blue)
+                                  : (isToday ? Color(.blue.opacity(0.35)) : .clear))
                 )
                 .overlay(
                     Circle()
-                        .stroke(isToday && !isSelected ? CalTheme.navy.opacity(0.35) : .clear, lineWidth: 1)
+                        .stroke(isToday && !isSelected ? Color(.blue.opacity(0.35)) : .clear, lineWidth: 1)
                 )
         }
     }

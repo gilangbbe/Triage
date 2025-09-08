@@ -8,23 +8,35 @@
 import SwiftUI
 
 struct CalendarWeekView: View {
-    @Binding var selectedDate: Date
-    @Binding var monthAnchor: Date
-    @Binding var appts: [Appt]
-    
+    @Environment(CalendarViewModel.self) private var vm
+
     var body: some View {
         VStack {
-            WeekStrip(selectedDate: $selectedDate, monthAnchor: $monthAnchor)
+            WeekStrip(
+                selectedDate: Binding(
+                    get: { vm.selectedDate },
+                    set: { vm.selectedDate = $0 }
+                ),
+                monthAnchor: Binding(
+                    get: { vm.monthAnchor },
+                    set: { vm.monthAnchor = $0 }
+                )
+            )
+
             WeekTimelineBoard(
-                weekAnchor: monthAnchor,
-                selectedDate: $selectedDate,
-                appts: appts
+                weekAnchor: vm.monthAnchor,
+                selectedDate: Binding(
+                    get: { vm.selectedDate },
+                    set: { vm.selectedDate = $0 }
+                ),
+                appts: vm.visibleAppointments
             )
         }
     }
 }
 
-// MARK: - PreferenceKey to bubble up measured heights per HOUR (take max across days)
+
+// MARK: - PreferenceKey
 private struct HourHeightKey: PreferenceKey {
     static var defaultValue: [Int: CGFloat] = [:]
     static func reduce(value: inout [Int : CGFloat], nextValue: () -> [Int : CGFloat]) {
@@ -36,7 +48,7 @@ private struct HourHeightKey: PreferenceKey {
 private struct WeekTimelineBoard: View {
     let weekAnchor: Date
     @Binding var selectedDate: Date
-    let appts: [Appt]
+    let appts: [Appointment]
 
     private let hours = Array(0..<24)
     private let labelWidth: CGFloat = 72
@@ -58,13 +70,13 @@ private struct WeekTimelineBoard: View {
             let gaps: CGFloat         = CGFloat(days.count - 1) * dayGap
             let dayColWidth: CGFloat  = (contentWidth - gaps) / CGFloat(days.count)
 
-            let byDay: [Date: [Appt]] = groupByDay(appts)
+            let byDay: [Date: [Appointment]] = groupByDay(appts)
 
             let hourHasAny: [Bool] = hours.map { h in
                 days.contains { day in
                     let key = Calendar.current.startOfDay(for: day)
                     let dayAppts = byDay[key] ?? []
-                    return dayAppts.contains { Calendar.current.component(.hour, from: $0.start) == h }
+                    return dayAppts.contains { Calendar.current.component(.hour, from: $0.timeSlot.startTime) == h }
                 }
             }
 
@@ -138,23 +150,25 @@ private struct WeekTimelineBoard: View {
         }
     }
 
-    // MARK: - Helpers
-    private func groupByDay(_ appts: [Appt]) -> [Date: [Appt]] {
+    // MARK: - Helpers ()
+    private func groupByDay(_ appts: [Appointment]) -> [Date: [Appointment]] {
         let cal = Calendar.current
-        return appts.reduce(into: [Date: [Appt]]()) { dict, a in
-            let key = cal.startOfDay(for: a.start)
+        return appts.reduce(into: [Date: [Appointment]]()) { dict, a in
+            let key = cal.startOfDay(for: a.timeSlot.startTime)
             dict[key, default: []].append(a)
         }
     }
 
-    private func appts(inHour hour: Int, from dayAppts: [Appt]) -> [Appt] {
+    private func appts(inHour hour: Int, from dayAppts: [Appointment]) -> [Appointment] {
         let cal = Calendar.current
-        return dayAppts.filter { cal.component(.hour, from: $0.start) == hour }
+        return dayAppts.filter { cal.component(.hour, from: $0.timeSlot.startTime) == hour }
     }
 
-    private func groupByKind(_ appts: [Appt]) -> [SlotKind: [Appt]] {
-        var d: [SlotKind: [Appt]] = [:]
-        for a in appts { d[a.slotKind, default: []].append(a) }
+    private func groupByKind(_ appts: [Appointment]) -> [SlotKind: [Appointment]] {
+        var d: [SlotKind: [Appointment]] = [:]
+        for a in appts {
+            d[a.inferredSlotKind, default: []].append(a)
+        }
         return d
     }
 

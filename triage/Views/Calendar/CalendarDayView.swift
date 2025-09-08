@@ -7,25 +7,27 @@
 
 import SwiftUI
 
-
 struct CalendarDayView: View {
-    @Binding var selectedDate: Date
-    @Binding var monthAnchor: Date
-    @Binding var appts: [Appt]
-    
+    @Environment(CalendarViewModel.self) private var vm
+
     var body: some View {
         VStack {
             OverviewHeader()
-            TimelineBoard(selectedDate: selectedDate, appts: appts).padding(.top, 24)
+            TimelineBoard(
+                selectedDate: vm.selectedDate,
+                appointments: vm.appointments(on: vm.selectedDate)
+            )
+            .padding(.top, 24)
+
             Spacer()
         }
     }
 }
 
-// MARK: - Timeline Board (24h grid; booked hours auto-size)
+// MARK: - Timeline Board
 private struct TimelineBoard: View {
     let selectedDate: Date
-    let appts: [Appt]
+    let appointments: [Appointment]
 
     // Layout
     private let minEmptyRowHeight: CGFloat = 128
@@ -39,8 +41,7 @@ private struct TimelineBoard: View {
     private var timeGutterWidth: CGFloat { timeTextWidth + timeLeadingPad }
 
     var body: some View {
-        let dayAppts = appts.filter { Calendar.current.isDate($0.start, inSameDayAs: selectedDate) }
-        let grouped = groupByHour(dayAppts)
+        let grouped = groupByHour(appointments)
 
         ScrollView(.vertical, showsIndicators: true) {
             VStack(spacing: 0) {
@@ -55,8 +56,8 @@ private struct TimelineBoard: View {
                             .foregroundStyle(.secondary)
                             .frame(width: timeGutterWidth, alignment: .trailing)
 
-                        // Content column
                         if let slotAppts = grouped[h], !slotAppts.isEmpty {
+                            // Keep your existing row as-is
                             SlotBucketsRow(appts: slotAppts)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -77,24 +78,20 @@ private struct TimelineBoard: View {
     }
 
     // MARK: Helpers
-    private func groupByHour(_ appts: [Appt]) -> [Int: [Appt]] {
-        var dict: [Int: [Appt]] = [:]
+    private func groupByHour(_ appts: [Appointment]) -> [Int: [Appointment]] {
         let cal = Calendar.current
+        var dict: [Int: [Appointment]] = [:]
+
         for a in appts {
-            dict[cal.component(.hour, from: a.start), default: []].append(a)
+            let hour = cal.component(.hour, from: a.timeSlot.startTime)
+            dict[hour, default: []].append(a)
         }
+
         for k in dict.keys {
-            dict[k]?.sort { ($0.start, $0.patient) < ($1.start, $1.patient) }
+            dict[k]?.sort {
+                ($0.timeSlot.startTime, $0.name) < ($1.timeSlot.startTime, $1.name)
+            }
         }
         return dict
-    }
-}
-
-
-// PreferenceKey — keep the LATEST measurement per hour.
-private struct HourHeightKey: PreferenceKey {
-    static var defaultValue: [Int: CGFloat] = [:]
-    static func reduce(value: inout [Int : CGFloat], nextValue: () -> [Int : CGFloat]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }

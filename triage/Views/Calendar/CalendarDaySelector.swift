@@ -80,7 +80,6 @@ struct DaySelector: View {
     }
 
     // MARK: - Helpers
-
     private func stepLabel(_ systemName: String) -> some View {
         Image(systemName: systemName)
             .font(.body.weight(.semibold))

@@ -16,18 +16,17 @@ struct MonthYearSelector: View {
     @State private var draftYear: Int  = Calendar.current.component(.year, from: Date())
 
     private let cal = Calendar.current
-    private let years = Array(2000...2100)  // adjust as needed
+    private let years = Array(2000...2100)
 
     var body: some View {
         Button {
-            // seed draft from current anchor
             let comps = cal.dateComponents([.year, .month], from: monthAnchor)
             draftMonth = comps.month ?? 1
             draftYear  = comps.year  ?? years.first!
             withAnimation(.snappy) { isOpen = true }
         } label: {
             HStack(spacing: 8) {
-                Text(formattedTitle(for: monthAnchor)) // "August 2025" w/ bold month
+                Text(formattedTitle(for: monthAnchor))
                 Image(systemName: "chevron.down")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -38,7 +37,6 @@ struct MonthYearSelector: View {
         .buttonStyle(.plain)
         .popover(isPresented: $isOpen, arrowEdge: .top) {
             VStack(spacing: 12) {
-                // Header
                 HStack {
                     Text("Select Month & Year")
                         .font(.headline)
@@ -53,7 +51,6 @@ struct MonthYearSelector: View {
                 .padding(.horizontal)
                 .padding(.top, 12)
 
-                // Wheels
                 HStack(spacing: 0) {
                     Picker("Month", selection: $draftMonth) {
                         ForEach(1...12, id: \.self) { m in
@@ -74,7 +71,6 @@ struct MonthYearSelector: View {
                 .labelsHidden()
                 .frame(height: 180)
 
-                // Quick actions
                 HStack(spacing: 12) {
                     Button {
                         shift(byMonths: -1)
@@ -100,8 +96,6 @@ struct MonthYearSelector: View {
         .accessibilityValue(Text(formattedPlain(for: monthAnchor)))
     }
 
-    // MARK: helpers
-
     private func shift(byMonths delta: Int) {
         let current = cal.date(from: DateComponents(year: draftYear, month: draftMonth, day: 1)) ?? Date()
         let next = cal.date(byAdding: .month, value: delta, to: current) ?? current
@@ -123,11 +117,11 @@ struct MonthYearSelector: View {
 
         var attr = AttributedString("\(monthName) \(yearStr)")
         if let monthRange = attr.range(of: monthName) {
-            attr[monthRange].font = .system(size: 22, weight: .bold)   // bold month
+            attr[monthRange].font = .system(size: 22, weight: .bold)
             attr[monthRange].foregroundColor = Color(.label)
         }
         if let yearRange = attr.range(of: yearStr) {
-            attr[yearRange].font = .system(size: 22, weight: .regular) // regular year
+            attr[yearRange].font = .system(size: 22, weight: .regular)
             attr[yearRange].foregroundColor = Color(.label)
         }
         return attr
@@ -135,7 +129,7 @@ struct MonthYearSelector: View {
 
     private func labelChevron(_ systemName: String, _ text: String) -> some View {
         Label(text, systemImage: systemName)
-            .labelStyle(.iconOnly) // keep it compact; swap to automatic if you want text
+            .labelStyle(.iconOnly)
             .font(.body.weight(.semibold))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

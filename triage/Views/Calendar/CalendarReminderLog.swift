@@ -33,11 +33,6 @@ struct ReminderLogView: View {
 
     var body: some View {
         ZStack {
-            // dark scrim
-            Color.black.opacity(0.25)
-                .ignoresSafeArea()
-                .onTapGesture { withAnimation(.easeInOut(duration: 0.2)) { onClose() } }
-
             VStack(spacing: 16) {
                 // header
                 ZStack {
@@ -77,10 +72,6 @@ struct ReminderLogView: View {
                                     }
                                 }
                                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(.systemBackground)))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.12), lineWidth: 1)
-                                )
-                                .shadow(color: .black.opacity(0.03), radius: 8, y: 2)
                             }
                             .padding(.horizontal, 20)
                         }
@@ -90,11 +81,7 @@ struct ReminderLogView: View {
                 }
             }
             .frame(maxWidth: 820)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.12), lineWidth: 1)
-            )
-            .padding(24)
+            .padding(12)
             .transition(.scale.combined(with: .opacity))
         }
     }

@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct WeekSlotSummaryCard: View {
-    let kindGroups: [SlotKind: [Appt]]
+    let kindGroups: [SlotKind: [Appointment]]
     @State private var expandedKinds: Set<SlotKind> = []
 
     private var orderedKinds: [SlotKind] {
         let order: [SlotKind] = [.medical, .radiology, .laboratory]
-        return order.filter { (kindGroups[$0] ?? []).isEmpty == false }
+        return order.filter { !(kindGroups[$0] ?? []).isEmpty }
     }
 
     var body: some View {
@@ -45,7 +45,7 @@ struct WeekSlotSummaryCard: View {
                                         .fill(color(for: kind).opacity(0.08))
                                 )
                                 .layoutPriority(1)
-                            
+
                             Text("\(shown)/\(cap)")
                                 .font(.caption2.weight(.light))
                                 .monospacedDigit()
@@ -63,7 +63,7 @@ struct WeekSlotSummaryCard: View {
                         if isExpanded {
                             VStack(alignment: .leading, spacing: 2) {
                                 ForEach(Array(patients.enumerated()), id: \.offset) { _, appt in
-                                    Text(appt.patient)
+                                    Text(appt.patient?.fullName ?? appt.name)
                                         .font(.caption2)
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
@@ -82,7 +82,6 @@ struct WeekSlotSummaryCard: View {
                             .fill(color(for: kind).opacity(0.08))
                     )
                     .transition(.move(edge: .top))
-
                 }
                 .buttonStyle(.plain)
             }

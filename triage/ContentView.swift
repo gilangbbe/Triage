@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var appointmentListViewModel: AppointmentListViewModel?
     @State private var packageListViewModel: PackageListViewModel?
     @State private var historyViewModel: HistoryViewModel?
+    @State private var calendarViewModel: CalendarViewModel?
     
     var body: some View {
         TabView {
@@ -47,11 +48,16 @@ struct ContentView: View {
                     Text("Settings")
                 }
             
-            CalendarView()
-                .tabItem {
-                    Image(systemName: "calendar")
-                    Text("Calendar")
-                }
+            if let calendarViewModel = calendarViewModel,
+               let appointmentListViewModel = appointmentListViewModel {
+                CalendarView()
+                    .environment(calendarViewModel)
+                    .environment(appointmentListViewModel)
+                    .tabItem {
+                        Image(systemName: "calendar")
+                        Text("Calendar")
+                    }
+            }
         }
         .onAppear {
             if patientListViewModel == nil {
@@ -65,6 +71,9 @@ struct ContentView: View {
             }
             if historyViewModel == nil {
                 historyViewModel = HistoryViewModel(historyManager: historyManager)
+            }
+            if calendarViewModel == nil {
+                calendarViewModel = CalendarViewModel(appointmentManager: appointmentManager)
             }
         }
     }
