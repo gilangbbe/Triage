@@ -117,7 +117,7 @@ struct TimeSlotOption: Identifiable, Hashable {
     let id = UUID()
     let startTime: Date
     let endTime: Date
-    let availableSlots: Int
+    var availableSlots: Int
     let maxSlots: Int
     
     var displayText: String {
