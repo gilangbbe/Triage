@@ -8,10 +8,12 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import UserNotifications
 
 @main
 struct triageApp: App {
     let modelContainer: ModelContainer
+    @Environment(\.scenePhase) private var scenePhase
     
     init() {
         do {
@@ -26,6 +28,12 @@ struct triageApp: App {
                 for: Patient.self, Appointment.self, Package.self, QuickReply.self, History.self,
                 configurations: configuration
             )
+            
+            let center = UNUserNotificationCenter.current()
+            center.delegate = NotificationDelegate.shared
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                print("Granted: \(granted)")
+            }
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }
@@ -61,6 +69,21 @@ struct triageApp: App {
                         QuickReplyManager.shared.loadQuickReplies()
                     }
                 }
+                .onChange(of: scenePhase) { phase in
+                    if phase == .active {
+                        UIApplication.shared.applicationIconBadgeNumber = 0
+                    }
+                }
+        }
+    }
+    
+    private func requestNotificationPermissions() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if granted {
+                print("Permission Granted")
+            } else {
+                print("Permission Denied")
+            }
         }
     }
 }
