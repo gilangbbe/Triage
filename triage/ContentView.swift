@@ -12,16 +12,20 @@ struct ContentView: View {
     @Environment(AppointmentManager.self) private var appointmentManager
     @Environment(PackageManager.self) private var packageManager
     @Environment(QuickReplyManager.self) private var quickReplyManager
+    @Environment(HistoryManager.self) private var historyManager
+    @Environment(DepartmentManager.self) private var departmentManager
     
     @State private var patientListViewModel: PatientListViewModel?
     @State private var appointmentListViewModel: AppointmentListViewModel?
     @State private var packageListViewModel: PackageListViewModel?
+    @State private var historyViewModel: HistoryViewModel?
     
     var body: some View {
         TabView {
-            if let patientListViewModel = patientListViewModel {
+            if let patientListViewModel = patientListViewModel, let historyViewModel = historyViewModel {
                 PatientListView()
                     .environment(patientListViewModel)
+                    .environment(historyViewModel)
                     .tabItem {
                         Image(systemName: "person.3")
                         Text("Patients")
@@ -34,15 +38,6 @@ struct ContentView: View {
                     .tabItem {
                         Image(systemName: "calendar")
                         Text("Appointments")
-                    }
-            }
-            
-            if let packageListViewModel = packageListViewModel {
-                PackageListView()
-                    .environment(packageListViewModel)
-                    .tabItem {
-                        Image(systemName: "square.stack.3d.up")
-                        Text("Packages")
                     }
             }
             
@@ -68,6 +63,9 @@ struct ContentView: View {
             if packageListViewModel == nil {
                 packageListViewModel = PackageListViewModel(packageManager: packageManager)
             }
+            if historyViewModel == nil {
+                historyViewModel = HistoryViewModel(historyManager: historyManager)
+            }
         }
     }
 }
@@ -78,4 +76,6 @@ struct ContentView: View {
         .environment(AppointmentManager.shared)
         .environment(PackageManager.shared)
         .environment(QuickReplyManager.shared)
+        .environment(HistoryManager.shared)
+        .environment(DepartmentManager.shared)
 }

@@ -10,104 +10,92 @@ import SwiftUI
 struct PatientListView: View {
     // Selected Patient State
     @State var selectedPatientID: UUID? = nil
-    @State private var showingNotificationSheet: Bool = false
-    @Environment(PatientListViewModel.self) private var viewModel
+    @State private var showingHistorySheet: Bool = false
+    @State private var showingAddPatientSheet = false
+    @Environment(PatientManager.self) private var patientManager
+    @Environment(PatientListViewModel.self) private var patientViewModel
+    @Environment(HistoryManager.self) private var historyManager
+    @Environment(HistoryViewModel.self) private var historyViewModel
     
     // Computed property to get patients from viewModel
     private var patients: [Patient] {
-        viewModel.filteredPatients
+        patientViewModel.filteredPatients
+    }
+    
+    private var historyLogs: [(date: String, logs: [History])] {
+        historyViewModel.groupedLogs
     }
     
     var body: some View {
-        @Bindable var viewModel = viewModel
+        @Bindable var patientViewModel = patientViewModel
+        
         NavigationSplitView() {
             VStack(spacing: 16) {
-                SearchBarPatient(text: $viewModel.searchText)
+                SearchBarPatientView(text: $patientViewModel.searchText)
                 
-                SegmentedControlFilter()
-                
-                List(patients) { patient in
-                    PatientRowNavigationLink(
-                            patient: patient,
-                            isSelected: selectedPatientID == patient.id
-                        )
-                        .listRowInsets(EdgeInsets())
+                SegmentedControlFilterView()
+
+                ScrollViewReader { proxy in
+                    ZStack(alignment: .trailing) {
+                        List(selection: $selectedPatientID) {
+                            ForEach(patients) { patient in
+                                PatientRowView(patient: patient)
+                                    .id(patient.id)
+                                    .listRowSeparator(.visible)
+                                    .listRowInsets(EdgeInsets())
+                                    .accessibilityHidden(true)
+                            }
+                            .onDelete { indexSet in
+                                for index in indexSet {
+                                    let patient = patients[index]
+                                    patientViewModel.deletePatient(patient)
+                                }
+                            }
+                        }
+                        .scrollContentBackground(.hidden)
+                        .padding(.trailing, 16)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text("Patient List"))
+                        .accessibilityHint(Text("Scroll the list to view more patients"))
+                        
+                        // A–Z index on the right
+                        NameIndexView(viewModel: patientViewModel, proxy: proxy)
+                    }
                 }
-                .padding(.horizontal, 8)
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Patient List")
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showingNotificationSheet.toggle()
-                    } ) {
-                        Image(systemName: "bell")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {} ) {
-                        Image(systemName: "plus")
-                    }
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button { showingHistorySheet.toggle() } label: { Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90") }
+                        .accessibilityLabel(Text("History Log"))
+                    Button { showingAddPatientSheet.toggle() } label: { Image(systemName: "plus") }
+                        .accessibilityLabel(Text("Add Patient"))
                 }
             }
             .toolbar(removing: .sidebarToggle)
-            .sheet(isPresented: $showingNotificationSheet) {
-                NotificationSheetView()
+
+            .sheet(isPresented: $showingHistorySheet) {
+                HistoryView(groupedHistory: historyLogs)
+            }
+            .sheet(isPresented: $showingAddPatientSheet) {
+                AddPatientView(
+                    patientManager: patientManager,
+                    appointmentManager: AppointmentManager.shared,
+                    packageManager: PackageManager.shared,
+                    historyViewModel: historyViewModel
+                )
+                .frame(width: 800)
             }
         } detail : {
-            
-        }
-    }
-}
-
-struct SearchBarPatient: View {
-    @Binding var text: String
-    
-    var body: some View {
-        HStack {
-            TextField("Search Patient", text: $text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, 24)
-    }
-}
-
-struct SegmentedControlFilter: View {
-    @State private var selectedSegment = 0
-    
-    var body : some View {
-        VStack {
-            Picker("Options", selection: $selectedSegment) {
-                Text("MCU").tag(0)
-                Text("Radiology").tag(1)
-                Text("Laboratorium").tag(2)
+            if let id = selectedPatientID,
+               let patient = patients.first(where: { $0.id == id }) {
+                PatientDetailView(patient: patient, historyViewModel: historyViewModel, historyManager: historyManager)
+            } else {
+                Text("Select a patient")
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("Patient Detail Info"))
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 24)
         }
     }
-}
-
-struct PatientRowNavigationLink: View {
-    let patient: Patient
-    let isSelected: Bool
-    
-    var body: some View {
-        NavigationLink(
-            destination: PatientDetailView(patient: patient)
-        ) {
-            PatientRowView(patient: patient)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-
-#Preview {
-    PatientListView()
-        .environment(PatientListViewModel(patientManager: PatientManager.shared))
 }

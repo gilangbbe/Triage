@@ -23,7 +23,7 @@ struct triageApp: App {
             let configuration = ModelConfiguration(url: storeURL)
             
             modelContainer = try ModelContainer(
-                for: Patient.self, Appointment.self, Package.self, QuickReply.self,
+                for: Patient.self, Appointment.self, Package.self, QuickReply.self, History.self,
                 configurations: configuration
             )
         } catch {
@@ -39,6 +39,8 @@ struct triageApp: App {
                 .environment(AppointmentManager.shared)
                 .environment(PackageManager.shared)
                 .environment(QuickReplyManager.shared)
+                .environment(HistoryManager.shared)
+                .environment(DepartmentManager.shared)
                 .onAppear {
                     // Set model context for managers
                     let context = modelContainer.mainContext
@@ -46,6 +48,8 @@ struct triageApp: App {
                     AppointmentManager.shared.setModelContext(context)
                     PackageManager.shared.setModelContext(context)
                     QuickReplyManager.shared.setModelContext(context)
+                    HistoryManager.shared.setModelContext(context)
+                    DepartmentManager.shared.setModelContext(context)
                     
                     // Check for new data from keyboard extension when app becomes active
                     NotificationCenter.default.addObserver(

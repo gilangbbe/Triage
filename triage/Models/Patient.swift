@@ -25,7 +25,7 @@ final class Patient {
     var packages: [Package] = []
 
     // Optional: appointments (can be empty)
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \Appointment.patient)
     var appointments: [Appointment] = []
 
     // UI helpers
@@ -47,6 +47,13 @@ enum Gender: String, Codable, CaseIterable {
 
 // MARK: - Parsing Extension
 extension Patient {
+    var firstLetter: String {
+        fullName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(1)
+            .uppercased()
+    }
+    
     static func parseFromText(_ text: String) -> Patient? {
         let lines = text.components(separatedBy: .newlines)
         var fullName = ""

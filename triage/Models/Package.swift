@@ -13,13 +13,21 @@ final class Package {
     @Attribute(.unique) var id: UUID
     var name: String
     var descriptionText: String?
-
-    // Many-to-many relationship with patients
+    
+    var department: Department
+    
+    // Many-to-many: assigned patients (can be empty)
+    @Relationship(deleteRule: .nullify, inverse: \Patient.packages)
     var patients: [Patient] = []
+    
+    // One-to-many: appointments that use this package
+    @Relationship(deleteRule: .cascade, inverse: \Appointment.package)
+    var appointments: [Appointment] = []
 
-    init(id: UUID = UUID(), name: String, descriptionText: String? = nil) {
+    init(id: UUID = UUID(), name: String, department: Department, descriptionText: String? = nil) {
         self.id = id
         self.name = name
+        self.department = department
         self.descriptionText = descriptionText
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct AddPackageView: View {
     @Environment(\.dismiss) private var dismiss
@@ -13,6 +14,13 @@ struct AddPackageView: View {
     
     @State private var name = ""
     @State private var descriptionText = ""
+    
+    // Pre-selected department (required - only shown when adding from department)
+    let department: Department
+    
+    init(department: Department) {
+        self.department = department
+    }
     
     var body: some View {
         NavigationView {
@@ -24,11 +32,24 @@ struct AddPackageView: View {
                         .lineLimit(3...8)
                 }
                 
-                Section(footer: Text("Create a medical service package that can be assigned to patients.")) {
+                Section("Department") {
+                    HStack {
+                        Text(department.name)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("Max \(department.maxSlot ?? 3) slots/hour")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                Section(footer: Text("This package will be added to the \(department.name) department.")) {
                     EmptyView()
                 }
             }
             .navigationTitle("Add Package")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -49,6 +70,7 @@ struct AddPackageView: View {
     private func savePackage() {
         let newPackage = Package(
             name: name,
+            department: department,
             descriptionText: descriptionText.isEmpty ? nil : descriptionText
         )
         
@@ -58,6 +80,9 @@ struct AddPackageView: View {
 }
 
 #Preview {
-    AddPackageView()
+    // Create a sample department for preview
+    let sampleDepartment = Department(name: "Medical Check Up", maxSlot: 5)
+    
+    AddPackageView(department: sampleDepartment)
         .environment(PackageManager.shared)
 }
