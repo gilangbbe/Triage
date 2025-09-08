@@ -48,6 +48,12 @@ struct ContentView: View {
                     Image(systemName: "gear")
                     Text("Settings")
                 }
+            
+            CloudKitDebugView(cloudKitManager: cloudKitManager)
+                .tabItem {
+                    Image(systemName: "icloud")
+                    Text("CloudKit")
+                }
         }
         .onAppear {
             if patientListViewModel == nil {

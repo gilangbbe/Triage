@@ -16,7 +16,6 @@ struct triageApp: App {
     
     init() {
         do {
-            // Configure SwiftData with CloudKit Public Database
             let configuration = ModelConfiguration(
                 schema: Schema([
                     Patient.self,
@@ -28,7 +27,7 @@ struct triageApp: App {
                     History.self
                 ]),
                 isStoredInMemoryOnly: false,
-                cloudKitDatabase: .automatic
+                cloudKitDatabase: .none
             )
             
             modelContainer = try ModelContainer(
@@ -61,8 +60,23 @@ struct triageApp: App {
                     HistoryManager.shared.setModelContext(context)
                     DepartmentManager.shared.setModelContext(context)
                     
+                    // Set up CloudKit manager with all the managers
+                    CloudKitManager.shared.setManagers(
+                        patient: PatientManager.shared,
+                        appointment: AppointmentManager.shared,
+                        package: PackageManager.shared,
+                        department: DepartmentManager.shared,
+                        quickReply: QuickReplyManager.shared,
+                        history: HistoryManager.shared
+                    )
+                    
                     // Configure CloudKit
                     CloudKitManager.configureCloudKit()
+                    
+                    // Download existing data from CloudKit on app launch
+                    Task {
+                        await CloudKitManager.shared.downloadDataFromCloudKit()
+                    }
                     
                     // Check for new data from keyboard extension when app becomes active
                     NotificationCenter.default.addObserver(
@@ -72,6 +86,11 @@ struct triageApp: App {
                     ) { _ in
                         PatientManager.shared.syncFromKeyboardExtension()
                         QuickReplyManager.shared.loadQuickReplies()
+                        
+                        // Also check for new CloudKit data
+                        Task {
+                            await CloudKitManager.shared.downloadDataFromCloudKit()
+                        }
                     }
                 }
         }
