@@ -180,10 +180,6 @@ struct Step3AppointmentsView: View {
                             )
                             standalonePackageAppointments.append(appointmentSelection)
                             onAppointmentSaved?(package, date, timeSlot)
-                            
-                            if let index = viewModel.availableTimeSlots.firstIndex(where: { $0.id == timeSlot.id }) {
-                                viewModel.availableTimeSlots[index].availableSlots -= 1
-                                }
                         } else {
                             viewModel.addAppointmentSelection(package: package, date: date, timeSlot: timeSlot)
                         }
@@ -214,10 +210,6 @@ struct Step3AppointmentsView: View {
                             )
                             standaloneDoctorAppointments.append(appointmentSelection)
                             onAppointmentSaved?(package, date, timeSlot)
-                            
-                            if let index = viewModel.availableTimeSlots.firstIndex(where: { $0.id == timeSlot.id }) {
-                                    viewModel.availableTimeSlots[index].availableSlots -= 1
-                                }
                         } else {
                             viewModel.addDoctorAppointmentSelection(package: package, date: date, timeSlot: timeSlot)
                         }
