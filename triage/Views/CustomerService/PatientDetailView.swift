@@ -21,15 +21,23 @@ struct PatientDetailView: View {
     
     // Computed properties to separate upcoming and completed appointments
     private var upcomingAppointments: [Appointment] {
-        patient.appointments.filter { appointment in
-            appointment.timeSlot.date >= Calendar.current.startOfDay(for: Date())
-        }.sorted { $0.timeSlot.date < $1.timeSlot.date }
+        patient.appointments?.filter { appointment in
+            guard let timeSlot = appointment.timeSlot else { return false }
+            return timeSlot.date >= Calendar.current.startOfDay(for: Date())
+        }.sorted { 
+            guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+            return timeSlot1.date < timeSlot2.date 
+        } ?? []
     }
     
     private var completedAppointments: [Appointment] {
-        patient.appointments.filter { appointment in
-            appointment.timeSlot.date < Calendar.current.startOfDay(for: Date())
-        }.sorted { $0.timeSlot.date > $1.timeSlot.date }
+        patient.appointments?.filter { appointment in
+            guard let timeSlot = appointment.timeSlot else { return false }
+            return timeSlot.date < Calendar.current.startOfDay(for: Date())
+        }.sorted { 
+            guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+            return timeSlot1.date > timeSlot2.date 
+        } ?? []
     }
     
     var body: some View {
@@ -300,21 +308,35 @@ struct AppointmentListRow: View {
     var body: some View {
         VStack {
             HStack {
-                Text(appointment.timeSlot.date.formatted(date: .long, time: .omitted))
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.accentColor)
+                if let timeSlot = appointment.timeSlot {
+                    Text(timeSlot.date.formatted(date: .long, time: .omitted))
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.accentColor)
+                } else {
+                    Text("No date scheduled")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
-                Text(appointment.package?.department.name ?? "Unknown Department")
+                Text(appointment.package?.department?.name ?? "Unknown Department")
                     .font(.title3)
                     .foregroundColor(.accentColor)
             }
             .padding(.bottom, 4)
             HStack {
-                Text(appointment.timeSlot.startTime.formatted(date: .omitted, time: .shortened))
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.accentColor)
+                if let timeSlot = appointment.timeSlot {
+                    Text(timeSlot.startTime.formatted(date: .omitted, time: .shortened))
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.accentColor)
+                } else {
+                    Text("No time scheduled")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
                 Text(appointment.package?.name ?? "Unkown Package")
                     .font(.subheadline)

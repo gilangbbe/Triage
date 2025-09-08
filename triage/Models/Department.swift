@@ -7,11 +7,12 @@
 
 import Foundation
 import SwiftData
+import CloudKit
 
 @Model
 final class Department {
-    @Attribute(.unique) var id: UUID
-    var name: String
+    var id: UUID = UUID()
+    var name: String = ""
     var maxSlot: Int?
 
     @Relationship(deleteRule: .cascade, inverse: \Package.department)

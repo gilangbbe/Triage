@@ -76,7 +76,11 @@ class AddAppointmentViewModel {
             return
         }
         
-        let department = selectedPackage.department
+        guard let department = selectedPackage.department else {
+            availableTimeSlots = []
+            return
+        }
+        
         let maxSlotsPerHour = department.maxSlot ?? 3
         
         // Generate time slots from 8 AM to 5 PM
@@ -91,9 +95,10 @@ class AddAppointmentViewModel {
             
             // Count existing appointments for this time slot and department
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                calendar.isDate(appointment.timeSlot.date, inSameDayAs: appointmentDate) &&
-                appointment.timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
-                appointment.package?.department.id == department.id
+                guard let timeSlot = appointment.timeSlot else { return false }
+                return calendar.isDate(timeSlot.date, inSameDayAs: appointmentDate) &&
+                       timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
+                       appointment.package?.department?.id == department.id
             }
             
             let bookedSlots = existingAppointments.count

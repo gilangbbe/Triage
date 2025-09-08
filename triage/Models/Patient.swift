@@ -6,12 +6,13 @@
 //
 
 import SwiftData
+import CloudKit
 import Foundation
 
 @Model
 final class Patient {
-    @Attribute(.unique) var id: UUID
-    var fullName: String
+    var id: UUID = UUID()
+    var fullName: String = ""
     var nationalID: String?
     var dateOfBirth: Date?
     var gender: Gender?
@@ -22,15 +23,15 @@ final class Patient {
 
     // Many-to-many: assigned packages (can be empty)
     @Relationship(deleteRule: .nullify)
-    var packages: [Package] = []
+    var packages: [Package]?
 
     // Optional: appointments (can be empty)
     @Relationship(deleteRule: .cascade, inverse: \Appointment.patient)
-    var appointments: [Appointment] = []
+    var appointments: [Appointment]?
 
     // UI helpers
-    var searchKeywords: String
-    var sortKey: String
+    var searchKeywords: String = ""
+    var sortKey: String = ""
 
     init(id: UUID = UUID(), fullName: String) {
         self.id = id

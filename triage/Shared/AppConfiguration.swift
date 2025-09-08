@@ -9,6 +9,9 @@ import Foundation
 
 struct AppConfiguration {
     
+    // MARK: - CloudKit Configuration
+    static let cloudKitContainerIdentifier = "iCloud.com.ada.triage"
+    
     // MARK: - App Group Configuration
     static let appGroupID = "group.com.ada.triage"
     

@@ -32,7 +32,7 @@ struct HealthCareCatalogView: View {
             packageManager.searchPackages(query: searchText)
         
         return Dictionary(grouping: filteredPackages) { package in
-            package.department.name
+            package.department?.name ?? "Unknown Department"
         }
     }
     
@@ -374,8 +374,8 @@ struct PackageRowView: View {
                 }
                 
                 // Show appointment count if there are any
-                if !package.appointments.isEmpty {
-                    Text("\(package.appointments.count) appointment(s) scheduled")
+                if let appointments = package.appointments, !appointments.isEmpty {
+                    Text("\(appointments.count) appointment(s) scheduled")
                         .font(.caption2)
                         .foregroundColor(.orange)
                         .padding(.top, 2)
@@ -401,10 +401,11 @@ struct PackageRowView: View {
                 onDelete()
             }
         } message: {
-            if package.appointments.isEmpty {
+            let appointmentCount = package.appointments?.count ?? 0
+            if appointmentCount == 0 {
                 Text("Are you sure you want to delete '\(package.name)'? This action cannot be undone.")
             } else {
-                Text("Are you sure you want to delete '\(package.name)'? This will also cancel \(package.appointments.count) scheduled appointment(s). This action cannot be undone.")
+                Text("Are you sure you want to delete '\(package.name)'? This will also cancel \(appointmentCount) scheduled appointment(s). This action cannot be undone.")
             }
         }
     }

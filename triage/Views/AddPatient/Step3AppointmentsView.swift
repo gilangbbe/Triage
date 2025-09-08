@@ -231,29 +231,31 @@ struct Step3AppointmentsView: View {
     // MARK: - Helper Methods
     private func populateExistingAppointments(for patient: Patient) {
         // Get upcoming appointments only
-        let upcomingAppointments = patient.appointments.filter { appointment in
-            appointment.timeSlot.date >= Calendar.current.startOfDay(for: Date())
-        }
+        let upcomingAppointments = patient.appointments?.filter { appointment in
+            guard let timeSlot = appointment.timeSlot else { return false }
+            return timeSlot.date >= Calendar.current.startOfDay(for: Date())
+        } ?? []
         
         // Separate into packages and doctors
         for appointment in upcomingAppointments {
-            guard let package = appointment.package else { continue }
+            guard let package = appointment.package,
+                  let timeSlot = appointment.timeSlot else { continue }
             
             let timeSlotOption = TimeSlotOption(
-                startTime: appointment.timeSlot.startTime,
-                endTime: appointment.timeSlot.endTime,
+                startTime: timeSlot.startTime,
+                endTime: timeSlot.endTime,
                 availableSlots: 1,
                 maxSlots: 1
             )
             
             let appointmentSelection = AppointmentSelection(
                 package: package,
-                date: appointment.timeSlot.date,
+                date: timeSlot.date,
                 timeSlot: timeSlotOption
             )
             
             // Check if it's a doctor appointment or package appointment
-            if package.department.name == "Doctor" {
+            if package.department?.name == "Doctor" {
                 standaloneDoctorAppointments.append(appointmentSelection)
             } else {
                 standalonePackageAppointments.append(appointmentSelection)
@@ -265,10 +267,11 @@ struct Step3AppointmentsView: View {
         guard let patient = patient else { return }
         
         // Find the matching appointment in the patient's appointments
-        if let appointmentToDelete = patient.appointments.first(where: { appointment in
-            appointment.timeSlot.date == appointmentSelection.date &&
-            appointment.timeSlot.startTime == appointmentSelection.timeSlot.startTime &&
-            appointment.package?.id == appointmentSelection.package?.id
+        if let appointmentToDelete = patient.appointments?.first(where: { appointment in
+            guard let timeSlot = appointment.timeSlot else { return false }
+            return timeSlot.date == appointmentSelection.date &&
+                   timeSlot.startTime == appointmentSelection.timeSlot.startTime &&
+                   appointment.package?.id == appointmentSelection.package?.id
         }) {
             // Remove from AppointmentManager
             AppointmentManager.shared.deleteAppointment(appointmentToDelete)
@@ -317,7 +320,7 @@ struct ModernAppointmentCard: View {
                 Spacer()
                 // Package Name
                 let packageName = appointment.package?.name ?? "Unknown Package"
-                let displayName = appointment.package?.department.name == "Doctor" ? "Dr. \(packageName)" : packageName
+                let displayName = appointment.package?.department?.name == "Doctor" ? "Dr. \(packageName)" : packageName
                 Text(displayName)
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#0F0E46"))
@@ -331,7 +334,7 @@ struct ModernAppointmentCard: View {
                     .foregroundColor(Color(hex: "#0F0E46"))
                 Spacer()
                 // Department tag - similar to old design
-                Text(appointment.package?.department.name ?? "Unknown")
+                Text(appointment.package?.department?.name ?? "Unknown")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "#0F0E46"))
                     .padding(.vertical, 3)

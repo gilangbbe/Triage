@@ -7,24 +7,26 @@
 
 import Foundation
 import SwiftData
+import CloudKit
 
 @Model
 class History: ObservableObject {
-    @Attribute(.unique) var id: UUID
-    private var typeData: Data
+    var id: UUID = UUID()
+    private var typeData: Data = Data()
     var type: HistoryType {
         get {
-            try! JSONDecoder().decode(HistoryType.self, from: typeData)
+            guard !typeData.isEmpty else { return .newPatient(patientName: "") }
+            return (try? JSONDecoder().decode(HistoryType.self, from: typeData)) ?? .newPatient(patientName: "")
         }
         set {
-            typeData = try! JSONEncoder().encode(newValue)
+            typeData = (try? JSONEncoder().encode(newValue)) ?? Data()
         }
     }
-    var timestamp: Date
+    var timestamp: Date = Date()
     
     init(id: UUID = UUID(), type: HistoryType, timestamp: Date = Date()) {
         self.id = id
-        self.typeData = try! JSONEncoder().encode(type)
+        self.typeData = (try? JSONEncoder().encode(type)) ?? Data()
         self.timestamp = timestamp
     }
 }

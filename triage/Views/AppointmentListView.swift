@@ -75,9 +75,15 @@ struct AppointmentRowView: View {
             
             HStack {
                 VStack(alignment: .trailing) {
-                    Text(appointment.timeSlot.startTime, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if let timeSlot = appointment.timeSlot {
+                        Text(timeSlot.startTime, style: .date)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No time scheduled")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             

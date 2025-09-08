@@ -64,9 +64,18 @@ class AppointmentManager {
         
         do {
             let descriptor = FetchDescriptor<Appointment>(
-                sortBy: [SortDescriptor(\.timeSlot.date, order: .forward)]
+                sortBy: [SortDescriptor(\.name, order: .forward)]
             )
-            appointments = try context.fetch(descriptor)
+            let fetchedAppointments = try context.fetch(descriptor)
+            
+            // Sort manually by timeSlot date since we can't sort optional relationships directly
+            appointments = fetchedAppointments.sorted { appointment1, appointment2 in
+                guard let date1 = appointment1.timeSlot?.date,
+                      let date2 = appointment2.timeSlot?.date else {
+                    return false
+                }
+                return date1 < date2
+            }
         } catch {
             print("Failed to fetch appointments: \(error)")
             appointments = []
@@ -96,7 +105,7 @@ class AppointmentManager {
     }
     
     func filterAppointments(by department: Department) -> [Appointment] {
-        return appointments.filter { $0.package?.department.id == department.id }
+        return appointments.filter { $0.package?.department?.id == department.id }
     }
     
     func todaysAppointments() -> [Appointment] {
@@ -104,18 +113,25 @@ class AppointmentManager {
         let today = Date()
         
         return appointments.filter { appointment in
-            calendar.isDate(appointment.timeSlot.date, inSameDayAs: today)
+            guard let timeSlot = appointment.timeSlot else { return false }
+            return calendar.isDate(timeSlot.date, inSameDayAs: today)
         }
     }
     
     func upcomingAppointments() -> [Appointment] {
         let now = Date()
-        return appointments.filter { $0.timeSlot.startTime > now }
+        return appointments.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return timeSlot.startTime > now 
+        }
     }
     
     func completedAppointments() -> [Appointment] {
         let now = Date()
-        return appointments.filter { $0.timeSlot.endTime < now }
+        return appointments.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return timeSlot.endTime < now 
+        }
     }
     
     func appointmentsForPatient(_ patient: Patient) -> [Appointment] {

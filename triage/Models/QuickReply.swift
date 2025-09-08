@@ -7,14 +7,15 @@
 
 import Foundation
 import SwiftData
+import CloudKit
 
 @Model
 final class QuickReply {
-    var id: UUID
-    var title: String
-    var message: String
-    var isActive: Bool
-    var dateCreated: Date
+    var id: UUID = UUID()
+    var title: String = ""
+    var message: String = ""
+    var isActive: Bool = true
+    var dateCreated: Date = Date()
     
     init(title: String, message: String, isActive: Bool = true) {
         self.id = UUID()

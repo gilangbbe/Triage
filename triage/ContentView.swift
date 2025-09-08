@@ -14,6 +14,7 @@ struct ContentView: View {
     @Environment(QuickReplyManager.self) private var quickReplyManager
     @Environment(HistoryManager.self) private var historyManager
     @Environment(DepartmentManager.self) private var departmentManager
+    @Environment(CloudKitManager.self) private var cloudKitManager
     
     @State private var patientListViewModel: PatientListViewModel?
     @State private var appointmentListViewModel: AppointmentListViewModel?
@@ -42,6 +43,7 @@ struct ContentView: View {
             }
             
             SettingsView()
+                .environment(cloudKitManager)
                 .tabItem {
                     Image(systemName: "gear")
                     Text("Settings")
@@ -72,4 +74,5 @@ struct ContentView: View {
         .environment(QuickReplyManager.shared)
         .environment(HistoryManager.shared)
         .environment(DepartmentManager.shared)
+        .environment(CloudKitManager.shared)
 }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import CloudKit
 import UIKit
 
 @main
@@ -15,15 +16,23 @@ struct triageApp: App {
     
     init() {
         do {
-            // Configure SwiftData to use the App Group container
-            guard let storeURL = AppConfiguration.swiftDataStoreURL else {
-                fatalError("Could not find App Group container: \(AppConfiguration.appGroupID)")
-            }
-            
-            let configuration = ModelConfiguration(url: storeURL)
+            // Configure SwiftData with CloudKit Public Database
+            let configuration = ModelConfiguration(
+                schema: Schema([
+                    Patient.self,
+                    Appointment.self, 
+                    Package.self,
+                    Department.self,
+                    TimeSlot.self,
+                    QuickReply.self,
+                    History.self
+                ]),
+                isStoredInMemoryOnly: false,
+                cloudKitDatabase: .automatic
+            )
             
             modelContainer = try ModelContainer(
-                for: Patient.self, Appointment.self, Package.self, QuickReply.self, History.self,
+                for: Patient.self, Appointment.self, Package.self, Department.self, TimeSlot.self, QuickReply.self, History.self,
                 configurations: configuration
             )
         } catch {
@@ -41,6 +50,7 @@ struct triageApp: App {
                 .environment(QuickReplyManager.shared)
                 .environment(HistoryManager.shared)
                 .environment(DepartmentManager.shared)
+                .environment(CloudKitManager.shared)
                 .onAppear {
                     // Set model context for managers
                     let context = modelContainer.mainContext
@@ -50,6 +60,9 @@ struct triageApp: App {
                     QuickReplyManager.shared.setModelContext(context)
                     HistoryManager.shared.setModelContext(context)
                     DepartmentManager.shared.setModelContext(context)
+                    
+                    // Configure CloudKit
+                    CloudKitManager.configureCloudKit()
                     
                     // Check for new data from keyboard extension when app becomes active
                     NotificationCenter.default.addObserver(

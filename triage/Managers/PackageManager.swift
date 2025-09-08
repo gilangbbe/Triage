@@ -97,22 +97,25 @@ class PackageManager {
     
     // MARK: - Patient-Package Relationships
     func assignPackageToPatient(_ package: Package, patient: Patient) {
-        if !package.patients.contains(where: { $0.id == patient.id }) {
-            package.patients.append(patient)
+        if package.patients?.contains(where: { $0.id == patient.id }) != true {
+            if package.patients == nil {
+                package.patients = []
+            }
+            package.patients?.append(patient)
             saveContext()
             loadPackages()
         }
     }
     
     func removePackageFromPatient(_ package: Package, patient: Patient) {
-        package.patients.removeAll { $0.id == patient.id }
+        package.patients?.removeAll { $0.id == patient.id }
         saveContext()
         loadPackages()
     }
     
     func packagesForPatient(_ patient: Patient) -> [Package] {
         return packages.filter { package in
-            package.patients.contains { $0.id == patient.id }
+            package.patients?.contains { $0.id == patient.id } == true
         }
     }
 }

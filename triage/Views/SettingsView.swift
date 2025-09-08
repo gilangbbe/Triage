@@ -277,4 +277,5 @@ struct PlaceholderDetailView: View {
     SettingsView()
         .environment(PackageManager.shared)
         .environment(QuickReplyManager.shared)
+        .environment(CloudKitManager.shared)
 }

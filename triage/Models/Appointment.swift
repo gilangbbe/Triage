@@ -7,16 +7,18 @@
 
 import Foundation
 import SwiftData
+import CloudKit
 
 @Model
 final class Appointment {
-    @Attribute(.unique) var id: UUID
-    var name: String
+    var id: UUID = UUID()
+    var name: String = ""
     
     // Links
     var patient: Patient?
     
-    var timeSlot: TimeSlot
+    @Relationship(deleteRule: .nullify)
+    var timeSlot: TimeSlot?
     
     // Optional package - can be nil if package is deleted
     var package: Package?

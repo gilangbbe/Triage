@@ -282,7 +282,10 @@ class AddPatientViewModel {
     }
     
     func updateAvailableTimeSlots(for package: Package, on date: Date) {
-        let department = package.department
+        guard let department = package.department else {
+            availableTimeSlots = []
+            return
+        }
         let maxSlotsPerHour = department.maxSlot ?? 3
         
         // Generate time slots from 8 AM to 5 PM
@@ -297,9 +300,10 @@ class AddPatientViewModel {
             
             // Count existing appointments for this time slot and department
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                calendar.isDate(appointment.timeSlot.date, inSameDayAs: date) &&
-                appointment.timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
-                appointment.package?.department.id == department.id
+                guard let timeSlot = appointment.timeSlot else { return false }
+                return calendar.isDate(timeSlot.date, inSameDayAs: date) &&
+                       timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
+                       appointment.package?.department?.id == department.id
             }
             
             let bookedSlots = existingAppointments.count
@@ -333,8 +337,9 @@ class AddPatientViewModel {
             
             // For doctors, check if this specific doctor (package) is already booked
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                let sameDate = calendar.isDate(appointment.timeSlot.date, inSameDayAs: date)
-                let sameTime = appointment.timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970
+                guard let timeSlot = appointment.timeSlot else { return false }
+                let sameDate = calendar.isDate(timeSlot.date, inSameDayAs: date)
+                let sameTime = timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970
                 let samePackage = appointment.package?.id == package.id
                 
                 print("🩺 Checking appointment: \(appointment.name)")

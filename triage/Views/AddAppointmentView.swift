@@ -72,7 +72,7 @@ struct PackageSelectionSection: View {
             Picker("Package", selection: $selectedPackage) {
                 Text("Select Package").tag(nil as Package?)
                 ForEach(packages, id: \.id) { package in
-                    Text("\(package.name) - \(package.department.name)")
+                    Text("\(package.name) - \(package.department?.name ?? "Unknown")")
                         .tag(package as Package?)
                 }
             }

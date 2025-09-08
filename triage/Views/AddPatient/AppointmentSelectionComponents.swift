@@ -44,28 +44,30 @@ struct AppointmentSelectionSheet: View {
     // Filtered packages for search
     var filteredPackages: [Package] {
         let basePackages = appointmentType == .doctor 
-            ? viewModel.availablePackages.filter { $0.department.name == "Doctor" }
-            : viewModel.availablePackages.filter { $0.department.name != "Doctor" }
+            ? viewModel.availablePackages.filter { $0.department?.name == "Doctor" }
+            : viewModel.availablePackages.filter { $0.department?.name != "Doctor" }
         
         let filtered = basePackages.filter { package in
-            (selectedFilter == "All" || package.department.name == selectedFilter) &&
+            (selectedFilter == "All" || package.department?.name == selectedFilter) &&
             (searchText.isEmpty || package.name.localizedCaseInsensitiveContains(searchText))
         }
         
         return filtered.sorted { (a, b) in
-            if a.department.name == b.department.name {
+            let aDeptName = a.department?.name ?? "Unknown"
+            let bDeptName = b.department?.name ?? "Unknown"
+            if aDeptName == bDeptName {
                 return a.name < b.name
             } else {
-                return a.department.name < b.department.name
+                return aDeptName < bDeptName
             }
         }
     }
     
     var uniqueDepartments: [String] {
         let basePackages = appointmentType == .doctor 
-            ? viewModel.availablePackages.filter { $0.department.name == "Doctor" }
-            : viewModel.availablePackages.filter { $0.department.name != "Doctor" }
-        return Array(Set(basePackages.map { $0.department.name })).sorted()
+            ? viewModel.availablePackages.filter { $0.department?.name == "Doctor" }
+            : viewModel.availablePackages.filter { $0.department?.name != "Doctor" }
+        return Array(Set(basePackages.compactMap { $0.department?.name })).sorted()
     }
     
     var shouldShowPackageList: Bool {
@@ -135,7 +137,7 @@ struct AppointmentSelectionSheet: View {
                         // Selected Package Display (when not searching)
                         if let package = selectedPackage, !shouldShowPackageList {
                             HStack {
-                                Text(package.department.name)
+                                Text(package.department?.name ?? "Unknown")
                                     .font(.subheadline)
                                     .fontWeight(.bold)
                                     .foregroundColor(Color(hex: "#0F0E46"))
@@ -379,7 +381,7 @@ struct PackageListRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack {
-                Text(package.department.name)
+                Text(package.department?.name ?? "Unknown")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(Color(hex: "#0F0E46"))
