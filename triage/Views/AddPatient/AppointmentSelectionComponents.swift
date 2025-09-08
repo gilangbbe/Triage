@@ -205,7 +205,7 @@ struct AppointmentSelectionSheet: View {
                                             .font(.subheadline)
                                             .foregroundColor(selected.availableSlots > 0 ? .gray : .red)
                                     } else {
-                                        Text("\(selected.availableSlots)/\(selected.maxSlots) Slot Available")
+                                        Text("\(selected.availableSlots) " + (selected.availableSlots > 1 ? "Slots Available" : "Slot Available"))
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                     }
@@ -230,6 +230,7 @@ struct AppointmentSelectionSheet: View {
                                 isPresented: $showTimePicker,
                                 appointmentType: appointmentType
                             )
+                            .presentationDetents([.height(345)])
                         }
                     }
                     
@@ -363,11 +364,7 @@ struct AppointmentSelectionSheet: View {
     private func timeString(_ timeSlot: TimeSlotOption) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        if appointmentType == .doctor {
-            return formatter.string(from: timeSlot.startTime)
-        } else {
-            return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
-        }
+        return formatter.string(from: timeSlot.startTime)
     }
 }
 
@@ -410,35 +407,34 @@ struct TimeSlotPickerModal: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                // Apple-style picker
-                Picker("Time Slot", selection: $selectedIndex) {
-                    ForEach(Array(timeSlots.enumerated()), id: \.offset) { index, timeSlot in
-                        HStack(spacing: 12) {
-                            // Time display
-                            Text(timeString(timeSlot))
-                                .font(.title2)
+            Picker("Time Slot", selection: $selectedIndex) {
+                ForEach(Array(timeSlots.enumerated()), id: \.offset) { index, timeSlot in
+                    HStack {
+                        Spacer()
+                        Text(timeString(timeSlot))
+                            .font(.title3)
+                            .fontWeight(.medium)
+                            .foregroundColor(timeSlot.availableSlots > 0 ? .primary : .secondary)
+                        Spacer()
+                        if appointmentType == .doctor {
+                            Text(timeSlot.availableSlots > 0 ? "Available" : "Unavailable")
+                                .font(.title3)
                                 .fontWeight(.medium)
-                                .foregroundColor(timeSlot.availableSlots > 0 ? .primary : .secondary)
-                            
-                            // Availability display
-                            if appointmentType == .doctor {
-                                Text(timeSlot.availableSlots > 0 ? "Available" : "Unavailable")
-                                    .font(.title3)
-                                    .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
-                            } else {
-                                Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) Slot Available")
-                                    .font(.title3)
-                                    .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
-                            }
+                                .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
+                        } else {
+                            Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) " +
+                                 (timeSlot.availableSlots > 1 ? "Slots Available" : "Slot Available"))
+                                .font(.title3)
+                                .fontWeight(.medium)
+                                .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
                         }
-                        .tag(index)
+                        Spacer()
                     }
+                    .tag(index)
                 }
-                .pickerStyle(.wheel)
-                .frame(height: 180)
             }
-            .padding()
+            .pickerStyle(.wheel)
+            .frame(maxHeight: .infinity)
             .navigationTitle("Pick a Time")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
