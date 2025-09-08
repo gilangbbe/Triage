@@ -49,6 +49,7 @@ struct triageApp: App {
                 .environment(QuickReplyManager.shared)
                 .environment(HistoryManager.shared)
                 .environment(DepartmentManager.shared)
+                .environment(NotificationManager.shared)
                 .onAppear {
                     // Set model context for managers
                     let context = modelContainer.mainContext

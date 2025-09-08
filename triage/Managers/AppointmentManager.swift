@@ -60,13 +60,17 @@ class AppointmentManager {
     
     // MARK: - Data Loading
     func loadAppointments() {
+        let now = Date()
         guard let context = modelContext else { return }
         
         do {
             let descriptor = FetchDescriptor<Appointment>(
+                predicate: #Predicate { $0.timeSlot.startTime >= now },
                 sortBy: [SortDescriptor(\.timeSlot.date, order: .forward)]
             )
             appointments = try context.fetch(descriptor)
+            
+            NotificationManager.shared.rescheduleReminders(for: appointments)
         } catch {
             print("Failed to fetch appointments: \(error)")
             appointments = []

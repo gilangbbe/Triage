@@ -40,9 +40,6 @@ struct PatientDetailView: View {
                     .fontWeight(.bold)
                     .padding(.bottom, 8)
                     .foregroundColor(.accentColor)
-                Button("Send Notification") {
-                    NotificationManager.shared.scheduleLocalNotification()
-                }
             }
             HStack(alignment: .top, spacing: 16) {
                 // Patient Appointment
