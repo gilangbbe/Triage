@@ -40,9 +40,7 @@ enum SlotKind: CaseIterable, Hashable {
 
 extension Appointment {
     var inferredSlotKind: SlotKind {
-        // Prefer a concrete property if you have it:
-        // if let k = self.slotKindProperty { return k }
-        let basis = (package?.name ?? name).lowercased()
+        let basis = (package?.department.name ?? name).lowercased()
         if basis.contains("medical")        { return .medical }
         if basis.contains("radio")          { return .radiology }
         if basis.contains("lab")            { return .laboratory }

@@ -9,10 +9,11 @@ import SwiftUI
 
 struct CalendarDayView: View {
     @Environment(CalendarViewModel.self) private var vm
+    @Binding var showAddAppointment: Bool
 
     var body: some View {
         VStack {
-            OverviewHeader()
+            OverviewHeader(showAddAppointment: $showAddAppointment)
             TimelineBoard(
                 selectedDate: vm.selectedDate,
                 appointments: vm.appointments(on: vm.selectedDate)

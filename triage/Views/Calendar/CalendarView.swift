@@ -73,9 +73,9 @@ struct CalendarView: View {
                     Group {
                         switch vm.scope {
                         case .day:
-                            CalendarDayView()   // uses @Environment(CalendarViewModel)
+                            CalendarDayView(showAddAppointment: $showAddAppointment)
                         case .week:
-                            CalendarWeekView()  // uses @Environment(CalendarViewModel)
+                            CalendarWeekView()
                         }
                     }
                 }
