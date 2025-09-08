@@ -167,6 +167,9 @@ class AddPatientViewModel {
         patient.phoneNumber = phoneNumber.isEmpty ? nil : phoneNumber
         patient.address = address.isEmpty ? nil : address
         patient.registeredAt = Date()
+        
+        HistoryManager.shared.addHistory(History(type: .newPatient(patientName: patient.fullName)))
+        
         return patient
     }
     
@@ -195,7 +198,10 @@ class AddPatientViewModel {
             )
             
             appointmentManager.addAppointment(appointment)
+            
+            HistoryManager.shared.addHistory(History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: patient.fullName, serviceChoice: appointment.package?.name ?? "")))
         }
+        
         
         // Create doctor appointments
         for appointmentSelection in selectedDoctorAppointments {
@@ -226,6 +232,8 @@ class AddPatientViewModel {
             print("   - Package ID: \(package.id)")
             
             appointmentManager.addAppointment(appointment)
+            
+            HistoryManager.shared.addHistory(History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: patient.fullName, serviceChoice: appointment.package?.name ?? "")))
         }
     }
     
