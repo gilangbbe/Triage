@@ -47,55 +47,76 @@ final class CalendarViewModel {
     }
 
     var visibleAppointments: [Appointment] {
-        guard let ctx = context else { return [] }
         let iv = visibleInterval
-        let predicate = #Predicate<Appointment> {
-            $0.timeSlot.endTime > iv.start && $0.timeSlot.startTime < iv.end
-        }
-        let desc = FetchDescriptor<Appointment>(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\.timeSlot.startTime)]
-        )
-        return (try? ctx.fetch(desc)) ?? []
+        return appointmentManager.appointments
+            .filter { appointment in
+                guard let timeSlot = appointment.timeSlot else { return false }
+                return timeSlot.endTime > iv.start && timeSlot.startTime < iv.end
+            }
+            .sorted { appointment1, appointment2 in
+                guard let timeSlot1 = appointment1.timeSlot,
+                      let timeSlot2 = appointment2.timeSlot else { return false }
+                return timeSlot1.startTime < timeSlot2.startTime
+            }
     }
 
     func appointments(on day: Date) -> [Appointment] {
-        guard let ctx = context else { return [] }
         let start = cal.startOfDay(for: day)
         let end = cal.date(byAdding: .day, value: 1, to: start)!
-        let predicate = #Predicate<Appointment> {
-            $0.timeSlot.startTime >= start && $0.timeSlot.startTime < end
-        }
-        let desc = FetchDescriptor<Appointment>(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\.timeSlot.startTime)]
-        )
-        return (try? ctx.fetch(desc)) ?? []
+        
+        return appointmentManager.appointments
+            .filter { appointment in
+                guard let timeSlot = appointment.timeSlot else { return false }
+                return timeSlot.startTime >= start && timeSlot.startTime < end
+            }
+            .sorted { appointment1, appointment2 in
+                guard let timeSlot1 = appointment1.timeSlot,
+                      let timeSlot2 = appointment2.timeSlot else { return false }
+                return timeSlot1.startTime < timeSlot2.startTime
+            }
     }
 
     var appointmentsByDay: [Date: [Appointment]] {
-        Dictionary(grouping: visibleAppointments) {
-            cal.startOfDay(for: $0.timeSlot.date)
+        Dictionary(grouping: visibleAppointments) { appointment in
+            guard let timeSlot = appointment.timeSlot else { return Date.distantPast }
+            return cal.startOfDay(for: timeSlot.date)
         }
     }
 
     func appointmentsByHour(on day: Date) -> [Int: [Appointment]] {
-        Dictionary(grouping: appointments(on: day)) {
-            cal.component(.hour, from: $0.timeSlot.startTime)
+        Dictionary(grouping: appointments(on: day)) { appointment in
+            guard let timeSlot = appointment.timeSlot else { return 0 }
+            return cal.component(.hour, from: timeSlot.startTime)
         }
     }
 
     var nextUpcomingInView: Appointment? {
         let now = Date()
         return visibleAppointments
-            .filter { $0.timeSlot.startTime >= now }
-            .min { $0.timeSlot.startTime < $1.timeSlot.startTime }
+            .filter { 
+                guard let timeSlot = $0.timeSlot else { return false }
+                return timeSlot.startTime >= now 
+            }
+            .min { 
+                guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+                return timeSlot1.startTime < timeSlot2.startTime 
+            }
     }
 
     // Convenience mirrors if you still need them:
     var todaysAppointments: [Appointment] { appointments(on: Date()) }
-    var upcomingAppointments: [Appointment] { visibleAppointments.filter { $0.timeSlot.startTime > Date() } }
-    var completedAppointments: [Appointment] { visibleAppointments.filter { $0.timeSlot.endTime < Date() } }
+    var upcomingAppointments: [Appointment] { 
+        visibleAppointments.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return timeSlot.startTime > Date() 
+        } 
+    }
+    var completedAppointments: [Appointment] { 
+        visibleAppointments.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return timeSlot.endTime < Date() 
+        } 
+    }
 
     // You can keep this if other screens rely on a cached list,
     // but don't use it for Day/Week screens now that we fetch directly.
@@ -123,7 +144,13 @@ final class CalendarViewModel {
     // Helper if you still need a filter on arrays somewhere
     private func filter(_ appts: [Appointment], in iv: DateInterval) -> [Appointment] {
         appts
-            .filter { $0.timeSlot.startTime < iv.end && $0.timeSlot.endTime > iv.start }
-            .sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
+            .filter { 
+                guard let timeSlot = $0.timeSlot else { return false }
+                return timeSlot.startTime < iv.end && timeSlot.endTime > iv.start 
+            }
+            .sorted { 
+                guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+                return timeSlot1.startTime < timeSlot2.startTime 
+            }
     }
 }

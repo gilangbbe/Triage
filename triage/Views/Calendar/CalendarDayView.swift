@@ -84,13 +84,15 @@ private struct TimelineBoard: View {
         var dict: [Int: [Appointment]] = [:]
 
         for a in appts {
-            let hour = cal.component(.hour, from: a.timeSlot.startTime)
+            guard let timeSlot = a.timeSlot else { continue }
+            let hour = cal.component(.hour, from: timeSlot.startTime)
             dict[hour, default: []].append(a)
         }
 
         for k in dict.keys {
             dict[k]?.sort {
-                ($0.timeSlot.startTime, $0.name) < ($1.timeSlot.startTime, $1.name)
+                guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+                return (timeSlot1.startTime, $0.name) < (timeSlot2.startTime, $1.name)
             }
         }
         return dict

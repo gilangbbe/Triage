@@ -81,10 +81,6 @@ struct CalendarView: View {
                 .padding(.top, 8)
                 .padding(.horizontal, 24)
             }
-            .task {
-                vm.setModelContext(modelContext)
-                vm.reload()
-            }
             .onChange(of: vm.selectedDate) { _ in vm.reload() }
             .onChange(of: vm.scope)        { _ in vm.reload() }
             .onChange(of: vm.monthAnchor)  { _ in vm.reload() }

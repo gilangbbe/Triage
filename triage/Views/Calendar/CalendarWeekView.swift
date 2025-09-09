@@ -76,7 +76,10 @@ private struct WeekTimelineBoard: View {
                 days.contains { day in
                     let key = Calendar.current.startOfDay(for: day)
                     let dayAppts = byDay[key] ?? []
-                    return dayAppts.contains { Calendar.current.component(.hour, from: $0.timeSlot.startTime) == h }
+                    return dayAppts.contains { 
+                        guard let timeSlot = $0.timeSlot else { return false }
+                        return Calendar.current.component(.hour, from: timeSlot.startTime) == h 
+                    }
                 }
             }
 
@@ -154,14 +157,18 @@ private struct WeekTimelineBoard: View {
     private func groupByDay(_ appts: [Appointment]) -> [Date: [Appointment]] {
         let cal = Calendar.current
         return appts.reduce(into: [Date: [Appointment]]()) { dict, a in
-            let key = cal.startOfDay(for: a.timeSlot.startTime)
+            guard let timeSlot = a.timeSlot else { return }
+            let key = cal.startOfDay(for: timeSlot.startTime)
             dict[key, default: []].append(a)
         }
     }
 
     private func appts(inHour hour: Int, from dayAppts: [Appointment]) -> [Appointment] {
         let cal = Calendar.current
-        return dayAppts.filter { cal.component(.hour, from: $0.timeSlot.startTime) == hour }
+        return dayAppts.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return cal.component(.hour, from: timeSlot.startTime) == hour 
+        }
     }
 
     private func groupByKind(_ appts: [Appointment]) -> [SlotKind: [Appointment]] {

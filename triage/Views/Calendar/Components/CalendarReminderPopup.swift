@@ -64,7 +64,10 @@ struct ReminderPopup: View {
     private func reminderMessage(for appt: Appointment) -> AttributedString {
         let patientName = appt.patient?.fullName ?? appt.name
         let kind = appt.inferredSlotKind.title
-        let timeText = time(appt.timeSlot.startTime)
+        guard let timeSlot = appt.timeSlot else {
+            return AttributedString("Appointment time not available")
+        }
+        let timeText = time(timeSlot.startTime)
 
         var result = AttributedString("Hello ")
 
@@ -92,7 +95,10 @@ struct ReminderPopup: View {
     private func plainReminder(for appt: Appointment) -> String {
         let patientName = appt.patient?.fullName ?? appt.name
         let kind = appt.package?.name ?? appt.name
-        let timeText = time(appt.timeSlot.startTime)
+        guard let timeSlot = appt.timeSlot else {
+            return "Hello \(patientName),\nAppointment time not available."
+        }
+        let timeText = time(timeSlot.startTime)
         return """
         Hello \(patientName),
         This is a friendly reminder for your \(kind) appointment scheduled at \(timeText).

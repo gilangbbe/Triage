@@ -70,7 +70,7 @@ struct ReminderCard: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "clock").font(.subheadline.weight(.semibold))
-                    Text(timeString(appt.timeSlot.startTime))
+                    Text(timeString(appt.timeSlot?.startTime ?? Date()))
                         .font(.headline.weight(.semibold))
                 }
                 .foregroundStyle(

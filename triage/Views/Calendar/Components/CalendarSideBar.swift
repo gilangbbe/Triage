@@ -76,26 +76,36 @@ struct SidebarPanel: View {
     // MARK: - Data helpers
     private var todaysAppts: [Appointment] {
         let cal = Calendar.current
-        return appointments.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: selectedDate) }
+        return appointments.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return cal.isDate(timeSlot.startTime, inSameDayAs: selectedDate) 
+        }
     }
 
     private var sortedReminders: [Appointment] {
-        todaysAppts.sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
+        todaysAppts.sorted { 
+            guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+            return timeSlot1.startTime < timeSlot2.startTime 
+        }
     }
 
     // MARK: - Log builder
     private func buildLog(from appts: [Appointment], asOf day: Date) -> [ReminderEntry] {
         let cal = Calendar.current
-        let todays = appts.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: day) }
+        let todays = appts.filter { 
+            guard let timeSlot = $0.timeSlot else { return false }
+            return cal.isDate(timeSlot.startTime, inSameDayAs: day) 
+        }
 
         let sentBase = cal.date(byAdding: .day, value: -1, to: day) ?? day
         let sentAt = cal.date(bySettingHour: 7, minute: 36, second: 0, of: sentBase) ?? sentBase
 
-        return todays.map { a in
-            ReminderEntry(
+        return todays.compactMap { a in
+            guard let timeSlot = a.timeSlot else { return nil }
+            return ReminderEntry(
                 patientName: a.patient?.fullName ?? a.name,
                 apptKind: a.name,
-                apptDate: a.timeSlot.startTime,
+                apptDate: timeSlot.startTime,
                 sentAt: sentAt
             )
         }
