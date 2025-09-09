@@ -92,16 +92,6 @@ struct Step3AppointmentsView: View {
                                     editingAppointment = appointment
                                     showAppointmentForm = true
                                 },
-                                onDelete: {
-                                    if isStandaloneMode {
-                                        let appointmentToDelete = standalonePackageAppointments[index]
-                                        standalonePackageAppointments.remove(at: index)
-                                        // Also delete from patient's actual appointments
-                                        deleteFromPatientAppointments(appointmentToDelete)
-                                    } else {
-                                        viewModel.removeAppointmentSelection(at: index)
-                                    }
-                                }
                             )
                             .padding(.bottom, 6)
                         }
@@ -135,16 +125,6 @@ struct Step3AppointmentsView: View {
                                     editingDoctorAppointment = appointment
                                     showDoctorAppointmentForm = true
                                 },
-                                onDelete: {
-                                    if isStandaloneMode {
-                                        let appointmentToDelete = standaloneDoctorAppointments[index]
-                                        standaloneDoctorAppointments.remove(at: index)
-                                        // Also delete from patient's actual appointments
-                                        deleteFromPatientAppointments(appointmentToDelete)
-                                    } else {
-                                        viewModel.removeDoctorAppointmentSelection(at: index)
-                                    }
-                                }
                             )
                             .padding(.bottom, 6)
                         }
@@ -167,8 +147,27 @@ struct Step3AppointmentsView: View {
                 editingAppointment: editingAppointment,
                 appointmentType: .package,
                 onSave: { package, date, timeSlot in
-                    if editingAppointment != nil {
+                    if let editing = editingAppointment {
                         // Handle editing logic here
+                        if isStandaloneMode {
+                            if let index = standalonePackageAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                standalonePackageAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        } else {
+                            if let index = viewModel.selectedAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                viewModel.selectedAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        }
                         editingAppointment = nil
                     } else {
                         if isStandaloneMode {
@@ -188,6 +187,17 @@ struct Step3AppointmentsView: View {
                 },
                 onCancel: {
                     editingAppointment = nil
+                },
+                onDelete: {
+                    guard let editing = editingAppointment else { return }
+                    if isStandaloneMode {
+                        standalonePackageAppointments.removeAll(where: { $0.id == editing.id })
+                        deleteFromPatientAppointments(editing)
+                    } else {
+                        viewModel.removeAppointmentSelection(by: editing.id)
+                    }
+                    editingAppointment = nil
+                    showAppointmentForm = false
                 }
             )
         }
@@ -197,8 +207,26 @@ struct Step3AppointmentsView: View {
                 editingAppointment: editingDoctorAppointment,
                 appointmentType: .doctor,
                 onSave: { package, date, timeSlot in
-                    if editingDoctorAppointment != nil {
-                        // Handle editing logic here
+                    if let editing = editingDoctorAppointment {
+                        if isStandaloneMode {
+                            if let index = standaloneDoctorAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                standaloneDoctorAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        } else {
+                            if let index = viewModel.selectedDoctorAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                viewModel.selectedDoctorAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        }
                         editingDoctorAppointment = nil
                     } else {
                         if isStandaloneMode {
@@ -218,6 +246,17 @@ struct Step3AppointmentsView: View {
                 },
                 onCancel: {
                     editingDoctorAppointment = nil
+                },
+                onDelete: {
+                    guard let editing = editingDoctorAppointment else { return }
+                    if isStandaloneMode {
+                        standaloneDoctorAppointments.removeAll(where: { $0.id == editing.id })
+                        deleteFromPatientAppointments(editing)
+                    } else {
+                        viewModel.removeDoctorAppointmentSelection(by: editing.id)
+                    }
+                    editingDoctorAppointment = nil
+                    showDoctorAppointmentForm = false
                 }
             )
         }
@@ -307,7 +346,6 @@ struct AddRowButton: View {
 struct ModernAppointmentCard: View {
     let appointment: AppointmentSelection
     let onTap: () -> Void
-    let onDelete: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -341,16 +379,6 @@ struct ModernAppointmentCard: View {
                     .padding(.horizontal, 6)
                     .background(Color(hex: "#FFE4E4"))
                     .cornerRadius(3)
-            }
-            
-            // Availability info
-            HStack {
-                Spacer()
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
             }
         }
         .padding()

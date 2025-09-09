@@ -32,6 +32,7 @@ struct AppointmentSelectionSheet: View {
     let appointmentType: AppointmentType
     let onSave: (Package, Date, TimeSlotOption) -> Void
     let onCancel: () -> Void
+    let onDelete: () -> Void
     
     var canSave: Bool {
         selectedPackage != nil && selectedTimeSlot != nil
@@ -75,38 +76,28 @@ struct AppointmentSelectionSheet: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 VStack(spacing: 16) {
-                    
-                    // Step 1: Package Selection with Search & Filter
+                    // MARK: Step 1 – Package Selection
                     VStack(alignment: .leading, spacing: 12) {
                         Text(appointmentType == .doctor ? "Doctor's Appointment" : "Medical Service Package")
                             .font(.subheadline)
                             .bold()
                             .foregroundColor(Color(hex: "#0F0E46"))
                         
-                        // Search and Filter Row
                         HStack {
-                            // Search TextField
                             HStack {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(.gray)
-                                TextField(appointmentType == .doctor ? "Search doctor name..." : "Search medical service package...", text: $searchText)
+                                TextField(appointmentType == .doctor ? "Search doctor name..." : "Search package...", text: $searchText)
                                     .font(.subheadline)
                                     .focused($isTextFieldFocused)
-                                    .onTapGesture {
-                                        isTextFieldFocused = true
-                                    }
+                                    .onTapGesture { isTextFieldFocused = true }
                                 
-                                // Clear button
                                 if !searchText.isEmpty {
-                                    Button {
-                                        searchText = ""
-                                        selectedPackage = nil
-                                    } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.gray)
+                                    Button { searchText = ""; selectedPackage = nil } label: {
+                                        Image(systemName: "xmark.circle.fill").foregroundColor(.gray)
                                     }
                                 }
                             }
@@ -114,7 +105,6 @@ struct AppointmentSelectionSheet: View {
                             .background(Color(.systemGray6))
                             .cornerRadius(6)
                             
-                            // Filter Menu
                             Menu {
                                 Button("All") { selectedFilter = "All" }
                                 ForEach(uniqueDepartments, id: \.self) { dept in
@@ -123,9 +113,9 @@ struct AppointmentSelectionSheet: View {
                             } label: {
                                 HStack {
                                     Text(selectedFilter)
-                                        .font(.subheadline)
                                     Image(systemName: "chevron.down")
                                 }
+                                .font(.subheadline)
                                 .foregroundColor(Color(hex: "#0F0E46"))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
@@ -134,27 +124,17 @@ struct AppointmentSelectionSheet: View {
                             }
                         }
                         
-                        // Selected Package Display (when not searching)
                         if let package = selectedPackage, !shouldShowPackageList {
                             HStack {
                                 Text(package.department?.name ?? "Unknown")
                                     .font(.subheadline)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                    .bold()
                                 Text(" - ")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color(hex: "#0F0E46"))
                                 Text(package.name)
                                     .font(.subheadline)
-                                    .foregroundColor(Color(hex: "#0F0E46"))
                                 Spacer()
-                                Button {
-                                    selectedPackage = nil
-                                    searchText = ""
-                                    isTextFieldFocused = true
-                                } label: {
-                                    Image(systemName: "xmark.circle")
-                                        .foregroundColor(.gray)
+                                Button { selectedPackage = nil; searchText = ""; isTextFieldFocused = true } label: {
+                                    Image(systemName: "xmark.circle").foregroundColor(.gray)
                                 }
                             }
                             .padding(10)
@@ -163,29 +143,28 @@ struct AppointmentSelectionSheet: View {
                         }
                     }
                     
-                    // Step 2: Date (always visible, disabled when no package selected)
+                    // MARK: Step 2 – Date Picker
                     VStack(alignment: .leading, spacing: 6) {
                         Text("DATE".uppercased())
                             .font(.caption2)
                             .foregroundColor(selectedPackage != nil ? Color(hex: "#0F0E46") : .gray)
                         
-                        DatePicker(
-                            dateString(selectedDate),
-                            selection: $selectedDate,
-                            in: Date()...,
-                            displayedComponents: .date
-                        )
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.clear))
-                        .cornerRadius(6)
-                        .disabled(selectedPackage == nil || shouldShowPackageList)
-                        .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
+                        HStack {
+                            DatePicker(
+                                "",
+                                selection: $selectedDate,
+                                in: Date()...,
+                                displayedComponents: .date
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .disabled(selectedPackage == nil || shouldShowPackageList)
+                            .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
+                            Spacer()
+                        }
                     }
                     
-                    // Step 3: Time (always visible, disabled when no package selected)
+                    // MARK: Step 3 – Time Slot
                     VStack(alignment: .leading, spacing: 6) {
                         Text("TIME & AVAILABLE SLOT".uppercased())
                             .font(.caption2)
@@ -204,11 +183,9 @@ struct AppointmentSelectionSheet: View {
                                     Spacer()
                                     if appointmentType == .doctor {
                                         Text(selected.availableSlots > 0 ? "Available" : "Unavailable")
-                                            .font(.subheadline)
                                             .foregroundColor(selected.availableSlots > 0 ? .gray : .red)
                                     } else {
-                                        Text("\(selected.availableSlots)/\(selected.maxSlots) Slot Available")
-                                            .font(.subheadline)
+                                        Text("\(selected.availableSlots) \(selected.availableSlots > 1 ? "Slots Available" : "Slot Available")")
                                             .foregroundColor(.gray)
                                     }
                                 } else {
@@ -231,51 +208,50 @@ struct AppointmentSelectionSheet: View {
                                 selectedTimeSlot: $selectedTimeSlot,
                                 isPresented: $showTimePicker,
                                 appointmentType: appointmentType
-                            )
+                            ).presentationDetents([.height(345)])
                         }
+
+                    }
+                    
+                    // Availability info
+                    if isEditing {
+                        HStack {
+                            Spacer()
+                            Button(role: .destructive) {
+                                onDelete()
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "trash")
+                                    Text("Delete")
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(Color(.systemRed).opacity(0.2))
+                                .foregroundColor(.red)
+                                .cornerRadius(6)
+                            }
+                        }
+                        .padding(.top, 12)
                     }
                     
                     Spacer()
                 }
                 .padding()
-                .navigationTitle(isEditing ? (appointmentType == .doctor ? "Edit Doctor Appointment" : "Edit Service Appointment") : (appointmentType == .doctor ? "New Doctor Appointment" : "New Service Appointment"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            onCancel()
-                            dismiss()
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(isEditing ? "Update" : "Add") {
-                            if let package = selectedPackage,
-                               let timeSlot = selectedTimeSlot {
-                                onSave(package, selectedDate, timeSlot)
-                            }
-                        }
-                        .disabled(!canSave)
-                    }
-                }
                 
-                // Package List Overlay (shows when searching or focused)
+                // MARK: Overlay for Package List
                 if shouldShowPackageList {
                     VStack(spacing: 0) {
-                        // Push overlay to below search field
                         Rectangle()
                             .fill(Color.clear)
-                            .frame(height: 82) // Height for title + search field
-                        
-                        // Package list positioned directly below search field
+                            .frame(height: 82)
                         HStack {
                             VStack(spacing: 0) {
                                 if filteredPackages.isEmpty {
                                     Text("No packages found")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
                                         .padding()
                                         .frame(maxWidth: .infinity)
+                                        .foregroundColor(.secondary)
                                 } else {
                                     ScrollView {
                                         LazyVStack(spacing: 1) {
@@ -302,26 +278,49 @@ struct AppointmentSelectionSheet: View {
                             .cornerRadius(8)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                             
-                            // Spacer to align with filter button
                             Spacer().frame(width: 0)
                         }
                         .padding(.horizontal)
-                        
                         Spacer()
                     }
-                    .background(
-                        Color.black.opacity(0.1)
-                            .onTapGesture {
-                                isTextFieldFocused = false
-                            }
-                    )
+                    .background(Color.black.opacity(0.1).onTapGesture { isTextFieldFocused = false })
+                }
+            }
+            .navigationTitle(isEditing ? (appointmentType == .doctor ? "Edit Doctor Appointment" : "Edit Service Appointment")
+                                       : (appointmentType == .doctor ? "New Doctor Appointment" : "New Service Appointment"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isEditing ? "Update" : "Add") {
+                        if let package = selectedPackage, let timeSlot = selectedTimeSlot {
+                            onSave(package, selectedDate, timeSlot)
+                        }
+                    }
+                    .disabled(!canSave)
                 }
             }
             .onAppear {
-                setupInitialState()
+                if let editing = editingAppointment {
+                    selectedPackage = editing.package
+                    selectedDate = editing.date
+                    selectedTimeSlot = editing.timeSlot
+                }
             }
             .onChange(of: selectedDate) { date in
-                handleDateChange(date)
+                if let package = selectedPackage {
+                    if appointmentType == .doctor {
+                        viewModel.updateAvailableDoctorTimeSlots(for: package, on: date)
+                    } else {
+                        viewModel.updateAvailableTimeSlots(for: package, on: date)
+                    }
+                }
             }
         }
     }
@@ -340,6 +339,18 @@ struct AppointmentSelectionSheet: View {
                 viewModel.updateAvailableDoctorTimeSlots(for: package, on: selectedDate)
             } else {
                 viewModel.updateAvailableTimeSlots(for: package, on: selectedDate)
+            }
+            
+            if let editing = editingAppointment {
+                if let idx = viewModel.availableTimeSlots.firstIndex(where: {
+                    $0.startTime == editing.timeSlot.startTime &&
+                    $0.endTime == editing.timeSlot.endTime
+                }) {
+                    selectedTimeSlot = viewModel.availableTimeSlots[idx]
+                } else {
+                    // fallback if slot no longer available
+                    selectedTimeSlot = nil
+                }
             }
         }
     }
@@ -365,11 +376,7 @@ struct AppointmentSelectionSheet: View {
     private func timeString(_ timeSlot: TimeSlotOption) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        if appointmentType == .doctor {
-            return formatter.string(from: timeSlot.startTime)
-        } else {
-            return "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
-        }
+        return formatter.string(from: timeSlot.startTime)
     }
 }
 
@@ -412,35 +419,34 @@ struct TimeSlotPickerModal: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                // Apple-style picker
-                Picker("Time Slot", selection: $selectedIndex) {
-                    ForEach(Array(timeSlots.enumerated()), id: \.offset) { index, timeSlot in
-                        HStack(spacing: 12) {
-                            // Time display
-                            Text(timeString(timeSlot))
-                                .font(.title2)
+            Picker("Time Slot", selection: $selectedIndex) {
+                ForEach(Array(timeSlots.enumerated()), id: \.offset) { index, timeSlot in
+                    HStack {
+                        Spacer()
+                        Text(timeString(timeSlot))
+                            .font(.title3)
+                            .fontWeight(.medium)
+                            .foregroundColor(timeSlot.availableSlots > 0 ? .primary : .secondary)
+                        Spacer()
+                        if appointmentType == .doctor {
+                            Text(timeSlot.availableSlots > 0 ? "Available" : "Unavailable")
+                                .font(.title3)
                                 .fontWeight(.medium)
-                                .foregroundColor(timeSlot.availableSlots > 0 ? .primary : .secondary)
-                            
-                            // Availability display
-                            if appointmentType == .doctor {
-                                Text(timeSlot.availableSlots > 0 ? "Available" : "Unavailable")
-                                    .font(.title3)
-                                    .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
-                            } else {
-                                Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) Slot Available")
-                                    .font(.title3)
-                                    .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
-                            }
+                                .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
+                        } else {
+                            Text("\(timeSlot.availableSlots)/\(timeSlot.maxSlots) " +
+                                 (timeSlot.availableSlots > 1 ? "Slots Available" : "Slot Available"))
+                                .font(.title3)
+                                .fontWeight(.medium)
+                                .foregroundColor(timeSlot.availableSlots > 0 ? .secondary : .red)
                         }
-                        .tag(index)
+                        Spacer()
                     }
+                    .tag(index)
                 }
-                .pickerStyle(.wheel)
-                .frame(height: 180)
             }
-            .padding()
+            .pickerStyle(.wheel)
+            .frame(maxHeight: .infinity)
             .navigationTitle("Pick a Time")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -460,12 +466,15 @@ struct TimeSlotPickerModal: View {
                 }
             }
         }
-        .presentationDetents([.height(400)])
         .onAppear {
-            // Set initial selection based on current selectedTimeSlot
             if let current = selectedTimeSlot,
-               let index = timeSlots.firstIndex(where: { $0.id == current.id }) {
-                selectedIndex = index
+               let idx = timeSlots.firstIndex(where: {
+                   $0.startTime == current.startTime &&
+                   $0.endTime == current.endTime
+               }) {
+                selectedIndex = idx
+            } else {
+                selectedIndex = 0
             }
         }
     }

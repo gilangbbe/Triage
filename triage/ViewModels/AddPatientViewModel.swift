@@ -139,6 +139,15 @@ class AddPatientViewModel {
         }
     }
     
+    func removeAppointmentSelection(by id: UUID) {
+        selectedAppointments.removeAll(where: { $0.id == id })
+    }
+
+    func removeDoctorAppointmentSelection(by id: UUID) {
+        selectedDoctorAppointments.removeAll(where: { $0.id == id })
+    }
+
+    
     private func applyParsedData(_ data: ParsedPatientData) {
         nationalId = data.nationalId
         fullName = data.fullName
@@ -231,50 +240,72 @@ class AddPatientViewModel {
     
     // MARK: - Appointment Management
     func addAppointmentSelection(package: Package, date: Date, timeSlot: TimeSlotOption) {
-        let selection = AppointmentSelection(
-            package: package,
-            date: date,
-            timeSlot: timeSlot
-        )
-        selectedAppointments.append(selection)
+        if let booked = bookSlot(timeSlot) {
+            let selection = AppointmentSelection(package: package, date: date, timeSlot: booked)
+            selectedAppointments.append(selection)
+        }
     }
     
     func removeAppointmentSelection(at index: Int) {
         guard index < selectedAppointments.count else { return }
-        selectedAppointments.remove(at: index)
+        let removed = selectedAppointments.remove(at: index)
+        releaseSlot(removed.timeSlot)
     }
     
     func updateAppointmentSelection(at index: Int, package: Package, date: Date, timeSlot: TimeSlotOption) {
         guard index < selectedAppointments.count else { return }
-        selectedAppointments[index] = AppointmentSelection(
-            package: package,
-            date: date,
-            timeSlot: timeSlot
-        )
+
+        // Release old slot
+        let oldSelection = selectedAppointments[index]
+        releaseSlot(oldSelection.timeSlot)
+
+        // Try to book new slot
+        if let booked = bookSlot(timeSlot) {
+            selectedAppointments[index] = AppointmentSelection(
+                package: package,
+                date: date,
+                timeSlot: booked
+            )
+        } else {
+            // Roll back if booking failed (slot already full)
+            selectedAppointments[index] = oldSelection
+            _ = bookSlot(oldSelection.timeSlot)
+        }
     }
     
     // MARK: - Doctor Appointment Management
     func addDoctorAppointmentSelection(package: Package, date: Date, timeSlot: TimeSlotOption) {
-        let selection = AppointmentSelection(
-            package: package,
-            date: date,
-            timeSlot: timeSlot
-        )
-        selectedDoctorAppointments.append(selection)
+        if let booked = bookSlot(timeSlot) {
+            let selection = AppointmentSelection(package: package, date: date, timeSlot: booked)
+            selectedDoctorAppointments.append(selection)
+        }
     }
     
     func removeDoctorAppointmentSelection(at index: Int) {
         guard index < selectedDoctorAppointments.count else { return }
-        selectedDoctorAppointments.remove(at: index)
+        let removed = selectedDoctorAppointments.remove(at: index)
+        releaseSlot(removed.timeSlot)
     }
     
     func updateDoctorAppointmentSelection(at index: Int, package: Package, date: Date, timeSlot: TimeSlotOption) {
         guard index < selectedDoctorAppointments.count else { return }
-        selectedDoctorAppointments[index] = AppointmentSelection(
-            package: package,
-            date: date,
-            timeSlot: timeSlot
-        )
+
+       // Release old slot
+       let oldSelection = selectedDoctorAppointments[index]
+       releaseSlot(oldSelection.timeSlot)
+
+       // Try to book new slot
+       if let booked = bookSlot(timeSlot) {
+           selectedDoctorAppointments[index] = AppointmentSelection(
+               package: package,
+               date: date,
+               timeSlot: booked
+           )
+       } else {
+           // Roll back if booking failed
+           selectedDoctorAppointments[index] = oldSelection
+           _ = bookSlot(oldSelection.timeSlot)
+       }
     }
     
     func loadAvailablePackages() {
@@ -287,86 +318,99 @@ class AddPatientViewModel {
             return
         }
         let maxSlotsPerHour = department.maxSlot ?? 3
-        
-        // Generate time slots from 8 AM to 5 PM
+
         let calendar = Calendar.current
         let workingHours = Array(8...16) // 8 AM to 4 PM (5 PM end time)
-        
-        availableTimeSlots = workingHours.compactMap { hour in
-            guard let startTime = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date),
-                  let endTime = calendar.date(bySettingHour: hour + 1, minute: 0, second: 0, of: date) else {
-                return nil
+
+        var slots: [TimeSlotOption] = []
+
+        for hour in workingHours {
+            guard
+                let startTime = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date),
+                let endTime = calendar.date(bySettingHour: hour + 1, minute: 0, second: 0, of: date)
+            else {
+                continue
             }
-            
-            // Count existing appointments for this time slot and department
+
+            // Count existing *saved* appointments in appointmentManager
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                guard let timeSlot = appointment.timeSlot else { return false }
-                return calendar.isDate(timeSlot.date, inSameDayAs: date) &&
-                       timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970 &&
-                       appointment.package?.department?.id == department.id
+                let sameDay = calendar.isDate(appointment.timeSlot.date, inSameDayAs: date)
+                let appointmentHour = calendar.component(.hour, from: appointment.timeSlot.startTime)
+                let sameHour = appointmentHour == hour
+                let sameDepartment = appointment.package?.department.id == department.id
+                return sameDay && sameHour && sameDepartment
             }
-            
-            let bookedSlots = existingAppointments.count
-            let availableSlots = maxSlotsPerHour - bookedSlots
-            
-            return TimeSlotOption(
-                startTime: startTime,
-                endTime: endTime,
-                availableSlots: max(0, availableSlots),
-                maxSlots: maxSlotsPerHour
+
+            // Count in-progress *selected* appointments (not yet saved)
+            let pendingAppointments = selectedAppointments.filter { selection in
+                let sameDay = calendar.isDate(selection.date, inSameDayAs: date)
+                let selectionHour = calendar.component(.hour, from: selection.timeSlot.startTime)
+                let sameHour = selectionHour == hour
+                let sameDepartment = selection.package?.department.id == department.id
+                return sameDay && sameHour && sameDepartment
+            }
+
+            let bookedSlots = existingAppointments.count + pendingAppointments.count
+            let availableSlots = max(0, maxSlotsPerHour - bookedSlots)
+
+            slots.append(
+                TimeSlotOption(
+                    startTime: startTime,
+                    endTime: endTime,
+                    availableSlots: availableSlots,
+                    maxSlots: maxSlotsPerHour
+                )
             )
         }
-        
-        // Filter out fully booked slots
-        availableTimeSlots = availableTimeSlots.filter { $0.availableSlots > 0 }
+
+        availableTimeSlots = slots.filter { $0.availableSlots > 0 }
     }
     
     func updateAvailableDoctorTimeSlots(for package: Package, on date: Date) {
-        // For doctors, each time slot has only 1 slot available
         let calendar = Calendar.current
         let workingHours = Array(8...16) // 8 AM to 4 PM (5 PM end time)
-        
-        print("🩺 Updating doctor time slots for: \(package.name) on \(date)")
-        print("🩺 Total appointments in system: \(appointmentManager.appointments.count)")
-        
-        availableTimeSlots = workingHours.compactMap { hour in
-            guard let startTime = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date),
-                  let endTime = calendar.date(bySettingHour: hour + 1, minute: 0, second: 0, of: date) else {
-                return nil
+
+        var slots: [TimeSlotOption] = []
+
+        for hour in workingHours {
+            guard
+                let startTime = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date),
+                let endTime = calendar.date(bySettingHour: hour + 1, minute: 0, second: 0, of: date)
+            else {
+                continue
             }
-            
-            // For doctors, check if this specific doctor (package) is already booked
+
+            // Count existing saved doctor appointments
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                guard let timeSlot = appointment.timeSlot else { return false }
-                let sameDate = calendar.isDate(timeSlot.date, inSameDayAs: date)
-                let sameTime = timeSlot.startTime.timeIntervalSince1970 == startTime.timeIntervalSince1970
+                let sameDate = calendar.isDate(appointment.timeSlot.date, inSameDayAs: date)
+                let sameHour = calendar.component(.hour, from: appointment.timeSlot.startTime) == hour
                 let samePackage = appointment.package?.id == package.id
-                
-                print("🩺 Checking appointment: \(appointment.name)")
-                print("   - Same date? \(sameDate)")
-                print("   - Same time? \(sameTime)")
-                print("   - Same package? \(samePackage)")
-                
-                return sameDate && sameTime && samePackage
+                return sameDate && sameHour && samePackage
             }
-            
-            let isBooked = !existingAppointments.isEmpty
+
+            // Count in-progress selected doctor appointments
+            let pendingAppointments = selectedDoctorAppointments.filter { selection in
+                let sameDate = calendar.isDate(selection.date, inSameDayAs: date)
+                let sameHour = calendar.component(.hour, from: selection.timeSlot.startTime) == hour
+                let samePackage = selection.package?.id == package.id
+                return sameDate && sameHour && samePackage
+            }
+
+            let isBooked = !existingAppointments.isEmpty || !pendingAppointments.isEmpty
             let availableSlots = isBooked ? 0 : 1
-            
-            print("🩺 Hour \(hour):00 - Booked: \(isBooked), Available: \(availableSlots)")
-            
-            return TimeSlotOption(
-                startTime: startTime,
-                endTime: endTime,
-                availableSlots: availableSlots,
-                maxSlots: 1
+
+            slots.append(
+                TimeSlotOption(
+                    startTime: startTime,
+                    endTime: endTime,
+                    availableSlots: availableSlots,
+                    maxSlots: 1
+                )
             )
         }
-        
-        print("🩺 Generated \(availableTimeSlots.count) time slots")
-        // For doctors, filter out fully booked slots to only show available times
-        availableTimeSlots = availableTimeSlots.filter { $0.availableSlots > 0 }
-        print("🩺 After filtering: \(availableTimeSlots.count) available slots")
+
+        // Show only available slots
+        availableTimeSlots = slots.filter { $0.availableSlots > 0 }
     }
     
     func clearInput() {
@@ -392,21 +436,33 @@ class AddPatientViewModel {
 }
 
 // MARK: - Supporting Models
-struct AppointmentSelection: Identifiable {
-    let id = UUID()
+struct AppointmentSelection: Identifiable, Equatable {
+    let id: UUID
     let package: Package?
     let date: Date
     let timeSlot: TimeSlotOption
     
+    init(id: UUID = UUID(), package: Package?, date: Date, timeSlot: TimeSlotOption) {
+        self.id = id
+        self.package = package
+        self.date = date
+        self.timeSlot = timeSlot
+    }
+    
     var displayText: String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        let dateString = formatter.string(from: date)
-        
         formatter.dateFormat = "HH:mm"
-        let timeString = "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
         
-        return "\(package?.name ?? "Unknown Package") on \(dateString) at \(timeString)"
+        if let pkg = package {
+            let slotText = "\(formatter.string(from: timeSlot.startTime))"
+            if pkg.department.name == "Doctor" {
+                return "\(pkg.name) – \(slotText)"
+            } else {
+                let plural = timeSlot.availableSlots > 1 ? "slots" : "slot"
+                return "\(pkg.name) – \(timeSlot.availableSlots) \(plural) left at \(slotText)"
+            }
+        }
+        return ""
     }
 }
 
@@ -606,6 +662,28 @@ class GenderParser {
         }
         
         return nil
+    }
+}
+
+extension AddPatientViewModel {
+    /// Try to decrement an available slot. Returns updated slot if successful.
+    @discardableResult
+    func bookSlot(_ slot: TimeSlotOption) -> TimeSlotOption? {
+        guard let idx = availableTimeSlots.firstIndex(where: { $0.id == slot.id }) else { return nil }
+        guard availableTimeSlots[idx].availableSlots > 0 else { return nil }
+
+        var updated = availableTimeSlots[idx]
+        updated.availableSlots -= 1
+        availableTimeSlots[idx] = updated
+        return updated
+    }
+
+    /// Release slot back (if you later allow delete/cancel).
+    func releaseSlot(_ slot: TimeSlotOption) {
+        guard let idx = availableTimeSlots.firstIndex(where: { $0.id == slot.id }) else { return }
+        var updated = availableTimeSlots[idx]
+        updated.availableSlots = min(updated.availableSlots + 1, updated.maxSlots)
+        availableTimeSlots[idx] = updated
     }
 }
 
