@@ -213,26 +213,38 @@ class QuickReplyManager: CloudKitSyncable {
                 for (_, result) in records {
                     switch result {
                     case .success(let record):
-                        // Check if quick reply already exists locally
+                        // Check if quick reply already exists in SwiftData database
                         let quickReplyId = UUID(uuidString: record.recordID.recordName) ?? UUID()
-                        if !quickReplies.contains(where: { $0.id == quickReplyId }) {
-                            let quickReply = QuickReply(
-                                title: record["title"] as? String ?? "",
-                                message: record["message"] as? String ?? "",
-                                isActive: record["isActive"] as? Bool ?? true
-                            )
-                            quickReply.id = quickReplyId
-                            quickReply.dateCreated = record["dateCreated"] as? Date ?? Date()
-                            
-                            // Add to local storage
-                            if let context = modelContext {
-                                context.insert(quickReply)
-                                do {
-                                    try context.save()
-                                } catch {
-                                    print("❌ Failed to save quick reply from CloudKit: \(error)")
-                                }
+                        
+                        // Query SwiftData directly to check for existing record
+                        guard let context = modelContext else { continue }
+                        
+                        let descriptor = FetchDescriptor<QuickReply>(
+                            predicate: #Predicate<QuickReply> { quickReply in
+                                quickReply.id == quickReplyId
                             }
+                        )
+                        
+                        do {
+                            let existingQuickReplies = try context.fetch(descriptor)
+                            if existingQuickReplies.isEmpty {
+                                // Only create if doesn't exist in database
+                                let quickReply = QuickReply(
+                                    title: record["title"] as? String ?? "",
+                                    message: record["message"] as? String ?? "",
+                                    isActive: record["isActive"] as? Bool ?? true
+                                )
+                                quickReply.id = quickReplyId
+                                quickReply.dateCreated = record["dateCreated"] as? Date ?? Date()
+                                
+                                context.insert(quickReply)
+                                try context.save()
+                                print("✅ Added new quick reply from CloudKit: \(quickReply.title)")
+                            } else {
+                                print("ℹ️ Quick reply already exists locally: \(record["title"] as? String ?? "Unknown")")
+                            }
+                        } catch {
+                            print("❌ Failed to check/save quick reply from CloudKit: \(error)")
                         }
                         
                     case .failure(let error):

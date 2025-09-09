@@ -215,56 +215,69 @@ class AppointmentManager: CloudKitSyncable {
                 for (_, result) in records {
                     switch result {
                     case .success(let record):
-                        // Check if appointment already exists locally
+                        // Check if appointment already exists in SwiftData database
                         let appointmentId = UUID(uuidString: record.recordID.recordName) ?? UUID()
-                        if !appointments.contains(where: { $0.id == appointmentId }) {
-                            
-                            // Find related records (patient and package must exist)
-                            var patient: Patient?
-                            var package: Package?
-                            
-                            if let patientRef = record["patient"] as? CKRecord.Reference,
-                               let patientId = UUID(uuidString: patientRef.recordID.recordName) {
-                                // Need to get patient from PatientManager
-                                patient = PatientManager.shared.patients.first { $0.id == patientId }
+                        
+                        // Query SwiftData directly to check for existing record
+                        guard let context = modelContext else { continue }
+                        
+                        let descriptor = FetchDescriptor<Appointment>(
+                            predicate: #Predicate<Appointment> { appointment in
+                                appointment.id == appointmentId
                             }
-                            
-                            if let packageRef = record["package"] as? CKRecord.Reference,
-                               let packageId = UUID(uuidString: packageRef.recordID.recordName) {
-                                // Need to get package from PackageManager
-                                package = PackageManager.shared.packages.first { $0.id == packageId }
-                            }
-                            
-                            // Create TimeSlot from embedded data
-                            var timeSlot: TimeSlot?
-                            if let date = record["date"] as? Date,
-                               let startTime = record["startTime"] as? Date,
-                               let endTime = record["endTime"] as? Date {
-                                timeSlot = TimeSlot(date: date, startTime: startTime, endTime: endTime)
-                            }
-                            
-                            if let patient = patient, let package = package, let timeSlot = timeSlot {
-                                let appointment = Appointment(
-                                    id: appointmentId,
-                                    name: record["name"] as? String ?? "",
-                                    date: timeSlot.date,
-                                    startTime: timeSlot.startTime,
-                                    endTime: timeSlot.endTime,
-                                    timeSlot: timeSlot,
-                                    patient: patient,
-                                    package: package
-                                )
+                        )
+                        
+                        do {
+                            let existingAppointments = try context.fetch(descriptor)
+                            if existingAppointments.isEmpty {
+                                // Find related records (patient and package must exist)
+                                var patient: Patient?
+                                var package: Package?
                                 
-                                // Add to local storage
-                                if let context = modelContext {
-                                    context.insert(appointment)
-                                    do {
-                                        try context.save()
-                                    } catch {
-                                        print("❌ Failed to save appointment from CloudKit: \(error)")
-                                    }
+                                if let patientRef = record["patient"] as? CKRecord.Reference,
+                                   let patientId = UUID(uuidString: patientRef.recordID.recordName) {
+                                    // Need to get patient from PatientManager
+                                    patient = PatientManager.shared.patients.first { $0.id == patientId }
                                 }
+                                
+                                if let packageRef = record["package"] as? CKRecord.Reference,
+                                   let packageId = UUID(uuidString: packageRef.recordID.recordName) {
+                                    // Need to get package from PackageManager
+                                    package = PackageManager.shared.packages.first { $0.id == packageId }
+                                }
+                                
+                                // Create TimeSlot from embedded data
+                                var timeSlot: TimeSlot?
+                                if let date = record["date"] as? Date,
+                                   let startTime = record["startTime"] as? Date,
+                                   let endTime = record["endTime"] as? Date {
+                                    timeSlot = TimeSlot(date: date, startTime: startTime, endTime: endTime)
+                                }
+                                
+                                if let patient = patient, let package = package, let timeSlot = timeSlot {
+                                    // Only create if doesn't exist in database
+                                    let appointment = Appointment(
+                                        id: appointmentId,
+                                        name: record["name"] as? String ?? "",
+                                        date: timeSlot.date,
+                                        startTime: timeSlot.startTime,
+                                        endTime: timeSlot.endTime,
+                                        timeSlot: timeSlot,
+                                        patient: patient,
+                                        package: package
+                                    )
+                                    
+                                    context.insert(appointment)
+                                    try context.save()
+                                    print("✅ Added new appointment from CloudKit: \(appointment.name)")
+                                } else {
+                                    print("⚠️ Skipping appointment - missing patient/package/timeslot: \(record["name"] as? String ?? "Unknown")")
+                                }
+                            } else {
+                                print("ℹ️ Appointment already exists locally: \(record["name"] as? String ?? "Unknown")")
                             }
+                        } catch {
+                            print("❌ Failed to check/save appointment from CloudKit: \(error)")
                         }
                         
                     case .failure(let error):

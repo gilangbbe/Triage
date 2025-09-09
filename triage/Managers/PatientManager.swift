@@ -238,33 +238,45 @@ class PatientManager: CloudKitSyncable {
                 for (_, result) in records {
                     switch result {
                     case .success(let record):
-                        // Check if patient already exists locally
+                        // Check if patient already exists in SwiftData database
                         let patientId = UUID(uuidString: record.recordID.recordName) ?? UUID()
-                        if !patients.contains(where: { $0.id == patientId }) {
-                            let patient = Patient(
-                                id: patientId,
-                                fullName: record["fullName"] as? String ?? ""
-                            )
-                            
-                            patient.nationalID = record["nationalID"] as? String
-                            patient.dateOfBirth = record["dateOfBirth"] as? Date
-                            if let genderString = record["gender"] as? String {
-                                patient.gender = Gender(rawValue: genderString)
+                        
+                        // Query SwiftData directly to check for existing record
+                        guard let context = modelContext else { continue }
+                        
+                        let descriptor = FetchDescriptor<Patient>(
+                            predicate: #Predicate<Patient> { patient in
+                                patient.id == patientId
                             }
-                            patient.placeOfBirth = record["placeOfBirth"] as? String
-                            patient.registeredAt = record["registeredAt"] as? Date
-                            patient.phoneNumber = record["phoneNumber"] as? String
-                            patient.address = record["address"] as? String
-                            
-                            // Add to local storage
-                            if let context = modelContext {
-                                context.insert(patient)
-                                do {
-                                    try context.save()
-                                } catch {
-                                    print("❌ Failed to save patient from CloudKit: \(error)")
+                        )
+                        
+                        do {
+                            let existingPatients = try context.fetch(descriptor)
+                            if existingPatients.isEmpty {
+                                // Only create if doesn't exist in database
+                                let patient = Patient(
+                                    id: patientId,
+                                    fullName: record["fullName"] as? String ?? ""
+                                )
+                                
+                                patient.nationalID = record["nationalID"] as? String
+                                patient.dateOfBirth = record["dateOfBirth"] as? Date
+                                if let genderString = record["gender"] as? String {
+                                    patient.gender = Gender(rawValue: genderString)
                                 }
+                                patient.placeOfBirth = record["placeOfBirth"] as? String
+                                patient.registeredAt = record["registeredAt"] as? Date
+                                patient.phoneNumber = record["phoneNumber"] as? String
+                                patient.address = record["address"] as? String
+                                
+                                context.insert(patient)
+                                try context.save()
+                                print("✅ Added new patient from CloudKit: \(patient.fullName)")
+                            } else {
+                                print("ℹ️ Patient already exists locally: \(record["fullName"] as? String ?? "Unknown")")
                             }
+                        } catch {
+                            print("❌ Failed to check/save patient from CloudKit: \(error)")
                         }
                         
                     case .failure(let error):

@@ -139,24 +139,36 @@ class DepartmentManager: CloudKitSyncable {
                 for (_, result) in records {
                     switch result {
                     case .success(let record):
-                        // Check if department already exists locally
+                        // Check if department already exists in SwiftData database
                         let departmentId = UUID(uuidString: record.recordID.recordName) ?? UUID()
-                        if !departments.contains(where: { $0.id == departmentId }) {
-                            let department = Department(
-                                id: departmentId,
-                                name: record["name"] as? String ?? "",
-                                maxSlot: record["maxSlot"] as? Int ?? 3
-                            )
-                            
-                            // Add to local storage
-                            if let context = modelContext {
-                                context.insert(department)
-                                do {
-                                    try context.save()
-                                } catch {
-                                    print("❌ Failed to save department from CloudKit: \(error)")
-                                }
+                        
+                        // Query SwiftData directly to check for existing record
+                        guard let context = modelContext else { continue }
+                        
+                        let descriptor = FetchDescriptor<Department>(
+                            predicate: #Predicate<Department> { department in
+                                department.id == departmentId
                             }
+                        )
+                        
+                        do {
+                            let existingDepartments = try context.fetch(descriptor)
+                            if existingDepartments.isEmpty {
+                                // Only create if doesn't exist in database
+                                let department = Department(
+                                    id: departmentId,
+                                    name: record["name"] as? String ?? "",
+                                    maxSlot: record["maxSlot"] as? Int ?? 3
+                                )
+                                
+                                context.insert(department)
+                                try context.save()
+                                print("✅ Added new department from CloudKit: \(department.name)")
+                            } else {
+                                print("ℹ️ Department already exists locally: \(record["name"] as? String ?? "Unknown")")
+                            }
+                        } catch {
+                            print("❌ Failed to check/save department from CloudKit: \(error)")
                         }
                         
                     case .failure(let error):

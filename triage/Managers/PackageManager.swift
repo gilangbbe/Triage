@@ -185,35 +185,48 @@ class PackageManager: CloudKitSyncable {
                 for (_, result) in records {
                     switch result {
                     case .success(let record):
-                        // Check if package already exists locally
+                        // Check if package already exists in SwiftData database
                         let packageId = UUID(uuidString: record.recordID.recordName) ?? UUID()
-                        if !packages.contains(where: { $0.id == packageId }) {
-                            
-                            // Find the department
-                            var department: Department?
-                            if let departmentRef = record["department"] as? CKRecord.Reference,
-                               let departmentId = UUID(uuidString: departmentRef.recordID.recordName) {
-                                department = DepartmentManager.shared.departments.first { $0.id == departmentId }
+                        
+                        // Query SwiftData directly to check for existing record
+                        guard let context = modelContext else { continue }
+                        
+                        let descriptor = FetchDescriptor<Package>(
+                            predicate: #Predicate<Package> { package in
+                                package.id == packageId
                             }
-                            
-                            if let department = department {
-                                let package = Package(
-                                    id: packageId,
-                                    name: record["name"] as? String ?? "",
-                                    department: department,
-                                    descriptionText: record["descriptionText"] as? String
-                                )
-                                
-                                // Add to local storage
-                                if let context = modelContext {
-                                    context.insert(package)
-                                    do {
-                                        try context.save()
-                                    } catch {
-                                        print("❌ Failed to save package from CloudKit: \(error)")
-                                    }
+                        )
+                        
+                        do {
+                            let existingPackages = try context.fetch(descriptor)
+                            if existingPackages.isEmpty {
+                                // Find the department
+                                var department: Department?
+                                if let departmentRef = record["department"] as? CKRecord.Reference,
+                                   let departmentId = UUID(uuidString: departmentRef.recordID.recordName) {
+                                    department = DepartmentManager.shared.departments.first { $0.id == departmentId }
                                 }
+                                
+                                if let department = department {
+                                    // Only create if doesn't exist in database
+                                    let package = Package(
+                                        id: packageId,
+                                        name: record["name"] as? String ?? "",
+                                        department: department,
+                                        descriptionText: record["descriptionText"] as? String
+                                    )
+                                    
+                                    context.insert(package)
+                                    try context.save()
+                                    print("✅ Added new package from CloudKit: \(package.name)")
+                                } else {
+                                    print("⚠️ Skipping package - department not found: \(record["name"] as? String ?? "Unknown")")
+                                }
+                            } else {
+                                print("ℹ️ Package already exists locally: \(record["name"] as? String ?? "Unknown")")
                             }
+                        } catch {
+                            print("❌ Failed to check/save package from CloudKit: \(error)")
                         }
                         
                     case .failure(let error):

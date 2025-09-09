@@ -148,34 +148,46 @@ class HistoryManager: CloudKitSyncable {
                 for (_, result) in records {
                     switch result {
                     case .success(let record):
-                        // Check if history already exists locally
+                        // Check if history already exists in SwiftData database
                         let historyId = UUID(uuidString: record.recordID.recordName) ?? UUID()
-                        if !history.contains(where: { $0.id == historyId }) {
-                            let timestamp = record["timestamp"] as? Date ?? Date()
-                            
-                            // Decode history type
-                            var historyType: HistoryType = .newPatient(patientName: "Unknown")
-                            if let typeString = record["typeData"] as? String,
-                               let typeData = typeString.data(using: .utf8),
-                               let decodedType = try? JSONDecoder().decode(HistoryType.self, from: typeData) {
-                                historyType = decodedType
+                        
+                        // Query SwiftData directly to check for existing record
+                        guard let context = modelContext else { continue }
+                        
+                        let descriptor = FetchDescriptor<History>(
+                            predicate: #Predicate<History> { history in
+                                history.id == historyId
                             }
-                            
-                            let historyItem = History(
-                                id: historyId,
-                                type: historyType,
-                                timestamp: timestamp
-                            )
-                            
-                            // Add to local storage
-                            if let context = modelContext {
-                                context.insert(historyItem)
-                                do {
-                                    try context.save()
-                                } catch {
-                                    print("❌ Failed to save history from CloudKit: \(error)")
+                        )
+                        
+                        do {
+                            let existingHistory = try context.fetch(descriptor)
+                            if existingHistory.isEmpty {
+                                let timestamp = record["timestamp"] as? Date ?? Date()
+                                
+                                // Decode history type
+                                var historyType: HistoryType = .newPatient(patientName: "Unknown")
+                                if let typeString = record["typeData"] as? String,
+                                   let typeData = typeString.data(using: .utf8),
+                                   let decodedType = try? JSONDecoder().decode(HistoryType.self, from: typeData) {
+                                    historyType = decodedType
                                 }
+                                
+                                // Only create if doesn't exist in database
+                                let historyItem = History(
+                                    id: historyId,
+                                    type: historyType,
+                                    timestamp: timestamp
+                                )
+                                
+                                context.insert(historyItem)
+                                try context.save()
+                                print("✅ Added new history from CloudKit")
+                            } else {
+                                print("ℹ️ History already exists locally")
                             }
+                        } catch {
+                            print("❌ Failed to check/save history from CloudKit: \(error)")
                         }
                         
                     case .failure(let error):
