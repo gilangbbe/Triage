@@ -75,7 +75,7 @@ struct Step3AppointmentsView: View {
                 
                 // MARK: - Medical Packages Column
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Medical Service Packages")
+                    Text("Medical Service Unit")
                         .font(.subheadline)
                         .bold()
                         .foregroundColor(Color(hex: "#0F0E46"))

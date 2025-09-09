@@ -30,7 +30,7 @@ struct AddDepartmentView: View {
                     Stepper("Max slots per hour: \(maxSlot)", value: $maxSlot, in: 1...10)
                 }
                 
-                Section(footer: Text("Create a department to organize medical service packages.")) {
+                Section(footer: Text("Create a department to organize medical service unit.")) {
                     EmptyView()
                 }
             }
