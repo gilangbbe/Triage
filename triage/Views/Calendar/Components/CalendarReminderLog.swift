@@ -89,7 +89,7 @@ struct ReminderLogView: View {
     private func sectionHeader(for day: Date) -> String {
         let df = DateFormatter()
         df.locale = headerLocale
-        df.setLocalizedDateFormatFromTemplate("d MMMM") // “28 Agustus”
+        df.setLocalizedDateFormatFromTemplate("d MMMM")
         return df.string(from: day).uppercased()
     }
 }

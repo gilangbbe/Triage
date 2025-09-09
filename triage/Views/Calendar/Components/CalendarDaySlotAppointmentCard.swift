@@ -38,20 +38,7 @@ enum SlotKind: CaseIterable, Hashable {
     var textColor: Color { Color(red: 0.07, green: 0.10, blue: 0.27) }
 }
 
-extension Appointment {
-    var inferredSlotKind: SlotKind {
-        let basis = (package?.department.name ?? name).lowercased()
-        if basis.contains("medical")        { return .medical }
-        if basis.contains("radio")          { return .radiology }
-        if basis.contains("lab")            { return .laboratory }
-        if basis.contains("consult")        { return .radiology }
-        return .medical
-    }
-
-    var displayPatientName: String { patient?.fullName ?? name }
-}
-
-// MARK: - Simple row for a patient name (unchanged layout)
+// MARK: - Simple row for a patient name
 private struct SlotPatientRow: View {
     let text: String
     let textColor: Color
@@ -60,7 +47,7 @@ private struct SlotPatientRow: View {
             Text(text)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(textColor)
-                .lineLimit(1)
+//                .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer()
         }
@@ -106,7 +93,7 @@ private struct SlotBucketCard: View {
                 Text(titleText)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(navy)
-                    .lineLimit(1)
+//                    .lineLimit(1)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 8).fill(pillTint))
@@ -135,7 +122,7 @@ private struct SlotBucketCard: View {
                             Text(patients[i].displayPatientName)
                                 .font(.body)
                                 .foregroundStyle(navy)
-                                .lineLimit(1)
+//                                .lineLimit(1)
                             Spacer()
                         }
                         .padding(8)

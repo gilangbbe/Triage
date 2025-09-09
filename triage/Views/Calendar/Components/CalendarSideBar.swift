@@ -4,18 +4,14 @@
 //
 //  Created by Hayya U on 01/09/25.
 //
-
-//
-//  CalendarSideBar.swift
-//  triage
-//
-
 import SwiftUI
 
 struct SidebarPanel: View {
     @Binding var selectedDate: Date
     @Binding var showLog: Bool
     @Binding var logEntries: [ReminderEntry]
+
+    /// Plain array of SwiftData @Model objects (reference semantics)
     let appointments: [Appointment]
 
     var body: some View {
@@ -65,10 +61,11 @@ struct SidebarPanel: View {
                 .padding(.horizontal, 20)
 
                 VStack(spacing: 12) {
-                    ForEach(sortedReminders) { a in
+                    ForEach(sortedReminders, id: \.persistentModelID) { a in
                         ReminderCard(appt: a, style: .needToRemind)
                     }
                 }
+
                 .padding(.horizontal, 16)
 
                 Spacer(minLength: 24)
@@ -76,7 +73,17 @@ struct SidebarPanel: View {
         }
     }
 
-    // MARK: - Log builder (Appointment-based)
+    // MARK: - Data helpers
+    private var todaysAppts: [Appointment] {
+        let cal = Calendar.current
+        return appointments.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: selectedDate) }
+    }
+
+    private var sortedReminders: [Appointment] {
+        todaysAppts.sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
+    }
+
+    // MARK: - Log builder
     private func buildLog(from appts: [Appointment], asOf day: Date) -> [ReminderEntry] {
         let cal = Calendar.current
         let todays = appts.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: day) }
@@ -92,15 +99,5 @@ struct SidebarPanel: View {
                 sentAt: sentAt
             )
         }
-    }
-
-    // MARK: - Data helpers (Appointment-based)
-    private var todaysAppts: [Appointment] {
-        let cal = Calendar.current
-        return appointments.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: selectedDate) }
-    }
-
-    private var sortedReminders: [Appointment] {
-        todaysAppts.sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
     }
 }

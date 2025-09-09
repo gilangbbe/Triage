@@ -8,9 +8,6 @@
 import SwiftUI
 import SwiftData
 
-import SwiftUI
-import SwiftData
-
 struct CalendarView: View {
     @Environment(CalendarViewModel.self) private var vm
     @Environment(AppointmentListViewModel.self) private var listVM
@@ -35,6 +32,7 @@ struct CalendarView: View {
                         logEntries: $logEntries,
                         appointments: vm.appointments(on: vm.selectedDate)
                     )
+
                     .frame(width: 360)
                     .background(Color(.systemBackground))
                     .overlay(Divider(), alignment: .trailing)
@@ -83,7 +81,10 @@ struct CalendarView: View {
                 .padding(.top, 8)
                 .padding(.horizontal, 24)
             }
-            .task { vm.setModelContext(modelContext) }   // still fine with @Environment
+            .task {
+                vm.setModelContext(modelContext)
+                vm.reload()
+            }
             .onChange(of: vm.selectedDate) { _ in vm.reload() }
             .onChange(of: vm.scope)        { _ in vm.reload() }
             .onChange(of: vm.monthAnchor)  { _ in vm.reload() }
@@ -101,6 +102,7 @@ struct CalendarView: View {
 }
 
 
+/// Generic segmented control you already had
 private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where E.AllCases: RandomAccessCollection {
     @Binding var selection: E
     let titles: [String]
@@ -162,7 +164,6 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
 }
 
 
-
 // MARK: - Helpers
 extension Date {
     var startOfDay: Date { Calendar.current.startOfDay(for: self) }
@@ -176,7 +177,6 @@ extension DateFormatter {
     }
 }
 
-// MARK: - Preview
 struct CalendarView_Previews: PreviewProvider {
     static var previews: some View {
         CalendarView()
@@ -186,4 +186,3 @@ struct CalendarView_Previews: PreviewProvider {
             .previewInterfaceOrientation(.landscapeLeft)
     }
 }
-

@@ -20,6 +20,8 @@ final class Appointment {
     
     // Optional package - can be nil if package is deleted
     var package: Package?
+    
+    var isReminded: Bool = false
 
     init(id: UUID = UUID(),
          name: String,
