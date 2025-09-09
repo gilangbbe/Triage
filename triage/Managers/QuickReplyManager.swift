@@ -7,13 +7,17 @@
 
 import Foundation
 import SwiftData
+import CloudKit
 
 @Observable
-class QuickReplyManager {
+class QuickReplyManager: CloudKitSyncable {
+    typealias ModelType = QuickReply
+    
     static let shared = QuickReplyManager()
     
     var quickReplies: [QuickReply] = []
     private var modelContext: ModelContext?
+    private let cloudKitHelper = CloudKitHelper.shared
     
     // App Group for sharing data between main app and keyboard extension
     private var sharedUserDefaults: UserDefaults? {
@@ -22,14 +26,15 @@ class QuickReplyManager {
     
     private init() {
         // ModelContext will be set by the main app
-        loadQuickReplies()
-        setupDefaultReplies()
     }
     
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
-        loadQuickReplies() // Reload data with the new context
-        setupDefaultReplies()
+        Task {
+            await loadFromCloudKit()
+            loadQuickReplies() // Load any additional local data
+            setupDefaultReplies()
+        }
     }
     
     // MARK: - CRUD Operations
@@ -40,12 +45,22 @@ class QuickReplyManager {
         saveContext()
         loadQuickReplies()
         syncToSharedContainer()
+        
+        // Sync to CloudKit
+        Task {
+            await syncToCloudKit(reply)
+        }
     }
     
     func updateQuickReply(_ reply: QuickReply) {
         saveContext()
         loadQuickReplies()
         syncToSharedContainer()
+        
+        // Sync to CloudKit
+        Task {
+            await syncToCloudKit(reply)
+        }
     }
     
     func deleteQuickReply(_ reply: QuickReply) {
@@ -55,18 +70,32 @@ class QuickReplyManager {
         saveContext()
         loadQuickReplies()
         syncToSharedContainer()
+        
+        // Delete from CloudKit
+        Task {
+            await deleteFromCloudKit(reply)
+        }
     }
     
     func deleteQuickReply(at indexSet: IndexSet) {
         guard let context = modelContext else { return }
         
+        var repliesToDelete: [QuickReply] = []
         for index in indexSet {
             let reply = quickReplies[index]
+            repliesToDelete.append(reply)
             context.delete(reply)
         }
         saveContext()
         loadQuickReplies()
         syncToSharedContainer()
+        
+        // Delete from CloudKit
+        Task {
+            for reply in repliesToDelete {
+                await deleteFromCloudKit(reply)
+            }
+        }
     }
     
     func toggleReplyStatus(_ reply: QuickReply) {
@@ -150,6 +179,78 @@ class QuickReplyManager {
         saveContext()
         loadQuickReplies()
         syncToSharedContainer()
+    }
+    
+    // MARK: - CloudKit Sync Implementation
+    func syncToCloudKit(_ item: QuickReply) async {
+        let record = CKRecord(recordType: "QuickReply", recordID: CKRecord.ID(recordName: item.id.uuidString))
+        record["title"] = item.title
+        record["message"] = item.message
+        record["isActive"] = item.isActive
+        record["dateCreated"] = item.dateCreated
+        
+        do {
+            try await cloudKitHelper.save(record, for: item)
+        } catch {
+            print("❌ Failed to sync quick reply to CloudKit: \(error.localizedDescription)")
+        }
+    }
+    
+    func deleteFromCloudKit(_ item: QuickReply) async {
+        let recordID = CKRecord.ID(recordName: item.id.uuidString)
+        do {
+            try await cloudKitHelper.delete(recordID: recordID, for: QuickReply.self)
+        } catch {
+            print("❌ Failed to delete quick reply from CloudKit: \(error.localizedDescription)")
+        }
+    }
+    
+    func loadFromCloudKit() async {
+        do {
+            let records = try await cloudKitHelper.fetchRecords(ofType: "QuickReply")
+            
+            await MainActor.run {
+                for (_, result) in records {
+                    switch result {
+                    case .success(let record):
+                        // Check if quick reply already exists locally
+                        let quickReplyId = UUID(uuidString: record.recordID.recordName) ?? UUID()
+                        if !quickReplies.contains(where: { $0.id == quickReplyId }) {
+                            let quickReply = QuickReply(
+                                title: record["title"] as? String ?? "",
+                                message: record["message"] as? String ?? "",
+                                isActive: record["isActive"] as? Bool ?? true
+                            )
+                            quickReply.id = quickReplyId
+                            quickReply.dateCreated = record["dateCreated"] as? Date ?? Date()
+                            
+                            // Add to local storage
+                            if let context = modelContext {
+                                context.insert(quickReply)
+                                do {
+                                    try context.save()
+                                } catch {
+                                    print("❌ Failed to save quick reply from CloudKit: \(error)")
+                                }
+                            }
+                        }
+                        
+                    case .failure(let error):
+                        print("❌ Failed to download quick reply: \(error.localizedDescription)")
+                    }
+                }
+                loadQuickReplies() // Refresh the quick replies array
+                syncToSharedContainer() // Update shared container for keyboard extension
+            }
+        } catch {
+            print("❌ Failed to load quick replies from CloudKit: \(error.localizedDescription)")
+        }
+    }
+    
+    func syncAllToCloudKit() async {
+        for quickReply in quickReplies {
+            await syncToCloudKit(quickReply)
+        }
     }
 }
 

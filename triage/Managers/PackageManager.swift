@@ -8,21 +8,27 @@
 import Foundation
 import SwiftData
 import Combine
+import CloudKit
 
 @Observable
-class PackageManager {
+class PackageManager: CloudKitSyncable {
+    typealias ModelType = Package
+    
     static let shared = PackageManager()
     
     var packages: [Package] = []
     private var modelContext: ModelContext?
+    private let cloudKitHelper = CloudKitHelper.shared
     
     private init() {
-        loadPackages()
     }
     
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
-        loadPackages()
+        Task {
+            await loadFromCloudKit()
+            loadPackages() // Load any additional local data
+        }
     }
     
     // MARK: - CRUD Operations
@@ -32,11 +38,21 @@ class PackageManager {
         context.insert(package)
         saveContext()
         loadPackages()
+        
+        // Sync to CloudKit
+        Task {
+            await syncToCloudKit(package)
+        }
     }
     
     func updatePackage(_ package: Package) {
         saveContext()
         loadPackages()
+        
+        // Sync to CloudKit
+        Task {
+            await syncToCloudKit(package)
+        }
     }
     
     func deletePackage(_ package: Package) {
@@ -45,17 +61,31 @@ class PackageManager {
         context.delete(package)
         saveContext()
         loadPackages()
+        
+        // Delete from CloudKit
+        Task {
+            await deleteFromCloudKit(package)
+        }
     }
     
     func deletePackages(at indexSet: IndexSet) {
         guard let context = modelContext else { return }
         
+        var packagesToDelete: [Package] = []
         for index in indexSet {
             let package = packages[index]
+            packagesToDelete.append(package)
             context.delete(package)
         }
         saveContext()
         loadPackages()
+        
+        // Delete from CloudKit
+        Task {
+            for package in packagesToDelete {
+                await deleteFromCloudKit(package)
+            }
+        }
     }
     
     // MARK: - Data Loading
@@ -116,6 +146,90 @@ class PackageManager {
     func packagesForPatient(_ patient: Patient) -> [Package] {
         return packages.filter { package in
             package.patients?.contains { $0.id == patient.id } == true
+        }
+    }
+    
+    // MARK: - CloudKit Sync Implementation
+    func syncToCloudKit(_ item: Package) async {
+        let record = CKRecord(recordType: "Package", recordID: CKRecord.ID(recordName: item.id.uuidString))
+        record["name"] = item.name
+        record["descriptionText"] = item.descriptionText
+        
+        // Reference to department
+        if let department = item.department {
+            let departmentRef = CKRecord.Reference(recordID: CKRecord.ID(recordName: department.id.uuidString), action: .deleteSelf)
+            record["department"] = departmentRef
+        }
+        
+        do {
+            try await cloudKitHelper.save(record, for: item)
+        } catch {
+            print("❌ Failed to sync package to CloudKit: \(error.localizedDescription)")
+        }
+    }
+    
+    func deleteFromCloudKit(_ item: Package) async {
+        let recordID = CKRecord.ID(recordName: item.id.uuidString)
+        do {
+            try await cloudKitHelper.delete(recordID: recordID, for: Package.self)
+        } catch {
+            print("❌ Failed to delete package from CloudKit: \(error.localizedDescription)")
+        }
+    }
+    
+    func loadFromCloudKit() async {
+        do {
+            let records = try await cloudKitHelper.fetchRecords(ofType: "Package")
+            
+            await MainActor.run {
+                for (_, result) in records {
+                    switch result {
+                    case .success(let record):
+                        // Check if package already exists locally
+                        let packageId = UUID(uuidString: record.recordID.recordName) ?? UUID()
+                        if !packages.contains(where: { $0.id == packageId }) {
+                            
+                            // Find the department
+                            var department: Department?
+                            if let departmentRef = record["department"] as? CKRecord.Reference,
+                               let departmentId = UUID(uuidString: departmentRef.recordID.recordName) {
+                                department = DepartmentManager.shared.departments.first { $0.id == departmentId }
+                            }
+                            
+                            if let department = department {
+                                let package = Package(
+                                    id: packageId,
+                                    name: record["name"] as? String ?? "",
+                                    department: department,
+                                    descriptionText: record["descriptionText"] as? String
+                                )
+                                
+                                // Add to local storage
+                                if let context = modelContext {
+                                    context.insert(package)
+                                    do {
+                                        try context.save()
+                                    } catch {
+                                        print("❌ Failed to save package from CloudKit: \(error)")
+                                    }
+                                }
+                            }
+                        }
+                        
+                    case .failure(let error):
+                        print("❌ Failed to download package: \(error.localizedDescription)")
+                    }
+                }
+                loadPackages() // Refresh the packages array
+            }
+        } catch {
+            print("❌ Failed to load packages from CloudKit: \(error.localizedDescription)")
+        }
+    }
+    
+    func syncAllToCloudKit() async {
+        for package in packages {
+            await syncToCloudKit(package)
         }
     }
 }
