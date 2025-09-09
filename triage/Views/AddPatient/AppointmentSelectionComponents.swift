@@ -82,7 +82,7 @@ struct AppointmentSelectionSheet: View {
                         Text(appointmentType == .doctor ? "Doctor's Appointment" : "Medical Service Unit")
                             .font(.subheadline)
                             .bold()
-                            .foregroundColor(Color(hex: "#0F0E46"))
+                            .foregroundColor(Color("TextPrimary"))
                         
                         HStack {
                             HStack {
@@ -114,7 +114,7 @@ struct AppointmentSelectionSheet: View {
                                     Image(systemName: "chevron.down")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(Color(hex: "#0F0E46"))
+                                .foregroundColor(Color("TextPrimary"))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
                                 .background(Color(.systemGray6))
@@ -127,13 +127,13 @@ struct AppointmentSelectionSheet: View {
                                 Text(package.department.name)
                                     .font(.subheadline)
                                     .bold()
-                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                    .foregroundColor(Color("TextPrimary"))
 
                                 Text(" - ")
 
                                 Text(package.name)
                                     .font(.subheadline)
-                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                    .foregroundColor(Color("TextPrimary"))
 
                                 Spacer()
 
@@ -143,15 +143,15 @@ struct AppointmentSelectionSheet: View {
                                     isTextFieldFocused = true
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(Color(hex: "#0F0E46"))
+                                        .foregroundColor(Color("TextPrimary"))
                                 }
                             }
                             .padding(10)
-                            .background(Color(hex: "#E2E2E9"))
+                            .background(Color("ButtonSecondary"))
                             .cornerRadius(6)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color(hex: "#0F0E46"), lineWidth: 1)
+                                    .stroke(Color("TextPrimary"), lineWidth: 1)
                             )
                         }
                     }
@@ -160,42 +160,42 @@ struct AppointmentSelectionSheet: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("DATE".uppercased())
                             .font(.caption2)
-                            .foregroundColor(selectedPackage != nil ? Color(hex: "#0F0E46") : .gray)
+                            .foregroundColor(selectedPackage != nil ? Color("TextPrimary") : .gray)
                         
-//                        DatePicker(
-//                            "",
-//                            selection: $selectedDate,
-//                            in: Date()...,
-//                            displayedComponents: .date
-//                        )
-//                        .labelsHidden()
-//                        .datePickerStyle(.compact)
-//                        .tint(Color(hex: "#0F0E46")) // changes selected date color
-//                        .disabled(selectedPackage == nil || shouldShowPackageList)
-//                        .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
-                        
-                        ZStack {
-                            DatePicker(
-                                "",
-                                selection: $selectedDate,
-                                in: Date()...,
-                                displayedComponents: .date
-                            )
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .tint(Color(hex: "#0F0E46"))
-                            .opacity(0.02)
-
-                            // Custom styled date
-                            Text(selectedDate, formatter: dateFormatter)
-                                .font(.subheadline)
-                                .bold()
-                                .foregroundColor(Color(hex: "#0F0E46"))
-                                .allowsHitTesting(false) // don’t block taps
-                        }
-                        .background(Color(hex: "D9D9D9").opacity(0.2))
+                        DatePicker(
+                            "",
+                            selection: $selectedDate,
+                            in: Date()...,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .tint(Color("TextPrimary")) // changes selected date color
                         .disabled(selectedPackage == nil || shouldShowPackageList)
                         .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
+                        
+//                        ZStack {
+//                            DatePicker(
+//                                "",
+//                                selection: $selectedDate,
+//                                in: Date()...,
+//                                displayedComponents: .date
+//                            )
+//                            .labelsHidden()
+//                            .datePickerStyle(.compact)
+//                            .tint(Color("TextPrimary"))
+//                            .opacity(0.02)
+//
+//                            // Custom styled date
+//                            Text(selectedDate, formatter: dateFormatter)
+//                                .font(.subheadline)
+//                                .bold()
+//                                .foregroundColor(Color("TextPrimary"))
+//                                .allowsHitTesting(false) // don’t block taps
+//                        }
+//                        .background(Color(hex: "D9D9D9").opacity(0.2))
+//                        .disabled(selectedPackage == nil || shouldShowPackageList)
+//                        .opacity((selectedPackage == nil || shouldShowPackageList) ? 0.6 : 1.0)
 
                     }
                     
@@ -203,7 +203,7 @@ struct AppointmentSelectionSheet: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("TIME & AVAILABLE SLOT".uppercased())
                             .font(.caption2)
-                            .foregroundColor(selectedPackage != nil ? Color(hex: "#0F0E46") : .gray)
+                            .foregroundColor(selectedPackage != nil ? Color("TextPrimary") : .gray)
                         
                         Button {
                             if selectedPackage != nil && !shouldShowPackageList {
@@ -215,13 +215,13 @@ struct AppointmentSelectionSheet: View {
                                     Text(timeString(selected))
                                         .font(.subheadline)
                                         .bold()
-                                        .foregroundColor(Color(hex: "#0F0E46"))
+                                        .foregroundColor(Color("TextPrimary"))
                                     Spacer()
                                     if appointmentType == .doctor {
                                         if (!isEditing) {
                                             Text(selected.availableSlots > 0 ? "Available" : "Unavailable")
                                                 .font(.footnote)
-                                                .foregroundColor(selected.availableSlots > 0 ? Color(hex: "#0F0E46") : .red)
+                                                .foregroundColor(selected.availableSlots > 0 ? Color("TextPrimary") : .red)
                                         }
                                     } else {
                                         if (!isEditing) {
@@ -229,7 +229,7 @@ struct AppointmentSelectionSheet: View {
                                                 ("\(selected.availableSlots) \(selected.availableSlots > 1 ? "Slots Available" : "Slot Available")")
                                             )
                                             .font(.footnote)
-                                            .foregroundColor(Color(hex: "#0F0E46"))
+                                            .foregroundColor(Color("TextPrimary"))
                                         }
                                     }
                                 } else {
@@ -350,7 +350,7 @@ struct AppointmentSelectionSheet: View {
                              : (appointmentType == .doctor ? "New Doctor Appointment" : "New Service Appointment")
                         )
                         .font(.headline)
-                        .foregroundColor(Color(hex: "#0F0E46"))
+                        .foregroundColor(Color("TextPrimary"))
                     }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -454,12 +454,12 @@ struct PackageListRow: View {
                 Text(package.department.name)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
                 Text(" - ")
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
                 Text(package.name)
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -522,7 +522,7 @@ struct TimeSlotPickerModal: View {
                 ToolbarItem(placement: .principal) {
                         Text("Pick a Time Slot")
                         .font(.headline)
-                        .foregroundColor(Color(hex: "#0F0E46"))
+                        .foregroundColor(Color("TextPrimary"))
                     }
                 
                 ToolbarItem(placement: .confirmationAction) {

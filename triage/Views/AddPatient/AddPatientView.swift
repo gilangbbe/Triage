@@ -103,10 +103,10 @@ struct StepIndicatorView: View {
         VStack(alignment: .center) {
             Text("STEP \(currentStep.rawValue) OF 3")
                 .font(.caption)
-                .foregroundColor(.black)
+                .foregroundColor(Color("TextSecondary"))
             Text("New Patient")
                 .font(.headline)
-                .foregroundColor(Color(hex: "#0F0E46"))
+                .foregroundColor(Color("TextPrimary"))
         }
     }
 }
