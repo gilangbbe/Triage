@@ -50,6 +50,7 @@ struct triageApp: App {
                 .environment(HistoryManager.shared)
                 .environment(DepartmentManager.shared)
                 .environment(CloudKitManager.shared)
+                .environment(DataRefreshManager.shared)
                 .onAppear {
                     // Set model context for managers
                     let context = modelContainer.mainContext

@@ -67,10 +67,6 @@ struct SettingsView: View {
                                 isSelected: selectedSection == .quickReplies
                             )
                         }
-                        
-                        Section("Server Sync") {
-                            CloudKitStatusView()
-                        }
                     }
                     .scrollContentBackground(.hidden)
                 }

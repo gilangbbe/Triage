@@ -15,6 +15,7 @@ struct ContentView: View {
     @Environment(HistoryManager.self) private var historyManager
     @Environment(DepartmentManager.self) private var departmentManager
     @Environment(CloudKitManager.self) private var cloudKitManager
+    @Environment(DataRefreshManager.self) private var refreshManager
     
     @State private var patientListViewModel: PatientListViewModel?
     @State private var appointmentListViewModel: AppointmentListViewModel?
@@ -34,22 +35,6 @@ struct ContentView: View {
                     }
             }
             
-            if let appointmentListViewModel = appointmentListViewModel {
-                AppointmentListView()
-                    .environment(appointmentListViewModel)
-                    .tabItem {
-                        Image(systemName: "calendar")
-                        Text("Appointments")
-                    }
-            }
-            
-            SettingsView()
-                .environment(cloudKitManager)
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
-                }
-            
             if let calendarViewModel = calendarViewModel,
                let appointmentListViewModel = appointmentListViewModel {
                 CalendarView()
@@ -61,10 +46,11 @@ struct ContentView: View {
                     }
             }
             
-            CloudKitDebugView(cloudKitManager: cloudKitManager)
+            SettingsView()
+                .environment(cloudKitManager)
                 .tabItem {
-                    Image(systemName: "icloud")
-                    Text("CloudKit")
+                    Image(systemName: "gear")
+                    Text("Settings")
                 }
         }
         .onAppear {
@@ -96,4 +82,5 @@ struct ContentView: View {
         .environment(HistoryManager.shared)
         .environment(DepartmentManager.shared)
         .environment(CloudKitManager.shared)
+        .environment(DataRefreshManager.shared)
 }

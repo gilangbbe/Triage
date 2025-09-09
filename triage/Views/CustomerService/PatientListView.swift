@@ -16,6 +16,7 @@ struct PatientListView: View {
     @Environment(PatientListViewModel.self) private var patientViewModel
     @Environment(HistoryManager.self) private var historyManager
     @Environment(HistoryViewModel.self) private var historyViewModel
+    @Environment(DataRefreshManager.self) private var refreshManager
     
     // Computed property to get patients from viewModel
     private var patients: [Patient] {
@@ -51,6 +52,9 @@ struct PatientListView: View {
                                     patientViewModel.deletePatient(patient)
                                 }
                             }
+                        }
+                        .refreshable {
+                            await refreshManager.refreshAllData()
                         }
                         .scrollContentBackground(.hidden)
                         .padding(.trailing, 16)
