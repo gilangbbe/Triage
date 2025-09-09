@@ -139,6 +139,15 @@ class AddPatientViewModel {
         }
     }
     
+    func removeAppointmentSelection(by id: UUID) {
+        selectedAppointments.removeAll(where: { $0.id == id })
+    }
+
+    func removeDoctorAppointmentSelection(by id: UUID) {
+        selectedDoctorAppointments.removeAll(where: { $0.id == id })
+    }
+
+    
     private func applyParsedData(_ data: ParsedPatientData) {
         nationalId = data.nationalId
         fullName = data.fullName

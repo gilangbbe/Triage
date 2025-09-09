@@ -32,6 +32,7 @@ struct AppointmentSelectionSheet: View {
     let appointmentType: AppointmentType
     let onSave: (Package, Date, TimeSlotOption) -> Void
     let onCancel: () -> Void
+    let onDelete: () -> Void
     
     var canSave: Bool {
         selectedPackage != nil && selectedTimeSlot != nil
@@ -202,12 +203,34 @@ struct AppointmentSelectionSheet: View {
                         .sheet(isPresented: $showTimePicker) {
                             TimeSlotPickerModal(
                                 timeSlots: viewModel.availableTimeSlots,
-                                selectedTimeSlot: $selectedTimeSlot, // <-- binding now
+                                selectedTimeSlot: $selectedTimeSlot,
                                 isPresented: $showTimePicker,
                                 appointmentType: appointmentType
-                            )
+                            ).presentationDetents([.height(345)])
                         }
 
+                    }
+                    
+                    // Availability info
+                    if isEditing {
+                        HStack {
+                            Spacer()
+                            Button(role: .destructive) {
+                                onDelete()
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "trash")
+                                    Text("Delete")
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(Color(.systemRed).opacity(0.2))
+                                .foregroundColor(.red)
+                                .cornerRadius(6)
+                            }
+                        }
+                        .padding(.top, 12)
                     }
                     
                     Spacer()
@@ -386,7 +409,7 @@ struct PackageListRow: View {
 // MARK: - Time Slot Picker Modal
 struct TimeSlotPickerModal: View {
     let timeSlots: [TimeSlotOption]
-    @Binding var selectedTimeSlot: TimeSlotOption?   // <-- use binding now
+    @Binding var selectedTimeSlot: TimeSlotOption?
     @Binding var isPresented: Bool
     let appointmentType: AppointmentType
     
@@ -427,15 +450,13 @@ struct TimeSlotPickerModal: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        print("DEBUG: Modal cancelled")
                         isPresented = false
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Confirm") {
                         if selectedIndex < timeSlots.count && timeSlots[selectedIndex].availableSlots > 0 {
-                            selectedTimeSlot = timeSlots[selectedIndex] // <-- update binding
-                            print("DEBUG: Modal Confirm pressed, chosen slot:", selectedTimeSlot as Any)
+                            selectedTimeSlot = timeSlots[selectedIndex]
                         }
                         isPresented = false
                     }
@@ -443,7 +464,6 @@ struct TimeSlotPickerModal: View {
                 }
             }
         }
-        .presentationDetents([.height(400)])
         .onAppear {
             if let current = selectedTimeSlot,
                let idx = timeSlots.firstIndex(where: {
@@ -451,10 +471,8 @@ struct TimeSlotPickerModal: View {
                    $0.endTime == current.endTime
                }) {
                 selectedIndex = idx
-                print("DEBUG: Modal onAppear: prefilled index = \(idx), slot = \(current)")
             } else {
                 selectedIndex = 0
-                print("DEBUG: Modal onAppear: no prefilled slot, defaulting to index 0")
             }
         }
     }

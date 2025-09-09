@@ -92,16 +92,6 @@ struct Step3AppointmentsView: View {
                                     editingAppointment = appointment
                                     showAppointmentForm = true
                                 },
-                                onDelete: {
-                                    if isStandaloneMode {
-                                        let appointmentToDelete = standalonePackageAppointments[index]
-                                        standalonePackageAppointments.remove(at: index)
-                                        // Also delete from patient's actual appointments
-                                        deleteFromPatientAppointments(appointmentToDelete)
-                                    } else {
-                                        viewModel.removeAppointmentSelection(at: index)
-                                    }
-                                }
                             )
                             .padding(.bottom, 6)
                         }
@@ -135,16 +125,6 @@ struct Step3AppointmentsView: View {
                                     editingDoctorAppointment = appointment
                                     showDoctorAppointmentForm = true
                                 },
-                                onDelete: {
-                                    if isStandaloneMode {
-                                        let appointmentToDelete = standaloneDoctorAppointments[index]
-                                        standaloneDoctorAppointments.remove(at: index)
-                                        // Also delete from patient's actual appointments
-                                        deleteFromPatientAppointments(appointmentToDelete)
-                                    } else {
-                                        viewModel.removeDoctorAppointmentSelection(at: index)
-                                    }
-                                }
                             )
                             .padding(.bottom, 6)
                         }
@@ -207,6 +187,17 @@ struct Step3AppointmentsView: View {
                 },
                 onCancel: {
                     editingAppointment = nil
+                },
+                onDelete: {
+                    guard let editing = editingAppointment else { return }
+                    if isStandaloneMode {
+                        standalonePackageAppointments.removeAll(where: { $0.id == editing.id })
+                        deleteFromPatientAppointments(editing)
+                    } else {
+                        viewModel.removeAppointmentSelection(by: editing.id)
+                    }
+                    editingAppointment = nil
+                    showAppointmentForm = false
                 }
             )
         }
@@ -255,6 +246,17 @@ struct Step3AppointmentsView: View {
                 },
                 onCancel: {
                     editingDoctorAppointment = nil
+                },
+                onDelete: {
+                    guard let editing = editingDoctorAppointment else { return }
+                    if isStandaloneMode {
+                        standaloneDoctorAppointments.removeAll(where: { $0.id == editing.id })
+                        deleteFromPatientAppointments(editing)
+                    } else {
+                        viewModel.removeDoctorAppointmentSelection(by: editing.id)
+                    }
+                    editingDoctorAppointment = nil
+                    showDoctorAppointmentForm = false
                 }
             )
         }
@@ -341,7 +343,6 @@ struct AddRowButton: View {
 struct ModernAppointmentCard: View {
     let appointment: AppointmentSelection
     let onTap: () -> Void
-    let onDelete: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -375,16 +376,6 @@ struct ModernAppointmentCard: View {
                     .padding(.horizontal, 6)
                     .background(Color(hex: "#FFE4E4"))
                     .cornerRadius(3)
-            }
-            
-            // Availability info
-            HStack {
-                Spacer()
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
             }
         }
         .padding()
