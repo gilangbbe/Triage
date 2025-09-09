@@ -334,10 +334,11 @@ class AddPatientViewModel {
 
             // Count existing *saved* appointments in appointmentManager
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                let sameDay = calendar.isDate(appointment.timeSlot.date, inSameDayAs: date)
-                let appointmentHour = calendar.component(.hour, from: appointment.timeSlot.startTime)
+                guard let timeSlot = appointment.timeSlot else { return false }
+                let sameDay = calendar.isDate(timeSlot.date, inSameDayAs: date)
+                let appointmentHour = calendar.component(.hour, from: timeSlot.startTime)
                 let sameHour = appointmentHour == hour
-                let sameDepartment = appointment.package?.department.id == department.id
+                let sameDepartment = appointment.package?.department?.id == department.id
                 return sameDay && sameHour && sameDepartment
             }
 
@@ -346,7 +347,7 @@ class AddPatientViewModel {
                 let sameDay = calendar.isDate(selection.date, inSameDayAs: date)
                 let selectionHour = calendar.component(.hour, from: selection.timeSlot.startTime)
                 let sameHour = selectionHour == hour
-                let sameDepartment = selection.package?.department.id == department.id
+                let sameDepartment = selection.package?.department?.id == department.id
                 return sameDay && sameHour && sameDepartment
             }
 
@@ -382,8 +383,9 @@ class AddPatientViewModel {
 
             // Count existing saved doctor appointments
             let existingAppointments = appointmentManager.appointments.filter { appointment in
-                let sameDate = calendar.isDate(appointment.timeSlot.date, inSameDayAs: date)
-                let sameHour = calendar.component(.hour, from: appointment.timeSlot.startTime) == hour
+                guard let timeSlot = appointment.timeSlot else { return false }
+                let sameDate = calendar.isDate(timeSlot.date, inSameDayAs: date)
+                let sameHour = calendar.component(.hour, from: timeSlot.startTime) == hour
                 let samePackage = appointment.package?.id == package.id
                 return sameDate && sameHour && samePackage
             }
@@ -455,7 +457,7 @@ struct AppointmentSelection: Identifiable, Equatable {
         
         if let pkg = package {
             let slotText = "\(formatter.string(from: timeSlot.startTime))"
-            if pkg.department.name == "Doctor" {
+            if pkg.department?.name == "Doctor" {
                 return "\(pkg.name) – \(slotText)"
             } else {
                 let plural = timeSlot.availableSlots > 1 ? "slots" : "slot"
