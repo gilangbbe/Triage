@@ -424,21 +424,33 @@ class AddPatientViewModel {
 }
 
 // MARK: - Supporting Models
-struct AppointmentSelection: Identifiable {
-    let id = UUID()
+struct AppointmentSelection: Identifiable, Equatable {
+    let id: UUID
     let package: Package?
     let date: Date
     let timeSlot: TimeSlotOption
     
+    init(id: UUID = UUID(), package: Package?, date: Date, timeSlot: TimeSlotOption) {
+        self.id = id
+        self.package = package
+        self.date = date
+        self.timeSlot = timeSlot
+    }
+    
     var displayText: String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        let dateString = formatter.string(from: date)
-        
         formatter.dateFormat = "HH:mm"
-        let timeString = "\(formatter.string(from: timeSlot.startTime)) - \(formatter.string(from: timeSlot.endTime))"
         
-        return "\(package?.name ?? "Unknown Package") on \(dateString) at \(timeString)"
+        if let pkg = package {
+            let slotText = "\(formatter.string(from: timeSlot.startTime))"
+            if pkg.department.name == "Doctor" {
+                return "\(pkg.name) – \(slotText)"
+            } else {
+                let plural = timeSlot.availableSlots > 1 ? "slots" : "slot"
+                return "\(pkg.name) – \(timeSlot.availableSlots) \(plural) left at \(slotText)"
+            }
+        }
+        return ""
     }
 }
 

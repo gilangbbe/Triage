@@ -167,8 +167,27 @@ struct Step3AppointmentsView: View {
                 editingAppointment: editingAppointment,
                 appointmentType: .package,
                 onSave: { package, date, timeSlot in
-                    if editingAppointment != nil {
+                    if let editing = editingAppointment {
                         // Handle editing logic here
+                        if isStandaloneMode {
+                            if let index = standalonePackageAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                standalonePackageAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        } else {
+                            if let index = viewModel.selectedAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                viewModel.selectedAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        }
                         editingAppointment = nil
                     } else {
                         if isStandaloneMode {
@@ -197,8 +216,26 @@ struct Step3AppointmentsView: View {
                 editingAppointment: editingDoctorAppointment,
                 appointmentType: .doctor,
                 onSave: { package, date, timeSlot in
-                    if editingDoctorAppointment != nil {
-                        // Handle editing logic here
+                    if let editing = editingDoctorAppointment {
+                        if isStandaloneMode {
+                            if let index = standaloneDoctorAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                standaloneDoctorAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        } else {
+                            if let index = viewModel.selectedDoctorAppointments.firstIndex(where: { $0.id == editing.id }) {
+                                viewModel.selectedDoctorAppointments[index] = AppointmentSelection(
+                                    id: editing.id,
+                                    package: package,
+                                    date: date,
+                                    timeSlot: timeSlot
+                                )
+                            }
+                        }
                         editingDoctorAppointment = nil
                     } else {
                         if isStandaloneMode {

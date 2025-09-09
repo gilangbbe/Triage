@@ -114,7 +114,7 @@ class AddAppointmentViewModel {
 
 // MARK: - Helper Models
 struct TimeSlotOption: Identifiable, Hashable {
-    let id = UUID()
+    var id: String { "\(startTime.timeIntervalSince1970)-\(endTime.timeIntervalSince1970)" }
     let startTime: Date
     let endTime: Date
     var availableSlots: Int
