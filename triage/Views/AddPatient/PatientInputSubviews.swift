@@ -18,17 +18,17 @@ struct PasteTextView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(isStep1 ? "Please fill in the Patient’s details" : "Pasted Data")
                 .font(.headline)
-                .foregroundColor(Color(hex: "#0F0E46").opacity(isStep1 ? 1 : 0.5))
+                .foregroundColor(Color("TextPrimary").opacity(isStep1 ? 1 : 0.5))
             
             ZStack(alignment: .topLeading) {
                 CustomTextEditor(text: $rawText)
                     .disabled(!isStep1)
-                    .background(isStep1 ? Color(hex: "#F0F0F7") : Color(hex: "#F9F9F9"))
+                    .background(isStep1 ? Color("BackgroundPrimary") : Color("BackgroundPrimary"))
                     .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .strokeBorder(
-                                isStep1 ? Color(hex: "#F0F0F7") : Color.black.opacity(0.2),
+                                isStep1 ? Color("BackgroundSecondary") : Color.black.opacity(0.2),
                                 style: isStep1
                                     ? StrokeStyle(lineWidth: 1)
                                     : StrokeStyle(lineWidth: 1, dash: [4])
@@ -53,7 +53,7 @@ struct PasteTextView: View {
                     Alamat lengkap:
                     Jenis kelamin (L/P):
                     """)
-                    .foregroundColor(Color(hex: "#0F0E46").opacity(isStep1 ? 0.4 : 0.2))
+                    .foregroundColor(Color("TextPrimary").opacity(isStep1 ? 0.4 : 0.2))
                     .font(.system(size: 16))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 10)
@@ -105,19 +105,19 @@ struct UploadIDCardView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(isStep1 ? "Please attach Patient ID Card here" : "Uploaded Data")
                 .font(.headline)
-                .foregroundColor(Color(hex: "#0F0E46").opacity(isStep1 ? 1 : 0.5))
+                .foregroundColor(Color("TextPrimary").opacity(isStep1 ? 1 : 0.5))
             
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isStep1 ? Color(hex: "#0F0E46") : Color.black.opacity(0.2),
+                    .strokeBorder(isStep1 ? Color("TextPrimary") : Color.black.opacity(0.2),
                                   style: StrokeStyle(lineWidth: 1, dash: [4]))
-                    .background(isStep1 ? Color(hex: "#F0F0F7").opacity(0.3)
-                                        : Color(hex: "#F9F9F9").opacity(0.5))
+                    .background(isStep1 ? Color("BackgroundSecondary")
+                                        : Color("BackgroundPrimary").opacity(0.5))
                 
                 VStack(spacing: 12) {
                     if uploading {
                         ProgressView("Parsing ID Card...")
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "#0F0E46")))
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color("TextPrimary")))
                             .font(.subheadline)
                     } else if let image = idCardImage {
                         Image(uiImage: image)
@@ -128,7 +128,7 @@ struct UploadIDCardView: View {
                     } else {
                         Text("Choose an image or drag/drop it here")
                             .font(.subheadline)
-                            .foregroundColor(isStep1 ? Color(hex: "#0F0E46") : .secondary)
+                            .foregroundColor(isStep1 ? Color("TextPrimary") : .secondary)
                         Text("JPEG, PNG up to 10 MB")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -144,8 +144,8 @@ struct UploadIDCardView: View {
                                 .font(.subheadline.bold())
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 14)
-                                .background(Color(hex: "#0F0E46"))
-                                .foregroundColor(.white)
+                                .background(Color("TextPrimary"))
+                                .foregroundColor(Color("ButtonPrimary"))
                                 .cornerRadius(6)
                             }
                             
@@ -161,8 +161,8 @@ struct UploadIDCardView: View {
                                     .font(.subheadline.bold())
                                     .padding(.vertical, 8)
                                     .padding(.horizontal, 14)
-                                    .background(Color(hex: "#F0F0F7"))
-                                    .foregroundColor(Color(hex: "#0F0E46"))
+                                    .background(Color("BackgroundSecondary"))
+                                    .foregroundColor(Color("TextPrimary"))
                                     .cornerRadius(6)
                                 }
                             }

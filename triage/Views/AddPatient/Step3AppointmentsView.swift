@@ -68,17 +68,17 @@ struct Step3AppointmentsView: View {
             Text(isStandaloneMode ? "Add Appointment" : "Patient Appointment")
                 .font(.headline)
                 .padding(.horizontal)
-                .foregroundColor(Color(hex: "#0F0E46"))
+                .foregroundColor(Color("TextPrimary"))
             
             // Two Columns Layout - similar to old design
             HStack(alignment: .top, spacing: 16) {
                 
                 // MARK: - Medical Packages Column
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Medical Service Packages")
+                    Text("Medical Service Unit")
                         .font(.subheadline)
                         .bold()
-                        .foregroundColor(Color(hex: "#0F0E46"))
+                        .foregroundColor(Color("TextPrimary"))
                     
                     AddRowButton(title: "+ Add Package") {
                         showAppointmentForm = true
@@ -111,7 +111,7 @@ struct Step3AppointmentsView: View {
                     Text("Doctor's Appointment")
                         .font(.subheadline)
                         .bold()
-                        .foregroundColor(Color(hex: "#0F0E46"))
+                        .foregroundColor(Color("TextPrimary"))
                     
                     AddRowButton(title: "+ Add Doctor") {
                         showDoctorAppointmentForm = true
@@ -329,11 +329,11 @@ struct AddRowButton: View {
                 Spacer()
                 Text(title)
                     .font(.footnote)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
                     .padding(.vertical, 5)
                 Spacer()
             }
-            .background(Color(UIColor.systemGray5))
+            .background(Color("ButtonSecondary"))
             .cornerRadius(6)
             .padding(.vertical, 6)
         }
@@ -354,14 +354,14 @@ struct ModernAppointmentCard: View {
                 Text(dateString(appointment.date))
                     .font(.headline)
                     .bold()
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
                 Spacer()
                 // Package Name
                 let packageName = appointment.package?.name ?? "Unknown Package"
                 let displayName = appointment.package?.department?.name == "Doctor" ? "Dr. \(packageName)" : packageName
                 Text(displayName)
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
             }
             
             HStack {
@@ -369,12 +369,12 @@ struct ModernAppointmentCard: View {
                 Text(timeString(appointment.date, timeSlot: appointment.timeSlot))
                     .font(.headline)
                     .bold()
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
                 Spacer()
                 // Department tag - similar to old design
                 Text(appointment.package?.department?.name ?? "Unknown")
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color(hex: "0F0E46"))
                     .padding(.vertical, 3)
                     .padding(.horizontal, 6)
                     .background(Color(hex: "#FFE4E4"))
@@ -383,7 +383,7 @@ struct ModernAppointmentCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity)
-        .background(Color(.systemGray6))
+        .background(Color("CardBackground"))
         .cornerRadius(8)
         .onTapGesture {
             onTap()

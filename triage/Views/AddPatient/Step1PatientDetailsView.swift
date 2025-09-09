@@ -24,7 +24,7 @@ struct Step1PatientDetailsView: View {
                 
                 Text("or")
                     .font(.headline)
-                    .foregroundColor(Color(hex: "#0F0E46"))
+                    .foregroundColor(Color("TextPrimary"))
             }
             
             // --- Upload Mode ---
