@@ -1,0 +1,103 @@
+//
+//  CalendarSideBar.swift
+//  triage
+//
+//  Created by Hayya U on 01/09/25.
+//
+import SwiftUI
+
+struct SidebarPanel: View {
+    @Binding var selectedDate: Date
+    @Binding var showLog: Bool
+    @Binding var logEntries: [ReminderEntry]
+
+    /// Plain array of SwiftData @Model objects (reference semantics)
+    let appointments: [Appointment]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Schedule")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
+                    Spacer()
+                    Button {
+                        logEntries = buildLog(from: appointments, asOf: selectedDate)
+                        withAnimation(.easeInOut(duration: 0.2)) { showLog = true }
+                    } label: {
+                        Label("Reminder Log", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                            .labelStyle(.iconOnly)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.top, 6)
+                }
+                .padding(.top, 16)
+                .padding(.horizontal, 20)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Today’s Schedule")
+                            .font(.headline)
+                        Spacer()
+                        if !todaysAppts.isEmpty {
+                            Text("\(todaysAppts.count)")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(.systemGray6))
+                                )
+                        }
+                    }
+
+                    DaySelector(date: $selectedDate)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 20)
+
+                VStack(spacing: 12) {
+                    ForEach(sortedReminders, id: \.persistentModelID) { a in
+                        ReminderCard(appt: a, style: .needToRemind)
+                    }
+                }
+
+                .padding(.horizontal, 16)
+
+                Spacer(minLength: 24)
+            }
+        }
+    }
+
+    // MARK: - Data helpers
+    private var todaysAppts: [Appointment] {
+        let cal = Calendar.current
+        return appointments.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: selectedDate) }
+    }
+
+    private var sortedReminders: [Appointment] {
+        todaysAppts.sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
+    }
+
+    // MARK: - Log builder
+    private func buildLog(from appts: [Appointment], asOf day: Date) -> [ReminderEntry] {
+        let cal = Calendar.current
+        let todays = appts.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: day) }
+
+        let sentBase = cal.date(byAdding: .day, value: -1, to: day) ?? day
+        let sentAt = cal.date(bySettingHour: 7, minute: 36, second: 0, of: sentBase) ?? sentBase
+
+        return todays.map { a in
+            ReminderEntry(
+                patientName: a.patient?.fullName ?? a.name,
+                apptKind: a.name,
+                apptDate: a.timeSlot.startTime,
+                sentAt: sentAt
+            )
+        }
+    }
+}

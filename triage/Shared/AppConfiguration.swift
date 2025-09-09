@@ -13,7 +13,7 @@ struct AppConfiguration {
     static let cloudKitContainerIdentifier = "iCloud.com.ada.triage"
     
     // MARK: - App Group Configuration
-    static let appGroupID = "group.com.ada.triage"
+    static let appGroupID = "group.com.ada.hayyaoe.triage"
     
     // MARK: - Shared Data Keys
     struct SharedDataKeys {
