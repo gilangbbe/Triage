@@ -31,8 +31,27 @@ class CloudKitHelper {
     // Generic method to save a record to CloudKit
     func save<T>(_ record: CKRecord, for item: T) async throws {
         do {
-            _ = try await database.save(record)
-            print("✅ Synced \(T.self): \(record.recordID.recordName)")
+            // Use modify operation which handles both insert and update
+            let modifyOperation = CKModifyRecordsOperation(recordsToSave: [record])
+            modifyOperation.savePolicy = .allKeys // Always update all fields
+            modifyOperation.qualityOfService = .userInitiated
+            
+            let (saveResults, _) = try await database.modifyRecords(
+                saving: [record],
+                deleting: [],
+                savePolicy: .allKeys,
+                atomically: false
+            )
+            
+            if let result = saveResults[record.recordID] {
+                switch result {
+                case .success(let savedRecord):
+                    print("✅ Synced \(T.self): \(savedRecord.recordID.recordName)")
+                case .failure(let error):
+                    print("❌ Failed to sync \(T.self): \(error.localizedDescription)")
+                    throw error
+                }
+            }
         } catch {
             print("❌ Failed to sync \(T.self): \(error.localizedDescription)")
             throw error
@@ -42,8 +61,22 @@ class CloudKitHelper {
     // Generic method to delete a record from CloudKit
     func delete<T>(recordID: CKRecord.ID, for type: T.Type) async throws {
         do {
-            _ = try await database.deleteRecord(withID: recordID)
-            print("✅ Deleted \(T.self): \(recordID.recordName)")
+            let (_, deleteResults) = try await database.modifyRecords(
+                saving: [],
+                deleting: [recordID],
+                savePolicy: .allKeys,
+                atomically: false
+            )
+            
+            if let result = deleteResults[recordID] {
+                switch result {
+                case .success():
+                    print("✅ Deleted \(T.self): \(recordID.recordName)")
+                case .failure(let error):
+                    print("❌ Failed to delete \(T.self): \(error.localizedDescription)")
+                    throw error
+                }
+            }
         } catch {
             print("❌ Failed to delete \(T.self): \(error.localizedDescription)")
             throw error

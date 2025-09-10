@@ -15,7 +15,7 @@ struct SegmentedControlFilterView: View {
             Picker("Select Service", selection: $selectedSegment) {
                 Text("MCU").tag(0)
                 Text("Radiology").tag(1)
-                Text("Laboratorium").tag(2)
+                Text("Laboratory").tag(2)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 18)
