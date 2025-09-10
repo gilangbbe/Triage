@@ -374,10 +374,10 @@ struct ModernAppointmentCard: View {
                 // Department tag - similar to old design
                 Text(appointment.package?.department?.name ?? "Unknown")
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "0F0E46"))
+                    .foregroundColor(Color("TagText"))
                     .padding(.vertical, 3)
                     .padding(.horizontal, 6)
-                    .background(Color(hex: "#FFE4E4"))
+                    .background(Color("TagBackground"))
                     .cornerRadius(3)
             }
         }

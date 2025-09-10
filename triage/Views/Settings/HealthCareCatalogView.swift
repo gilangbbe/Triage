@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// MARK: - Healthcare Catalog
 struct HealthCareCatalogView: View {
     @Environment(PackageManager.self) private var packageManager
     @Environment(DepartmentManager.self) private var departmentManager
@@ -17,7 +18,6 @@ struct HealthCareCatalogView: View {
     @State private var selectedDepartmentForPackage: Department? = nil
     @State private var editingDepartment: Department? = nil
     
-    // Computed property for sheet presentation
     private var showingAddPackage: Binding<Bool> {
         Binding(
             get: { selectedDepartmentForPackage != nil },
@@ -25,7 +25,6 @@ struct HealthCareCatalogView: View {
         )
     }
     
-    // Group packages by department
     private var groupedPackages: [String: [Package]] {
         let filteredPackages = searchText.isEmpty ? 
             packageManager.packages : 
@@ -35,98 +34,88 @@ struct HealthCareCatalogView: View {
             package.department?.name ?? "Unknown Department"
         }
     }
-    
-    // Get all departments (including those without packages)
     private var allDepartments: [Department] {
-        return departmentManager.departments.sorted { $0.name < $1.name }
+        departmentManager.departments.sorted { $0.name < $1.name }
     }
-    
-    // Department categories with their display names and colors
-    private let departmentConfig: [String: (displayName: String, color: Color)] = [
-        "Medical Check Up": ("MEDICAL CHECK UP", Color.blue.opacity(0.1)),
-        "Radiology": ("RADIOLOGY", Color.green.opacity(0.1)), 
-        "Laboratory": ("LABORATORY", Color.red.opacity(0.1))
-    ]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            
-            // Title + Search + Add Department
-            HStack {
-                Text("Healthcare Catalog & Department Management")
-                    .font(.headline)
-                    .foregroundColor(Color.accent)
-                
+            // Search + Add
+            HStack(spacing: 12) {
+                Text("Setting Up the Healthcare Catalog")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color("TextPrimary"))
                 Spacer()
-                
-                // Add Department Button
-                Button("+ Department") {
+                SearchField(text: $searchText, placeholder: "Search")
+                    .frame(width: 200)
+                Button {
                     showingAddDepartment = true
-                }
-                .foregroundColor(Color.accent)
-                .font(.subheadline)
-                
-                HStack {
-                    TextField("Search", text: $searchText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .frame(width: 200)
-                    
-                    Button(action: {
-                        // Search is automatic through searchText binding
-                    }) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                    }
+                } label: {
+                    Text("Add Department")
+                        .font(.footnote)
+                        .foregroundStyle(Color("TextPrimary"))
                 }
             }
             
             ScrollView {
                 VStack(spacing: 20) {
-                    // Display all departments (including empty ones)
-                    ForEach(allDepartments, id: \.id) { department in
-                        let packages = groupedPackages[department.name] ?? []
-                        let config = departmentConfig[department.name] ?? (department.name.uppercased(), Color.purple.opacity(0.1))
-                        
+                    ForEach(allDepartments, id: \.id) { dept in
+                        let packages = groupedPackages[dept.name] ?? []
                         DepartmentSectionView(
-                            department: department,
-                            displayTitle: config.displayName,
+                            department: dept,
+                            displayTitle: dept.name.uppercased(),
                             packages: packages,
-                            color: config.color,
-                            onAddPackage: {
-                                selectedDepartmentForPackage = department
-                            },
-                            onEditDepartment: {
-                                editingDepartment = department
-                            },
-                            onDeleteDepartment: {
-                                departmentManager.deleteDepartment(department)
-                            },
-                            onDeletePackage: { package in
-                                packageManager.deletePackage(package)
-                            }
+                            color: Color("BackgroundSettings"),
+                            onAddPackage: { selectedDepartmentForPackage = dept },
+                            onEditDepartment: { editingDepartment = dept },
+                            onDeleteDepartment: { departmentManager.deleteDepartment(dept) },
+                            onDeletePackage: { packageManager.deletePackage($0) }
                         )
                     }
                 }
             }
         }
-        .padding()
+        .padding([.top, .leading, .trailing], 16)
+        .background(Color(.systemBackground))
         .onAppear {
             packageManager.setModelContext(modelContext)
             departmentManager.setModelContext(modelContext)
         }
         .sheet(isPresented: showingAddPackage) {
-            if let department = selectedDepartmentForPackage {
-                AddPackageView(department: department)
+            if let dept = selectedDepartmentForPackage {
+                AddPackageView(department: dept)
             }
         }
-        .sheet(isPresented: $showingAddDepartment) {
-            AddDepartmentView()
-        }
-        .sheet(item: $editingDepartment) { department in
-            EditDepartmentView(department: department)
-        }
+        .sheet(isPresented: $showingAddDepartment) { AddDepartmentView() }
+        .sheet(item: $editingDepartment) { EditDepartmentView(department: $0) }
     }
 }
+
+// MARK: - SearchField
+struct SearchField: View {
+    @Binding var text: String
+    var placeholder: String = "Search"
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(Color(hex: "999999"))
+            
+            TextField(placeholder, text: $text)
+                .font(.subheadline)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color("SearchBackground"))
+        )
+    }
+}
+
 
 // MARK: - Edit Department View
 struct EditDepartmentView: View {
@@ -218,33 +207,18 @@ struct DepartmentSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(displayTitle)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.gray)
-                    
-                    Text("Max \(department.maxSlot ?? 3) slots/hour")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text(displayTitle)
+                    .font(.footnote)
+                    .foregroundColor(Color("TextPrimary").opacity(0.8))
                 
                 Spacer()
                 
                 HStack(spacing: 12) {
-                    if department.name == "Doctor" {
-                        Button("+ Doctor") {
-                            onAddPackage()
-                        }
-                        .foregroundColor(Color.accent)
-                        .font(.subheadline)
-                    } else {
-                        Button("+ Package") {
-                            onAddPackage()
-                        }
-                        .foregroundColor(Color.accent)
-                        .font(.subheadline)
+                    Button("Add") {
+                        onAddPackage()
                     }
+                    .foregroundColor(Color("TextPrimary"))
+                    .font(.subheadline)
                     
                     Menu {
                         Button("Edit Department") {
@@ -268,6 +242,7 @@ struct DepartmentSectionView: View {
                         .italic()
                         .padding(.vertical, 16)
                         .padding(.horizontal)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 } else {
                     ForEach(packages, id: \.id) { package in
                         PackageRowView(
@@ -332,6 +307,7 @@ struct SectionView: View {
                         .italic()
                         .padding(.vertical, 16)
                         .padding(.horizontal)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 } else {
                     ForEach(packages, id: \.id) { package in
                         PackageRowView(
@@ -380,6 +356,12 @@ struct PackageRowView: View {
                         .foregroundColor(.orange)
                         .padding(.top, 2)
                 }
+//                if !package.appointments.isEmpty {
+//                    Text("\(package.appointments.count) appointment(s) scheduled")
+//                        .font(.caption2)
+//                        .foregroundColor(.orange)
+//                        .padding(.top, 2)
+//                }
             }
             
             Spacer()
@@ -387,11 +369,10 @@ struct PackageRowView: View {
             Button(action: {
                 showingDeleteAlert = true
             }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
+                Text("Delete")
                     .font(.caption)
+                    .foregroundColor(Color("OutlineDelete"))
             }
-            .buttonStyle(PlainButtonStyle())
         }
         .padding(.vertical, 8)
         .padding(.horizontal)
