@@ -235,11 +235,24 @@ class KeyboardViewController: UIInputViewController {
             return
         }
         
-        guard let patient = PatientParser.parseFromText(text) else {
+        let parser = PatientDataParser()
+        let parsedData = parser.parse(from: text)
+        
+        guard !parsedData.fullName.isEmpty else {
             statusLabel.text = "Error: Could not parse patient information"
             statusLabel.textColor = UIColor.systemRed
             return
         }
+        
+        let patient = PatientData(
+            fullName: parsedData.fullName,
+            nationalID: parsedData.nationalId,
+            dateOfBirth: parsedData.dateOfBirth,
+            gender: parsedData.gender?.rawValue,
+            placeOfBirth: nil,
+            phoneNumber: parsedData.phoneNumber.isEmpty ? nil : parsedData.phoneNumber,
+            address: parsedData.address.isEmpty ? nil : parsedData.address
+        )
         
         // Save to shared container for main app to process
         savePatientToSharedContainer(patient)
@@ -472,65 +485,159 @@ struct PatientData: Codable {
     }
 }
 
-struct PatientParser {
-    static func parseFromText(_ text: String) -> PatientData? {
-        let lines = text.components(separatedBy: .newlines)
-        var fullName = ""
-        var nationalID: String?
-        var dateOfBirth: Date?
-        var gender: String?
-        var placeOfBirth: String?
-        var phoneNumber: String?
-        var address: String?
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        
-        for line in lines {
-            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            let components = trimmedLine.components(separatedBy: ":")
-            
-            if components.count >= 2 {
-                let key = components[0].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                let value = components[1...].joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                switch key {
-                case "name", "nama", "full name", "nama lengkap":
-                    fullName = value
-                case "nik", "national id", "ktp", "id":
-                    nationalID = value
-                case "dob", "date of birth", "tanggal lahir", "lahir":
-                    dateOfBirth = dateFormatter.date(from: value)
-                case "gender", "jenis kelamin", "kelamin":
-                    if value.lowercased().contains("man") || value.lowercased().contains("pria") || value.lowercased().contains("laki") {
-                        gender = "Man"
-                    } else if value.lowercased().contains("woman") || value.lowercased().contains("wanita") || value.lowercased().contains("perempuan") {
-                        gender = "Woman"
+enum Gender: String, Codable, CaseIterable {
+    case male = "Male"
+    case female = "Female"
+}
+
+// MARK: - Data Models
+struct ParsedPatientData {
+    let nationalId: String?
+    let fullName: String
+    let dateOfBirth: Date?
+    let phoneNumber: String
+    let address: String
+    let gender: Gender?
+}
+
+class PatientDataParser {
+    func parse(from text: String) -> ParsedPatientData {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else {
+            return ParsedPatientData(
+                nationalId: nil,
+                fullName: "",
+                dateOfBirth: nil,
+                phoneNumber: "",
+                address: "",
+                gender: nil
+            )
+        }
+
+        let nationalId = extractValue(for: ["NIK"], from: cleanText)
+        let fullName   = extractValue(for: ["Nama lengkap", "Nama"], from: cleanText)
+        var dobString  = extractValue(for: ["Tgl lahir", "Tempat/Tgl Lahir"], from: cleanText)
+        let phone      = extractValue(for: ["No telp"], from: cleanText)
+        var address    = extractValue(for: ["Alamat lengkap", "Alamat"], from: cleanText)
+        let genderStr  = extractValue(for: ["Jenis kelamin", "Jenis kelamin (L/P)", "Jenis Kelamin"], from: cleanText)
+
+        // Handle DOB with comma case
+        if !dobString.isEmpty, let commaIdx = dobString.firstIndex(of: ",") {
+            dobString = String(dobString[dobString.index(after: commaIdx)...]).trimmingCharacters(in: .whitespaces)
+        }
+
+        // Fallback: build full address if only partial pieces are available
+        if address.isEmpty {
+            let rtRw = extractValue(for: ["RT/RW"], from: cleanText)
+            let kel  = extractValue(for: ["Kel/Desa"], from: cleanText)
+            let kec  = extractValue(for: ["Kecamatan"], from: cleanText)
+            address = [address, rtRw, kel, kec].filter { !$0.isEmpty }.joined(separator: ", ")
+        }
+
+        return ParsedPatientData(
+            nationalId: nationalId.isEmpty ? nil : nationalId,
+            fullName: fullName,
+            dateOfBirth: DateParser.parse(from: dobString),
+            phoneNumber: phone,
+            address: address,
+            gender: GenderParser.parse(from: genderStr)
+        )
+    }
+    
+    private func extractValue(for keys: [String], from text: String) -> String {
+        for key in keys {
+            let escapedKey = NSRegularExpression.escapedPattern(for: key)
+            let pattern =
+                "(?i)" + escapedKey + "\\s*[:：]\\s*([^\\n]*)" +                // normal paste
+                "|(?i)" + escapedKey + "\\s*\\n\\s*[:：]\\s*([^\\n]*)"          // OCR with newline
+
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let nsText = text as NSString
+                if let match = regex.firstMatch(in: text, range: NSRange(location: 0, length: nsText.length)) {
+                    var val: String? = nil
+                    if match.numberOfRanges > 1, match.range(at: 1).location != NSNotFound {
+                        val = nsText.substring(with: match.range(at: 1))
+                    } else if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound {
+                        val = nsText.substring(with: match.range(at: 2))
                     }
-                case "place of birth", "tempat lahir", "born":
-                    placeOfBirth = value
-                case "phone", "telephone", "telepon", "hp", "no hp", "nomor hp":
-                    phoneNumber = value
-                case "address", "alamat", "addr":
-                    address = value
-                default:
-                    // Ignore unrecognized keys
-                    break
+                    if let val = val {
+                        let trimmed = val.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let lower = trimmed.lowercased()
+                        // Prevent capturing next key as value
+                        if trimmed.isEmpty
+                            || lower.contains("nama") || lower.contains("nik")
+                            || lower.contains("tgl") || lower.contains("alamat")
+                            || lower.contains("jenis kelamin") {
+                            continue
+                        }
+                        return trimmed
+                    }
                 }
             }
         }
+        return ""
+    }
+}
+
+class DateParser {
+    static func parse(from string: String) -> Date? {
+        var cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanString.isEmpty else { return nil }
         
-        // Only create patient if we have at least full name
-        if !fullName.isEmpty {
-            return PatientData(
-                fullName: fullName,
-                nationalID: nationalID,
-                dateOfBirth: dateOfBirth,
-                gender: gender,
-                placeOfBirth: placeOfBirth,
-                phoneNumber: phoneNumber,
-                address: address
-            )
+        // If contains a comma, assume it's "City, dd-MM-yyyy"
+        if let commaIdx = cleanString.firstIndex(of: ",") {
+            cleanString = String(cleanString[cleanString.index(after: commaIdx)...]).trimmingCharacters(in: .whitespaces)
+        }
+        
+        // Normalize multiple spaces
+        cleanString = cleanString.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        
+        let formats = [
+            "d MMMM yyyy",   // 1 Januari 2000
+            "dd MMMM yyyy",  // 01 Januari 2000
+            "d-M-yyyy",      // 1-1-2000
+            "dd-MM-yyyy",    // 01-01-2000
+            "d/M/yyyy",      // 1/1/2000
+            "dd/MM/yyyy",    // 01/01/2000
+            "dd.MM.yyyy"     // 01.01.2000
+        ]
+        
+        // Try Indonesian first
+        for format in formats {
+            let formatter = createFormatter(format: format, locale: "id_ID")
+            if let date = formatter.date(from: cleanString) {
+                return date
+            }
+        }
+        
+        // Fallback: English months
+        for format in formats {
+            let formatter = createFormatter(format: format, locale: "en_US_POSIX")
+            if let date = formatter.date(from: cleanString) {
+                return date
+            }
+        }
+        
+        return nil
+    }
+    
+    private static func createFormatter(format: String, locale: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        formatter.locale = Locale(identifier: locale)
+        return formatter
+    }
+}
+
+class GenderParser {
+    static func parse(from string: String) -> Gender? {
+        let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !cleanString.isEmpty else { return nil }
+        
+        if cleanString.hasPrefix("l") || cleanString.contains("laki") || cleanString.contains("pria") || cleanString.contains("male") {
+            return .male
+        } else if cleanString.hasPrefix("p") || cleanString.contains("perempuan") || cleanString.contains("wanita") || cleanString.contains("female") {
+            return .female
         }
         
         return nil
