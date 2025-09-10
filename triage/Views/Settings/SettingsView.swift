@@ -36,58 +36,60 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedSection) {
-                // Profile Section
-                Section {
-                    ProfileRowView(
-                        fullName: fullName,
-                        isSelected: selectedSection == .profile
-                    )
-                    .tag(SettingsSection.profile)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                } header: {
-                    Text("CUSTOMER CARE IDENTITY")
-                        .font(.footnote)
-                        .foregroundColor(Color(hex: "#272556").opacity(0.5))
+            VStack {
+                List(selection: $selectedSection) {
+                    // Profile Section
+                    Section {
+                        ProfileRowView(
+                            fullName: fullName,
+                            isSelected: selectedSection == .profile
+                        )
+                        .tag(SettingsSection.profile)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    } header: {
+                        Text("CUSTOMER CARE IDENTITY")
+                            .font(.footnote)
+                            .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                    }
+                    .headerProminence(.increased)
+                    
+                    // Service Setup Section
+                    Section {
+                        SettingsRowView(
+                            section: .packages,
+                            isSelected: selectedSection == .packages
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    } header: {
+                        Text("SERVICE SETUP")
+                            .font(.footnote)
+                            .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                    }
+                    .headerProminence(.increased)
+                    
+                    // Keyboard Extension Section
+                    Section {
+                        SettingsRowView(
+                            section: .setupInstructions,
+                            isSelected: selectedSection == .setupInstructions
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        SettingsRowView(
+                            section: .quickReplies,
+                            isSelected: selectedSection == .quickReplies
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    } header: {
+                        Text("KEYBOARD EXTENSION")
+                            .font(.footnote)
+                            .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                    }
+                    .headerProminence(.increased)
                 }
-                .headerProminence(.increased)
-                
-                // Service Setup Section
-                Section {
-                    SettingsRowView(
-                        section: .packages,
-                        isSelected: selectedSection == .packages
-                    )
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                } header: {
-                    Text("SERVICE SETUP")
-                        .font(.footnote)
-                        .foregroundColor(Color(hex: "#272556").opacity(0.5))
-                }
-                .headerProminence(.increased)
-                
-                // Keyboard Extension Section
-                Section {
-                    SettingsRowView(
-                        section: .setupInstructions,
-                        isSelected: selectedSection == .setupInstructions
-                    )
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    SettingsRowView(
-                        section: .quickReplies,
-                        isSelected: selectedSection == .quickReplies
-                    )
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                } header: {
-                    Text("KEYBOARD EXTENSION")
-                        .font(.footnote)
-                        .foregroundColor(Color(hex: "#272556").opacity(0.5))
-                }
-                .headerProminence(.increased)
             }
             .listSectionSpacing(20)
             .scrollContentBackground(.hidden)
-            .background(Color.white)
+            .background(Color(.systemBackground))
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar(removing: .sidebarToggle)
@@ -98,28 +100,39 @@ struct SettingsView: View {
             }
         } detail: {
             // Detail View
-            switch selectedSection {
-            case .profile:
-                ProfileDetailView(
-                    fullName: $fullName,
-                    role: $role,
-                    phone: $phone,
-                    email: $email
-                )
-            case .packages:
-                HealthCareCatalogView()
-            case .setupInstructions:
-                KeyboardInstructionView()
-            case .quickReplies:
-                QuickRepliesPaneView()
-            case .none:
-                PlaceholderDetailView(
-                    title: "Settings",
-                    description: "Select a settings category"
-                )
+            VStack {
+                Spacer().frame(height: 46)
+                switch selectedSection {
+                case .profile:
+                    ProfileDetailView(
+                        fullName: $fullName,
+                        role: $role,
+                        phone: $phone,
+                        email: $email
+                    )
+                case .packages:
+                    HealthCareCatalogView()
+                case .setupInstructions:
+                    KeyboardInstructionView()
+                case .quickReplies:
+                    QuickRepliesPaneView()
+                case .none:
+                    EmptyView()
+                }
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .background(Color(.systemBackground))
+        .overlay(
+            VStack {
+                Spacer().frame(height: 200)    // offset from top
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1)
+                Spacer()
+            },
+            alignment: .leading
+        )
     }
 }
 
@@ -133,7 +146,7 @@ struct SettingsRowView: View {
         HStack(spacing: 12) {
             Text(section.rawValue)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : Color(hex: "#0F0E46"))
             
             Spacer()
         }
@@ -162,14 +175,14 @@ struct ProfileRowView: View {
                     Text(initials(fullName))
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundColor(isSelected ? .white : .primary)
+                        .foregroundColor(Color(hex: "#0F0E46"))
                 )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(fullName)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(isSelected ? .white : .primary)
+                    .foregroundColor(isSelected ? .white : Color(hex: "#0F0E46"))
             }
             
             Spacer()

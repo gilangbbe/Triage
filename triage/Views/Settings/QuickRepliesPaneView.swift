@@ -8,78 +8,109 @@
 
 import SwiftUI
 
-// MARK: - Right Pane
+// MARK: - Quick Replies
 struct QuickRepliesPaneView: View {
     @Environment(QuickReplyManager.self) private var quickReplyManager
-    
     @State private var searchText = ""
     @State private var showingAddSheet = false
     @State private var editingReply: QuickReply? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header
-            Text("Quick Replies Keyboard Setting")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color(hex: "#0F0E46"))
-
             // Search + Add
             HStack(spacing: 12) {
-                SearchField("Search", text: $searchText)
+                Text("Setting Up the Quick Replies")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color(hex: "#0F0E46"))
                 Spacer()
+                SearchField(text: $searchText, placeholder: "Search")
+                    .frame(width: 200)
                 Button {
                     showingAddSheet = true
                 } label: {
                     Text("Add")
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(hex: "#0F0E46"))
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .font(.footnote)
+                        .foregroundStyle(Color(hex: "#0F0E46"))
                 }
             }
 
-            // Cards
+            // List
             ScrollView {
                 LazyVStack(spacing: 14) {
                     ForEach(filteredItems) { item in
-                        QuickReplyCard(
-                            item: item,
-                            onToggle: toggle,
-                            onTap: edit
-                        )
+                        QuickReplyCard(item: item, onToggle: toggle, onTap: edit)
                     }
                 }
-                .padding(.top, 4)
+                .padding(4)
             }
         }
-        .padding(24)
-        .sheet(isPresented: $showingAddSheet) {
-            AddQuickReplyView()
-        }
-        .sheet(item: $editingReply) { reply in
-            EditQuickReplyView(reply: reply)
-        }
+        .padding([.top, .leading, .trailing], 16)
+        .background(Color(.systemBackground))
+        .sheet(isPresented: $showingAddSheet) { AddQuickReplyView() }
+        .sheet(item: $editingReply) { reply in EditQuickReplyView(reply: reply) }
     }
-
+    
     // MARK: - Helpers
     private var filteredItems: [QuickReply] {
         guard !searchText.isEmpty else { return quickReplyManager.quickReplies }
         let q = searchText.lowercased()
-        return quickReplyManager.quickReplies.filter { 
-            $0.title.lowercased().contains(q) || $0.message.lowercased().contains(q) 
+        return quickReplyManager.quickReplies.filter {
+            $0.title.lowercased().contains(q) || $0.message.lowercased().contains(q)
         }
     }
+    private func toggle(_ item: QuickReply) { quickReplyManager.toggleReplyStatus(item) }
+    private func edit(_ item: QuickReply) { editingReply = item }
+}
 
-    private func toggle(_ item: QuickReply) {
-        quickReplyManager.toggleReplyStatus(item)
-    }
+// MARK: - Card
+private struct QuickReplyCard: View {
+    let item: QuickReply
+    var onToggle: (QuickReply) -> Void
+    var onTap: (QuickReply) -> Void
 
-    private func edit(_ item: QuickReply) {
-        editingReply = item
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Checkbox(isOn: item.isActive) { onToggle(item) }
+                Text(item.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color(hex: "#0F0E46"))
+                Spacer()
+            }
+            Text(item.message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+            .fill(Color(hex: "E2E2E9"))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color(hex: "0F0E46"), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+        .onTapGesture { onTap(item) }
     }
 }
+
+
+// MARK: - Checkbox
+private struct Checkbox: View {
+    var isOn: Bool
+    var action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: isOn ? "checkmark.square.fill" : "square")
+                .foregroundStyle(Color(hex: "#0F0E46"))
+                .font(.title3)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 
 // MARK: - Edit View
 struct EditQuickReplyView: View {
@@ -150,90 +181,6 @@ struct EditQuickReplyView: View {
     }
 }
 
-// MARK: - Card
-private struct QuickReplyCard: View {
-    let item: QuickReply
-    var onToggle: (QuickReply) -> Void
-    var onTap: (QuickReply) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Checkbox(isOn: item.isActive) { onToggle(item) }
-                Text(item.title)
-                    .font(.headline)
-                    .foregroundStyle(Color(hex: "#0F0E46"))
-                Spacer()
-            }
-            Text(item.message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.white)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
-        )
-        .onTapGesture { onTap(item) }
-        .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
-    }
-}
-
-// MARK: - UI Bits
-private struct SearchField: View {
-    var title: String
-    @Binding var text: String
-
-    init(_ title: String, text: Binding<String>) {
-        self.title = title
-        self._text = text
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .imageScale(.medium)
-                .foregroundStyle(.secondary)
-            TextField(title, text: $text)
-                .textInputAutocapitalization(.never)
-                .disableAutocorrection(true)
-        }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(.white)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-}
-
-private struct Checkbox: View {
-    var isOn: Bool
-    var action: () -> Void
-
-    init(isOn: Bool, action: @escaping () -> Void) {
-        self.isOn = isOn
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: isOn ? "checkmark.square.fill" : "square")
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Color(hex: "#0F0E46"))
-                .font(.title3)
-                .accessibilityLabel(isOn ? "Enabled" : "Disabled")
-        }
-        .buttonStyle(.plain)
-    }
-}
 
 // MARK: - Preview
 #Preview {
