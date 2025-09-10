@@ -147,6 +147,8 @@ class PatientManager: CloudKitSyncable {
         // Get existing patient IDs
         let existingIDs = Set(patients.map { $0.id.uuidString })
         
+        var newPatientsToSync: [Patient] = []
+        
         // Add new patients from keyboard extension
         for patientData in patientDataArray {
             if !existingIDs.contains(patientData.id) {
@@ -163,6 +165,7 @@ class PatientManager: CloudKitSyncable {
                 newPatient.address = patientData.address
                 
                 context.insert(newPatient)
+                newPatientsToSync.append(newPatient)
             }
         }
         
@@ -171,6 +174,13 @@ class PatientManager: CloudKitSyncable {
         
         saveContext()
         loadPatients()
+        
+        // Sync new patients to CloudKit
+        Task {
+            for patient in newPatientsToSync {
+                await syncToCloudKit(patient)
+            }
+        }
     }
     
     // MARK: - Search and Filter
