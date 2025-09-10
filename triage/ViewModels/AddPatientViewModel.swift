@@ -199,7 +199,9 @@ class AddPatientViewModel {
             
             appointmentManager.addAppointment(appointment)
             
-            HistoryManager.shared.addHistory(History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: patient.fullName, serviceChoice: appointment.package?.name ?? "")))
+            if let user = UserManager.shared.loadUserProfile() {
+                HistoryManager.shared.addHistory(History(type: .serviceChoiceUpdate(customerCareName: user.fullName, patientName: patient.fullName, serviceChoice: appointment.package?.name ?? "")))
+            }
         }
         
         
@@ -233,7 +235,9 @@ class AddPatientViewModel {
             
             appointmentManager.addAppointment(appointment)
             
-            HistoryManager.shared.addHistory(History(type: .serviceChoiceUpdate(customerCareName: "Okta", patientName: patient.fullName, serviceChoice: appointment.package?.name ?? "")))
+            if let user = UserManager.shared.loadUserProfile() {
+                HistoryManager.shared.addHistory(History(type: .serviceChoiceUpdate(customerCareName: user.fullName, patientName: patient.fullName, serviceChoice: appointment.package?.name ?? "")))
+            }
         }
     }
     

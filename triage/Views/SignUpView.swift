@@ -10,41 +10,47 @@ import SwiftUI
 struct SignUpView: View {
     @StateObject private var viewModel = SignUpViewModel()
     @Environment(\.colorScheme) var colorScheme
+    @Binding var user: User?
+    
+    private var sidebarWidth: CGFloat {
+        max(UIScreen.main.bounds.width * 0.40, 500)
+    }
 
     var body: some View {
-        NavigationSplitView {
+        HStack(spacing: 8) {
             ZStack {
                 Image("CihosBackground")
                     .resizable()
                     .scaledToFill()
                     .ignoresSafeArea()
             }
-            .navigationSplitViewColumnWidth(
-                        min: 1000, ideal: 1000, max: 1000)
-            .toolbar(removing: .sidebarToggle)
-        } detail: {
+            .frame(width: sidebarWidth)
+
+            // MARK: Detail
             ZStack {
                 VStack(alignment: .leading) {
                     Spacer()
+                    
                     Text("Sign In")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.accentColor)
-                    Text("Please Complete Your Information Below to Begin")
+                    
+                    Text("Please complete your information below to begin")
                         .foregroundColor(.accentColor)
                         .padding(.bottom, 24)
                     
                     SignUpTextField(
                         icon: "person.text.rectangle.fill",
                         label: "FULL NAME",
-                        placeholder: "Ex. Alvin Kita Bersama",
+                        placeholder: "Ex. Jason Statam",
                         text: $viewModel.fullName
                     )
                     
                     SignUpTextField(
                         icon: "envelope.badge.person.crop.fill",
                         label: "WORK EMAIL",
-                        placeholder: "Ex. alvinkitabersama@gmail.com",
+                        placeholder: "Ex. jasonstatam@gmail.com",
                         text: $viewModel.email
                     )
                     
@@ -73,14 +79,14 @@ struct SignUpView: View {
                                     Text(role.rawValue).tag(role as Role?)
                                 }
                             }
-                            .frame(width: 250, height: 50)
+                            .frame(width: 300, height: 50)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(colorScheme == .dark ? Color.clear : Color.placeholder)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.accentColor, lineWidth:1)
+                                    .stroke(Color.accentColor, lineWidth: 1)
                             )
                             .labelsHidden()
                         }
@@ -90,18 +96,17 @@ struct SignUpView: View {
                     HStack {
                         Spacer()
                         Button(action: {
-                            
+                            user = viewModel.completeOnboarding()
                         }) {
-                                Label("Start", systemImage: "chevron.right.circle.fill")
-                                    .padding(12)
-                                    .frame(width: 125)
-                                    .foregroundColor(.signInBackground)
-                                    .background(Color.accentColor)
-                                    .cornerRadius(8)
+                            Label("Start", systemImage: "chevron.right.circle.fill")
+                                .padding(12)
+                                .frame(width: 125)
+                                .foregroundColor(.signInBackground)
+                                .background(Color.accentColor)
+                                .cornerRadius(8)
                         }
-                        
                     }
-
+                    
                     Spacer()
                 }
                 .frame(width: 700)
@@ -111,7 +116,12 @@ struct SignUpView: View {
         }
     }
 }
-
-#Preview {
-    SignUpView()
-}
+//
+//#Preview {
+//    SignUpView()
+//}
+//
+//
+//#Preview {
+//    SignUpView()
+//}

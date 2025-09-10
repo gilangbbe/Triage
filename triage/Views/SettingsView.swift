@@ -9,10 +9,21 @@ import SwiftUI
 
 struct SettingsView: View {
     // Single customer care profile
-    @State private var fullName: String = "Ayu Lestari Wulandari"
-    @State private var role: String = "Customer Care Coordinator"
-    @State private var phone: String = "08123456789"
-    @State private var email: String = "ayulestariwu@ciputrahospital.com"
+    var user: User?
+    @State var fullName: String = ""
+    @State var role: String = ""
+    @State var phone: String = ""
+    @State var email: String = ""
+    
+    init() {
+        let user = UserManager.shared.loadUserProfile()
+        _fullName = State(initialValue: user?.fullName ?? "")
+        _role = State(initialValue: user?.role.rawValue ?? "")
+        _phone = State(initialValue: user?.phoneNumber ?? "")
+        _email = State(initialValue: user?.email ?? "")
+        
+        self.user = user
+    }
     
     // Navigation state
     @State private var selectedSection: SettingsSection? = .profile
@@ -238,6 +249,7 @@ struct ProfileDetailView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 14)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .disabled(true)
         }
     }
 }

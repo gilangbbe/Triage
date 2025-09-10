@@ -22,8 +22,9 @@ class SignUpViewModel: ObservableObject {
         }
     }
     
-    func completeOnboarding() {
+    func completeOnboarding() -> User {
         let user = User(fullName: fullName, email: email, role: role, phoneNumber: phoneNumber)
         UserManager.shared.saveUserProfile(user)
+        return user
     }
 }

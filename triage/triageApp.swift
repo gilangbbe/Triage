@@ -14,6 +14,7 @@ import UserNotifications
 struct triageApp: App {
     let modelContainer: ModelContainer
     @Environment(\.scenePhase) private var scenePhase
+    @State var isLoggedIn: User? = UserManager.shared.loadUserProfile()
     
     init() {
         do {
@@ -41,40 +42,44 @@ struct triageApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .modelContainer(modelContainer)
-                .environment(PatientManager.shared)
-                .environment(AppointmentManager.shared)
-                .environment(PackageManager.shared)
-                .environment(QuickReplyManager.shared)
-                .environment(HistoryManager.shared)
-                .environment(DepartmentManager.shared)
-                .environment(NotificationManager.shared)
-                .onAppear {
-                    // Set model context for managers
-                    let context = modelContainer.mainContext
-                    PatientManager.shared.setModelContext(context)
-                    AppointmentManager.shared.setModelContext(context)
-                    PackageManager.shared.setModelContext(context)
-                    QuickReplyManager.shared.setModelContext(context)
-                    HistoryManager.shared.setModelContext(context)
-                    DepartmentManager.shared.setModelContext(context)
-                    
-                    // Check for new data from keyboard extension when app becomes active
-                    NotificationCenter.default.addObserver(
-                        forName: UIApplication.didBecomeActiveNotification,
-                        object: nil,
-                        queue: .main
-                    ) { _ in
-                        PatientManager.shared.syncFromKeyboardExtension()
-                        QuickReplyManager.shared.loadQuickReplies()
+            if isLoggedIn != nil {
+                ContentView()
+                    .modelContainer(modelContainer)
+                    .environment(PatientManager.shared)
+                    .environment(AppointmentManager.shared)
+                    .environment(PackageManager.shared)
+                    .environment(QuickReplyManager.shared)
+                    .environment(HistoryManager.shared)
+                    .environment(DepartmentManager.shared)
+                    .environment(NotificationManager.shared)
+                    .onAppear {
+                        // Set model context for managers
+                        let context = modelContainer.mainContext
+                        PatientManager.shared.setModelContext(context)
+                        AppointmentManager.shared.setModelContext(context)
+                        PackageManager.shared.setModelContext(context)
+                        QuickReplyManager.shared.setModelContext(context)
+                        HistoryManager.shared.setModelContext(context)
+                        DepartmentManager.shared.setModelContext(context)
+                        
+                        // Check for new data from keyboard extension when app becomes active
+                        NotificationCenter.default.addObserver(
+                            forName: UIApplication.didBecomeActiveNotification,
+                            object: nil,
+                            queue: .main
+                        ) { _ in
+                            PatientManager.shared.syncFromKeyboardExtension()
+                            QuickReplyManager.shared.loadQuickReplies()
+                        }
                     }
-                }
-                .onChange(of: scenePhase) { phase in
-                    if phase == .active {
-                        UIApplication.shared.applicationIconBadgeNumber = 0
+                    .onChange(of: scenePhase) { phase in
+                        if phase == .active {
+                            UIApplication.shared.applicationIconBadgeNumber = 0
+                        }
                     }
-                }
+            } else {
+                SignUpView(user: $isLoggedIn)
+            }
         }
     }
     

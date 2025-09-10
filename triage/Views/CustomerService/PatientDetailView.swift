@@ -271,11 +271,12 @@ struct PatientDetailView: View {
     }
     
     private func recordPatientUpdateHistory() {
-        let log = History(
-            type: .patientDataUpdate(customerCareName: "Okta", patientName: patient.fullName)
-        )
-        print(log)
-        historyViewModel.addHistory(log)
+        if let user = UserManager.shared.loadUserProfile() {
+            let log = History(
+                type: .patientDataUpdate(customerCareName: user.fullName, patientName: patient.fullName)
+            )
+            historyViewModel.addHistory(log)
+        }
     }
     
     // MARK: - Appointment Management
