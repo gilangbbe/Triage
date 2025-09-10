@@ -378,6 +378,8 @@ struct AppointmentSelectionSheet: View {
                     } else {
                         viewModel.updateAvailableTimeSlots(for: package, on: date)
                     }
+                    // Clear the selected time slot when date changes (especially important for editing)
+                    selectedTimeSlot = nil
                 }
             }
         }
