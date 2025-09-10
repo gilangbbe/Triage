@@ -90,6 +90,7 @@ class AppointmentManager: CloudKitSyncable {
     
     // MARK: - Data Loading
     func loadAppointments() {
+        let now = Date()
         guard let context = modelContext else { return }
         
         do {
@@ -106,6 +107,8 @@ class AppointmentManager: CloudKitSyncable {
                 }
                 return date1 < date2
             }
+
+            NotificationManager.shared.rescheduleReminders(for: appointments)
         } catch {
             print("Failed to fetch appointments: \(error)")
             appointments = []

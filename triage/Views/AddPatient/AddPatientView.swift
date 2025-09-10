@@ -127,18 +127,9 @@ struct NextButton: View {
         } else {
             Button("Add") {
                 onSave()
-                recordNewPatient(patientName: viewModel.fullName)
             }
             .disabled(!viewModel.isFormComplete)
         }
-    }
-    
-    private func recordNewPatient(patientName: String) {
-        let log = History(
-            type: .newPatient(patientName: patientName)
-        )
-        print(log)
-        historyViewModel.addHistory(log)
     }
 }
 

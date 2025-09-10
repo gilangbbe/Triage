@@ -45,7 +45,18 @@ struct PatientRowView: View {
     }
     
     private var initials: String {
-        let first = patient.fullName.first?.uppercased() ?? ""
-        return first
+        let nameParts = patient.fullName.split(separator: " ")
+        
+        if let firstLetter = nameParts.first?.first {
+            if nameParts.count > 1, let lastLetter = nameParts.last?.first {
+                // Two or more words → take first letter of first + first letter of last
+                return "\(firstLetter.uppercased())\(lastLetter.uppercased())"
+            } else {
+                // Only one word → just take the first letter
+                return "\(firstLetter.uppercased())"
+            }
+        }
+        
+        return ""
     }
 }

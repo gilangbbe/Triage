@@ -220,9 +220,35 @@ struct PatientDetailView: View {
                     ),
                     displayedComponents: .date
                 )
+                .disabled(!isEditing)
                 .labelsHidden()
-                .accentColor(.accentColor)
-                .tint(.accentColor)
+            }
+            .padding(.leading)
+            .padding(.bottom, 16)
+            
+            // Gender
+            HStack {
+                Image(systemName: "tshirt.fill")
+                    .foregroundColor(.gray)
+                Text("GENDER")
+                    .foregroundColor(.gray)
+
+                Spacer()
+
+                Picker("Select Gender", selection: Binding(
+                    get: { patient.gender ?? .male }, // fallback if nil
+                    set: { patient.gender = $0 }
+                )) {
+                    ForEach(Gender.allCases, id: \.self) { gender in
+                        Text(gender.rawValue).tag(gender as Gender?)
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isEditing ? Color.placeholder : Color.clear) // ✅ only picker highlighted
+                )
+                .disabled(!isEditing)
+                .labelsHidden()
             }
             .padding(.leading)
             .padding(.bottom, 16)
@@ -247,25 +273,18 @@ struct PatientDetailView: View {
                     set: { patient.address = $0.isEmpty ? nil : $0 }
                 ),
                 isEditing: isEditing
-                
-            )
-            FormFieldView(
-                icon: "tshirt.fill",
-                label: "GENDER",
-                placeholder: "Enter Gender",
-                value: patient.gender?.rawValue ?? "Not provided",
-                isEditing: isEditing
             )
         }
         .frame(maxWidth: .infinity)
     }
     
     private func recordPatientUpdateHistory() {
-        let log = History(
-            type: .patientDataUpdate(customerCareName: "Okta", patientName: patient.fullName)
-        )
-        print(log)
-        historyViewModel.addHistory(log)
+        if let user = UserManager.shared.loadUserProfile() {
+            let log = History(
+                type: .patientDataUpdate(customerCareName: user.fullName, patientName: patient.fullName)
+            )
+            historyViewModel.addHistory(log)
+        }
     }
     
     // MARK: - Appointment Management
