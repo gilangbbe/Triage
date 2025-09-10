@@ -11,7 +11,6 @@ struct SidebarPanel: View {
     @Binding var showLog: Bool
     @Binding var logEntries: [ReminderEntry]
 
-    /// Plain array of SwiftData @Model objects (reference semantics)
     let appointments: [Appointment]
 
     var body: some View {
@@ -20,7 +19,7 @@ struct SidebarPanel: View {
                 HStack {
                     Text("Schedule")
                         .font(.largeTitle.weight(.bold))
-                        .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
+                        .foregroundStyle(Color.primary)
                     Spacer()
                     Button {
                         logEntries = buildLog(from: appointments, asOf: selectedDate)
@@ -80,8 +79,14 @@ struct SidebarPanel: View {
     }
 
     private var sortedReminders: [Appointment] {
-        todaysAppts.sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
+        todaysAppts.sorted {
+            if $0.isReminded == $1.isReminded {
+                return $0.timeSlot.startTime < $1.timeSlot.startTime
+            }
+            return $0.isReminded == false && $1.isReminded == true
+        }
     }
+
 
     // MARK: - Log builder
     private func buildLog(from appts: [Appointment], asOf day: Date) -> [ReminderEntry] {

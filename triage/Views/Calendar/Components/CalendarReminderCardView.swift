@@ -14,8 +14,8 @@ enum ReminderStyle {
 
     var accent: Color {
         switch self {
-        case .needToRemind: return Color(red: 0.55, green: 0.09, blue: 0.10)
-        case .remindAgain:  return Color(red: 0.08, green: 0.10, blue: 0.24)
+        case .needToRemind: return Color(.systemRed)
+        case .remindAgain:  return Color(.systemIndigo)
         }
     }
     var pillText: String {
@@ -27,18 +27,13 @@ enum ReminderStyle {
 }
 
 struct ReminderCard: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(CalendarViewModel.self) private var vm
+    @Bindable var appt: Appointment
 
-    @Bindable var appt: Appointment   // @Model instance
+    @State private var showReminder = false
 
-    // ✨ Derive style from saved data
-    private var currentStyle: ReminderStyle {
-        appt.isReminded ? .remindAgain : .needToRemind
-    }
+    private var currentStyle: ReminderStyle { appt.isReminded ? .remindAgain : .needToRemind }
 
-    let style: ReminderStyle  // you can keep it if you need an initial look, but not required
-
+    let style: ReminderStyle
     init(appt: Appointment, style: ReminderStyle = .needToRemind) {
         self.appt = appt
         self.style = style
@@ -53,17 +48,17 @@ struct ReminderCard: View {
                     .overlay(
                         Text(initials(displayPatientName))
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.secondaryLabel))
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayPatientName)
                         .font(.headline)
-                        .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
+                        .foregroundStyle(Color(.label))
 
                     Text(kindText)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.secondaryLabel))
                 }
 
                 Spacer()
@@ -74,27 +69,20 @@ struct ReminderCard: View {
                         .font(.headline.weight(.semibold))
                 }
                 .foregroundStyle(
-                    currentStyle == .needToRemind
-                    ? currentStyle.accent
-                    : Color(red: 0.08, green: 0.10, blue: 0.24)
+                    currentStyle == .needToRemind ? currentStyle.accent : Color(.label)
                 )
             }
 
             Button {
                 withAnimation(.easeInOut(duration: 0.18)) {
-                    // Write to the model, not local state
-                    appt.isReminded = true
-                    do { try modelContext.save() } catch {
-                        assertionFailure("Save failed: \(error)")
-                        print("Save failed:", error)
-                    }
+                    showReminder = true
                 }
             } label: {
                 HStack {
                     Image(systemName: "bell.fill").font(.caption.bold())
                     Text(currentStyle.pillText).font(.caption.weight(.semibold))
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.white)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(
@@ -105,11 +93,20 @@ struct ReminderCard: View {
             .buttonStyle(.plain)
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground))
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(currentStyle.accent.opacity(currentStyle == .needToRemind ? 0.35 : 0.25), lineWidth: 1)
+                .stroke(currentStyle.accent.opacity(currentStyle == .needToRemind ? 0.30 : 0.22), lineWidth: 1)
         )
+        .popover(isPresented: $showReminder) {
+            ReminderPopup(appt: appt, isPresented: $showReminder) {
+                showReminder = false
+            }
+            .presentationCompactAdaptation(.popover)
+        }
     }
 
     // MARK: - Derived text

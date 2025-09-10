@@ -12,7 +12,7 @@ struct WeekSlotSummaryCard: View {
     @State private var expandedKinds: Set<SlotKind> = []
 
     private var orderedKinds: [SlotKind] {
-        let order: [SlotKind] = [.medical, .radiology, .laboratory]
+        let order: [SlotKind] = [.medical, .radiology, .laboratory, .doctor]
         return order.filter { !(kindGroups[$0] ?? []).isEmpty }
     }
 
@@ -34,30 +34,28 @@ struct WeekSlotSummaryCard: View {
                         HStack(spacing: 4) {
                             Text(kind.title)
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.primary)
-//                                .lineLimit(3)
+                                .foregroundStyle(Color(.label))
                                 .truncationMode(.tail)
                                 .padding(.vertical, 4)
                                 .padding(.horizontal, 6)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     RoundedRectangle(cornerRadius: 4)
-                                        .fill(color(for: kind).opacity(0.08))
+                                        .fill(kind.accent.opacity(0.20))
                                 )
                                 .layoutPriority(1)
 
                             Text("\(shown)/\(cap)")
-                                .font(.caption2.weight(.light))
+                                .font(.caption2)
                                 .monospacedDigit()
-//                                .lineLimit(3)
                                 .fixedSize(horizontal: true, vertical: false)
                                 .padding(.vertical, 4)
                                 .padding(.horizontal, 6)
                                 .background(
                                     RoundedRectangle(cornerRadius: 4)
-                                        .fill(color(for: kind).opacity(0.08))
+                                        .fill(kind.accent.opacity(0.20))
                                 )
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(Color(.label))
                         }
 
                         if isExpanded {
@@ -65,8 +63,7 @@ struct WeekSlotSummaryCard: View {
                                 ForEach(Array(patients.enumerated()), id: \.offset) { _, appt in
                                     Text(appt.patient?.fullName ?? appt.name)
                                         .font(.caption2)
-                                        .foregroundStyle(.primary)
-//                                        .lineLimit(3)
+                                        .foregroundStyle(Color(.label))
                                         .truncationMode(.tail)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -79,20 +76,12 @@ struct WeekSlotSummaryCard: View {
                     .padding(8)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(color(for: kind).opacity(0.08))
+                            .fill(kind.accent.opacity(0.20))
                     )
                     .transition(.move(edge: .top))
                 }
                 .buttonStyle(.plain)
             }
-        }
-    }
-
-    private func color(for kind: SlotKind) -> Color {
-        switch kind {
-        case .medical:    return .blue
-        case .radiology:  return .green
-        case .laboratory: return .red
         }
     }
 }

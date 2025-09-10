@@ -7,35 +7,42 @@
 
 import SwiftUI
 
-// MARK: - SlotKind stays the same
+// MARK: - SlotKind
 enum SlotKind: CaseIterable, Hashable {
-    case medical, radiology, laboratory
+    case medical, radiology, laboratory, doctor
 
     var title: String {
         switch self {
         case .medical:    return "Medical Check Up"
         case .radiology:  return "Radiology"
         case .laboratory: return "Laboratorium"
+        case .doctor:     return "Doctor"
         }
     }
 
+    /// Accent colors that adapt automatically across Light/Dark
+    var accent: Color {
+        switch self {
+        case .medical:    return Color(.systemBlue)
+        case .radiology:  return Color(.systemGreen)
+        case .laboratory: return Color(.systemPink)
+        case .doctor:     return Color(.systemTeal)
+        }
+    }
+
+    /// Card tint: keep neutral so it contrasts well in Dark Mode.
+    /// Use system backgrounds to get automatic adaptation.
     var tint: Color {
-        switch self {
-        case .medical:    return Color(red: 0.93, green: 0.96, blue: 1.00)
-        case .radiology:  return Color(red: 0.92, green: 0.98, blue: 0.93)
-        case .laboratory: return Color(red: 1.00, green: 0.94, blue: 0.95)
-        }
+        Color(.secondarySystemBackground)
     }
 
+    /// Pill fill: a soft wash of the accent color.
+    /// Using opacity over system background keeps it readable in Dark Mode.
     var pillFill: Color {
-        switch self {
-        case .medical:    return Color(red: 0.83, green: 0.88, blue: 0.98)
-        case .radiology:  return Color(red: 0.82, green: 0.94, blue: 0.84)
-        case .laboratory: return Color(red: 1.00, green: 0.86, blue: 0.88)
-        }
+        accent.opacity(0.30)
     }
 
-    var textColor: Color { Color(red: 0.07, green: 0.10, blue: 0.27) }
+    var textColor: Color { Color(.label) }
 }
 
 // MARK: - Simple row for a patient name
@@ -47,7 +54,6 @@ private struct SlotPatientRow: View {
             Text(text)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(textColor)
-//                .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer()
         }
@@ -55,35 +61,44 @@ private struct SlotPatientRow: View {
     }
 }
 
-// MARK: - Bucket card (uses Appointment)
+// MARK: - Bucket card
 private struct SlotBucketCard: View {
-    enum Kind { case medical, radiology, lab }
+    enum Kind { case medical, radiology, lab , doctor}
 
     let kind: Kind
     let patients: [Appointment]
     @State private var isExpanded = true
 
-    private let navy = Color(red: 16/255, green: 27/255, blue: 79/255)
+    private let labelColor = Color(.label)
+
+    private var accent: Color {
+        switch kind {
+        case .medical:   return Color(.systemBlue)
+        case .radiology: return Color(.systemGreen)
+        case .lab:       return Color(.systemPink)
+        case .doctor:     return Color(.systemTeal)
+        }
+    }
 
     private var cardTint: Color {
         switch kind {
-        case .medical:   return Color(red: 0.93, green: 0.96, blue: 1.00)
-        case .radiology: return Color(red: 0.92, green: 0.98, blue: 0.93)
-        case .lab:       return Color(red: 1.00, green: 0.94, blue: 0.95)
+        case .medical:   return Color(.systemBlue).opacity(0.20)
+        case .radiology: return Color(.systemGreen).opacity(0.20)
+        case .lab:       return Color(.systemPink).opacity(0.20)
+        case .doctor:     return Color(.systemTeal).opacity(0.20)
         }
     }
+
     private var pillTint: Color {
-        switch kind {
-        case .medical:   return Color(red: 0.83, green: 0.88, blue: 0.98)
-        case .radiology: return Color(red: 0.82, green: 0.94, blue: 0.84)
-        case .lab:       return Color(red: 1.00, green: 0.86, blue: 0.88)
-        }
+        accent.opacity(0.20)
     }
+
     private var titleText: String {
         switch kind {
         case .medical:   return "Medical Check Up"
         case .radiology: return "Radiology"
         case .lab:       return "Laboratorium"
+        case .doctor:    return "Doctor"
         }
     }
 
@@ -92,11 +107,13 @@ private struct SlotBucketCard: View {
             HStack(spacing: 10) {
                 Text(titleText)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(navy)
-//                    .lineLimit(1)
+                    .foregroundStyle(labelColor)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(pillTint))
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(pillTint)
+                    )
 
                 Spacer(minLength: 8)
 
@@ -107,7 +124,7 @@ private struct SlotBucketCard: View {
                 } label: {
                     Image(systemName: "chevron.down")
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                        .foregroundStyle(navy.opacity(0.6))
+                        .foregroundStyle(Color(.tertiaryLabel))
                         .font(.subheadline.weight(.semibold))
                         .padding(6)
                 }
@@ -121,13 +138,12 @@ private struct SlotBucketCard: View {
                         HStack {
                             Text(patients[i].displayPatientName)
                                 .font(.body)
-                                .foregroundStyle(navy)
-//                                .lineLimit(1)
+                                .foregroundStyle(labelColor)
                             Spacer()
                         }
                         .padding(8)
                         if i < show - 1 {
-                            Divider().overlay(navy.opacity(0.08))
+                            Divider().overlay(Color(.separator))
                         }
                     }
                 }
@@ -135,11 +151,14 @@ private struct SlotBucketCard: View {
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(cardTint))
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(cardTint)
+        )
     }
 }
 
-// MARK: - Row that groups by kind (uses Appointment)
+// MARK: - Row that groups by kind
 struct SlotBucketsRow: View {
     let appts: [Appointment]
 
@@ -147,6 +166,7 @@ struct SlotBucketsRow: View {
         switch appt.inferredSlotKind {
         case .medical:    return .medical
         case .radiology:  return .radiology
+        case .doctor:     return .doctor
         case .laboratory: return .lab
         }
     }
@@ -158,11 +178,13 @@ struct SlotBucketsRow: View {
                 let k = bucketKind(for: a)
                 d[k, default: []].append(a)
             }
-            for k in d.keys { d[k]?.sort { $0.displayPatientName < $1.displayPatientName } }
+            for k in d.keys {
+                d[k]?.sort { $0.displayPatientName < $1.displayPatientName }
+            }
             return d
         }()
 
-        let visible: [SlotBucketCard.Kind] = [.medical, .radiology, .lab]
+        let visible: [SlotBucketCard.Kind] = [.medical, .radiology, .lab, .doctor]
             .filter { !(grouped[$0] ?? []).isEmpty }
 
         HStack(alignment: .top, spacing: 24) {

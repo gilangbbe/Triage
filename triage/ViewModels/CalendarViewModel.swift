@@ -12,27 +12,27 @@ import SwiftData
 final class CalendarViewModel {
     enum Scope: String, CaseIterable, Equatable { case day, week }
 
+    // MARK: - Deps
     private let appointmentManager: AppointmentManager
     @ObservationIgnored private let cal = Calendar.current
+    // Keep a reference only if other screens still rely on it for saving,
+    // but reads should come from appointmentManager.appointments.
     @ObservationIgnored private var context: ModelContext?
 
+    // MARK: - UI State
     var scope: Scope = .day
     var selectedDate: Date = .now
     var monthAnchor: Date = .now
 
-    // (Optional) legacy cache—avoid relying on this for day/week screens
+    /// Optional cache used by some screens; for day/week you can fill this
+    /// with just the visible slice via `reloadForVisibleInterval()`.
     var appointments: [Appointment] = []
 
     init(appointmentManager: AppointmentManager = .shared) {
         self.appointmentManager = appointmentManager
     }
 
-    func setModelContext(_ ctx: ModelContext) {
-        self.context = ctx
-        appointmentManager.setModelContext(ctx)
-        reload() // ok to keep if other parts still use 'appointments'
-    }
-
+    // MARK: - Visible range
     var visibleInterval: DateInterval {
         switch scope {
         case .day:
@@ -46,33 +46,22 @@ final class CalendarViewModel {
         }
     }
 
+    // MARK: - Reads (derive from manager’s live list)
+    /// Live view of appointments overlapping the current visible interval.
     var visibleAppointments: [Appointment] {
-        guard let ctx = context else { return [] }
-        let iv = visibleInterval
-        let predicate = #Predicate<Appointment> {
-            $0.timeSlot.endTime > iv.start && $0.timeSlot.startTime < iv.end
-        }
-        let desc = FetchDescriptor<Appointment>(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\.timeSlot.startTime)]
-        )
-        return (try? ctx.fetch(desc)) ?? []
+        filter(appointmentManager.appointments, in: visibleInterval)
     }
 
+    /// Appointments strictly on a calendar day.
     func appointments(on day: Date) -> [Appointment] {
-        guard let ctx = context else { return [] }
         let start = cal.startOfDay(for: day)
         let end = cal.date(byAdding: .day, value: 1, to: start)!
-        let predicate = #Predicate<Appointment> {
-            $0.timeSlot.startTime >= start && $0.timeSlot.startTime < end
-        }
-        let desc = FetchDescriptor<Appointment>(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\.timeSlot.startTime)]
-        )
-        return (try? ctx.fetch(desc)) ?? []
+        return appointmentManager.appointments
+            .filter { $0.timeSlot.startTime >= start && $0.timeSlot.startTime < end }
+            .sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
     }
 
+    // MARK: - Grouped helpers
     var appointmentsByDay: [Date: [Appointment]] {
         Dictionary(grouping: visibleAppointments) {
             cal.startOfDay(for: $0.timeSlot.date)
@@ -92,38 +81,47 @@ final class CalendarViewModel {
             .min { $0.timeSlot.startTime < $1.timeSlot.startTime }
     }
 
-    // Convenience mirrors if you still need them:
-    var todaysAppointments: [Appointment] { appointments(on: Date()) }
-    var upcomingAppointments: [Appointment] { visibleAppointments.filter { $0.timeSlot.startTime > Date() } }
-    var completedAppointments: [Appointment] { visibleAppointments.filter { $0.timeSlot.endTime < Date() } }
-
-    // You can keep this if other screens rely on a cached list,
-    // but don't use it for Day/Week screens now that we fetch directly.
+    // MARK: - Public reloads
+    /// Legacy: mirror the manager’s full list (keep if other screens expect it).
     func reload() {
         appointments = appointmentManager.appointments
+            .sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
     }
 
-    // Mutations
-    func addAppointment(_ appointment: Appointment) {
+    /// Fill `appointments` with just the current visible day/week slice.
+    @MainActor
+    func reloadForVisibleInterval() {
+        appointments = filter(appointmentManager.appointments, in: visibleInterval)
+    }
+
+    // MARK: - Mutations (always write via manager)
+    @MainActor func addAppointment(_ appointment: Appointment) {
         appointmentManager.addAppointment(appointment)
-        try? context?.save()
+        // manager reloads internally; keep local cache in sync if you use it
+        reloadForVisibleInterval()
     }
 
-    func deleteAppointment(_ appointment: Appointment) {
+    @MainActor func deleteAppointment(_ appointment: Appointment) {
         appointmentManager.deleteAppointment(appointment)
-        try? context?.save()
+        reloadForVisibleInterval()
     }
 
-    // ✅ Persist a reminder toggle
-    func markReminded(_ appt: Appointment) {
+    @MainActor func markReminded(_ appt: Appointment) {
         appt.isReminded = true
-        try? context?.save()
+        appointmentManager.updateAppointment(appt) // persists + reloads internally
+        // keep local cache in sync with the new state
+        reloadForVisibleInterval()
     }
 
-    // Helper if you still need a filter on arrays somewhere
+    // MARK: - Local filter
     private func filter(_ appts: [Appointment], in iv: DateInterval) -> [Appointment] {
         appts
             .filter { $0.timeSlot.startTime < iv.end && $0.timeSlot.endTime > iv.start }
             .sorted { $0.timeSlot.startTime < $1.timeSlot.startTime }
     }
+
+    // Convenience mirrors (computed from manager / visible slice)
+    var todaysAppointments: [Appointment] { appointments(on: Date()) }
+    var upcomingAppointments: [Appointment] { visibleAppointments.filter { $0.timeSlot.startTime > Date() } }
+    var completedAppointments: [Appointment] { visibleAppointments.filter { $0.timeSlot.endTime < Date() } }
 }

@@ -58,9 +58,6 @@ struct CalendarView: View {
                             titles: CalendarViewModel.Scope.allCases.map(\.rawValue),
                             width: 300, height: 32,
                             font: .callout.weight(.semibold),
-                            trackColor: Color(.systemGray6),
-                            trackStroke: Color(.systemGray4),
-                            textColor: Color(.blue)
                         )
                     }
                     .padding(.horizontal, 24)
@@ -81,13 +78,10 @@ struct CalendarView: View {
                 .padding(.top, 8)
                 .padding(.horizontal, 24)
             }
-            .task {
-                vm.setModelContext(modelContext)
-                vm.reload()
-            }
-            .onChange(of: vm.selectedDate) { _ in vm.reload() }
-            .onChange(of: vm.scope)        { _ in vm.reload() }
-            .onChange(of: vm.monthAnchor)  { _ in vm.reload() }
+            .onAppear { vm.reloadForVisibleInterval() }
+            .task(id: vm.scope) { vm.reloadForVisibleInterval() }
+            .task(id: vm.selectedDate.startOfDay) { vm.reloadForVisibleInterval() }
+            .task(id: vm.monthAnchor.startOfDay) { vm.reloadForVisibleInterval() }
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showLog) {
@@ -110,14 +104,15 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
     var width: CGFloat = 200
     var height: CGFloat = 32
     var font: Font = .subheadline.weight(.semibold)
-    var trackColor: Color = Color(.systemGray6)
-    var trackStroke: Color = Color(.systemGray4)
-    var textColor: Color = .primary
-    private let inset: CGFloat = 5
 
-    private var index: Int {
-        Array(E.allCases).firstIndex(of: selection) ?? 0
-    }
+    var trackColor: Color = Color(.secondarySystemBackground)
+//    var trackStroke: Color = Color(.separator)
+    var pillColor: Color = Color(.tertiarySystemBackground)
+    var textColor: Color = Color(.secondaryLabel)
+    var selectedText: Color = Color(.label)
+
+    private let inset: CGFloat = 5
+    private var index: Int { Array(E.allCases).firstIndex(of: selection) ?? 0 }
 
     var body: some View {
         let all = Array(E.allCases)
@@ -129,16 +124,13 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
         ZStack(alignment: .leading) {
             Capsule()
                 .fill(trackColor)
-                .overlay(Capsule().stroke(trackStroke, lineWidth: 1))
-
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(.white)
-                    .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 3)
-                    .frame(width: segW, height: pillH)
-                    .offset(x: segW * CGFloat(index))
-            }
-            .padding(inset)
+            
+            Capsule()
+                .fill(pillColor)
+                .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 4)
+                .frame(width: segW, height: pillH)
+                .offset(x: segW * CGFloat(index))
+                .padding(inset)
 
             HStack(spacing: 0) {
                 ForEach(Array(all.enumerated()), id: \.offset) { i, value in
@@ -149,7 +141,7 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
                     } label: {
                         Text(titles[i])
                             .font(font)
-                            .foregroundColor(selection == value ? .blue : .black)
+                            .foregroundStyle(selection == value ? selectedText : textColor)
                             .frame(width: segW, height: height)
                             .contentShape(Rectangle())
                     }

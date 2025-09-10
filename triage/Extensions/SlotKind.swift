@@ -14,7 +14,7 @@ extension Appointment {
         if basis.contains("medical")        { return .medical }
         if basis.contains("radio")          { return .radiology }
         if basis.contains("lab")            { return .laboratory }
-        if basis.contains("consult")        { return .radiology }
+        if basis.contains("doctor")        { return .doctor }
         return .medical
     }
 

@@ -22,7 +22,7 @@ struct WeekStrip: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.title3)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
                 .buttonStyle(.plain)
                 .frame(width: 44)
@@ -43,7 +43,7 @@ struct WeekStrip: View {
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.title3)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
                 .buttonStyle(.plain)
                 .frame(width: 44)
@@ -68,29 +68,39 @@ private struct DayCell: View {
 
     var body: some View {
         let isToday = Calendar.current.isDateInToday(date)
+
         VStack(spacing: 8) {
             Text(shortWeekday(date))
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.secondaryLabel))
 
             Text(dayString(date))
                 .font(.body.weight(.semibold))
-                .foregroundStyle(isSelected ? .white : Color.primary)
+                .foregroundStyle(isSelected ? Color.white : Color(.label))
                 .frame(width: 36, height: 36)
                 .background(
-                    Circle().fill(isSelected ? Color(.blue)
-                                  : (isToday ? Color(.blue.opacity(0.35)) : .clear))
+                    Circle().fill(
+                        isSelected
+                        ? Color(.systemBlue).opacity(0.80)
+                        : (isToday ? Color(.systemBlue).opacity(0.30)
+                                   : .clear)
+                    )
                 )
                 .overlay(
                     Circle()
-                        .stroke(isToday && !isSelected ? Color(.blue.opacity(0.35)) : .clear, lineWidth: 1)
+                        .stroke(
+                            (isToday && !isSelected)
+                            ? Color(.systemBlue).opacity(0.30)
+                            : .clear,
+                            lineWidth: 1
+                        )
                 )
         }
     }
 
     private func shortWeekday(_ d: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "E"
-        return f.string(from: d).prefix(1).uppercased()
+        return String(f.string(from: d).prefix(1)).uppercased()
     }
     
     private func dayString(_ d: Date) -> String {
