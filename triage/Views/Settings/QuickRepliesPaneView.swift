@@ -21,7 +21,7 @@ struct QuickRepliesPaneView: View {
             HStack(spacing: 12) {
                 Text("Setting Up the Quick Replies")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color(hex: "#0F0E46"))
+                    .foregroundStyle(Color("TextPrimary"))
                 Spacer()
                 SearchField(text: $searchText, placeholder: "Search")
                     .frame(width: 200)
@@ -30,7 +30,7 @@ struct QuickRepliesPaneView: View {
                 } label: {
                     Text("Add")
                         .font(.footnote)
-                        .foregroundStyle(Color(hex: "#0F0E46"))
+                        .foregroundStyle(Color("TextPrimary"))
                 }
             }
 
@@ -74,7 +74,7 @@ private struct QuickReplyCard: View {
                 Checkbox(isOn: item.isActive) { onToggle(item) }
                 Text(item.title)
                     .font(.headline.weight(.semibold))
-                    .foregroundStyle(Color(hex: "#0F0E46"))
+                    .foregroundStyle(Color("TextPrimary"))
                 Spacer()
             }
             Text(item.message)
@@ -85,11 +85,11 @@ private struct QuickReplyCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 6)
-            .fill(Color(hex: "E2E2E9"))
+            .fill(Color("CardSettings"))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(Color(hex: "0F0E46"), lineWidth: 1)
+                .stroke(Color("TextPrimary"), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
         .onTapGesture { onTap(item) }
@@ -104,7 +104,7 @@ private struct Checkbox: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: isOn ? "checkmark.square.fill" : "square")
-                .foregroundStyle(Color(hex: "#0F0E46"))
+                .foregroundStyle(Color("TextPrimary"))
                 .font(.title3)
         }
         .buttonStyle(.plain)

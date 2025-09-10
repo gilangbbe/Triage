@@ -13,7 +13,7 @@ struct KeyboardInstructionView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Setting Up the Keyboard Extension")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(Color(hex: "#0F0E46"))
+                .foregroundStyle(Color("TextPrimary"))
                 .padding(.top, 20)
             
             ScrollView {
@@ -41,8 +41,8 @@ struct KeyboardInstructionView: View {
                             Text("Jenis kelamin(P/L): L")
                         }
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
                         .italic()
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -78,9 +78,9 @@ private struct StepRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .center) {
                 NumberBadge(number: number)
-                Text(title).font(.title3).bold().foregroundColor(Color(hex: "0F0E46"))
+                Text(title).font(.title3).bold().foregroundColor(Color("TextPrimary"))
             }
-            Text(attributedDetail).font(.callout).foregroundColor(Color(hex: "0F0E46"))
+            Text(attributedDetail).font(.callout).foregroundColor(Color("TextPrimary"))
         }
     }
 }
@@ -91,8 +91,8 @@ private struct NumberBadge: View {
         Text("\(number)")
             .font(.caption)
             .frame(width: 19, height: 19)
-            .background(Circle().fill(Color(hex: "#0F0E46")))
-            .foregroundStyle(Color(hex: "#F9F9F9"))
+            .background(Circle().fill(Color("TextPrimary")))
+            .foregroundStyle(Color("ButtonPrimary"))
     }
 }
 private struct AppCard<Content: View>: View {
@@ -103,7 +103,7 @@ private struct AppCard<Content: View>: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(hex: "#F7F7F7"))
+                    .fill(Color("BackgroundSettings"))
             )
             .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }

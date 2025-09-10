@@ -39,7 +39,7 @@ struct HealthCareCatalogView: View {
             HStack(spacing: 12) {
                 Text("Setting Up the Healthcare Catalog")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color(hex: "#0F0E46"))
+                    .foregroundStyle(Color("TextPrimary"))
                 Spacer()
                 SearchField(text: $searchText, placeholder: "Search")
                     .frame(width: 200)
@@ -48,7 +48,7 @@ struct HealthCareCatalogView: View {
                 } label: {
                     Text("Add Department")
                         .font(.footnote)
-                        .foregroundStyle(Color(hex: "#0F0E46"))
+                        .foregroundStyle(Color("TextPrimary"))
                 }
             }
             
@@ -60,7 +60,7 @@ struct HealthCareCatalogView: View {
                             department: dept,
                             displayTitle: dept.name.uppercased(),
                             packages: packages,
-                            color: Color.gray.opacity(0.05),
+                            color: Color("BackgroundSettings"),
                             onAddPackage: { selectedDepartmentForPackage = dept },
                             onEditDepartment: { editingDepartment = dept },
                             onDeleteDepartment: { departmentManager.deleteDepartment(dept) },
@@ -106,7 +106,7 @@ struct SearchField: View {
         .padding(.horizontal, 10)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color(hex: "D9D9D9").opacity(0.3))
+                .fill(Color("SearchBackground"))
         )
     }
 }
@@ -204,7 +204,7 @@ struct DepartmentSectionView: View {
             HStack {
                 Text(displayTitle)
                     .font(.footnote)
-                    .foregroundColor(Color(hex: "272556").opacity(0.5))
+                    .foregroundColor(Color("TextPrimary").opacity(0.8))
                 
                 Spacer()
                 
@@ -212,7 +212,7 @@ struct DepartmentSectionView: View {
                     Button("Add") {
                         onAddPackage()
                     }
-                    .foregroundColor(Color.accent)
+                    .foregroundColor(Color("TextPrimary"))
                     .font(.subheadline)
                     
                     Menu {
@@ -358,11 +358,10 @@ struct PackageRowView: View {
             Button(action: {
                 showingDeleteAlert = true
             }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
+                Text("Delete")
                     .font(.caption)
+                    .foregroundColor(Color("OutlineDelete"))
             }
-            .buttonStyle(PlainButtonStyle())
         }
         .padding(.vertical, 8)
         .padding(.horizontal)

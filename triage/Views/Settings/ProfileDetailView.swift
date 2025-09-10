@@ -37,17 +37,17 @@ struct ProfileDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.footnote)
-                .foregroundStyle(Color(hex: "272556").opacity(0.5))
+                .foregroundStyle(Color("TextPrimary").opacity(0.8))
             
             TextField(placeholder, text: text)
                 .keyboardType(keyboard)
                 .font(.title3)
-                .foregroundColor(Color(hex: "0F0E46")) // text color
+                .foregroundColor(Color("TextPrimary")) // text color
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(hex: "F9F9F9"))
+                        .fill(Color("BackgroundSettings"))
                 )
 
         }

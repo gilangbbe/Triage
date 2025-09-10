@@ -49,7 +49,7 @@ struct SettingsView: View {
                     } header: {
                         Text("CUSTOMER CARE IDENTITY")
                             .font(.footnote)
-                            .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                            .foregroundColor(Color("TextPrimary").opacity(0.8))
                     }
                     .headerProminence(.increased)
                     
@@ -63,7 +63,7 @@ struct SettingsView: View {
                     } header: {
                         Text("SERVICE SETUP")
                             .font(.footnote)
-                            .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                            .foregroundColor(Color("TextPrimary").opacity(0.8))
                     }
                     .headerProminence(.increased)
                     
@@ -82,7 +82,7 @@ struct SettingsView: View {
                     } header: {
                         Text("KEYBOARD EXTENSION")
                             .font(.footnote)
-                            .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                            .foregroundColor(Color("TextPrimary").opacity(0.8))
                     }
                     .headerProminence(.increased)
                 }
@@ -146,7 +146,7 @@ struct SettingsRowView: View {
         HStack(spacing: 12) {
             Text(section.rawValue)
                 .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : Color(hex: "#0F0E46"))
+                .foregroundColor(isSelected ? Color("ButtonPrimary") : Color("TextPrimary"))
             
             Spacer()
         }
@@ -154,7 +154,7 @@ struct SettingsRowView: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .background(
-            (isSelected ? Color(hex: "#0F0E46") : Color(hex: "#F9F9F9"))
+            (isSelected ? Color("TextPrimary") : Color("BackgroundSettings"))
                 .ignoresSafeArea()
         )
         .cornerRadius(6)
@@ -175,14 +175,14 @@ struct ProfileRowView: View {
                     Text(initials(fullName))
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundColor(Color(hex: "#0F0E46"))
+                        .foregroundColor(Color("TextPrimary"))
                 )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(fullName)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(isSelected ? .white : Color(hex: "#0F0E46"))
+                    .foregroundColor(isSelected ? Color("ButtonPrimary") : Color("TextPrimary"))
             }
             
             Spacer()
@@ -191,7 +191,7 @@ struct ProfileRowView: View {
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isSelected ? Color(hex: "#0F0E46") : Color(hex: "#F9F9F9"))
+                .fill(isSelected ? Color("TextPrimary") : Color("BackgroundSettings"))
         )
     }
     
