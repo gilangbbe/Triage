@@ -9,7 +9,6 @@ import SwiftUI
 struct SidebarPanel: View {
     @Binding var selectedDate: Date
     @Binding var showLog: Bool
-    @Binding var logEntries: [ReminderEntry]
 
     let appointments: [Appointment]
 
@@ -22,7 +21,6 @@ struct SidebarPanel: View {
                         .foregroundStyle(Color.primary)
                     Spacer()
                     Button {
-                        logEntries = buildLog(from: appointments, asOf: selectedDate)
                         withAnimation(.easeInOut(duration: 0.2)) { showLog = true }
                     } label: {
                         Label("Reminder Log", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
@@ -84,25 +82,6 @@ struct SidebarPanel: View {
                 return $0.timeSlot.startTime < $1.timeSlot.startTime
             }
             return $0.isReminded == false && $1.isReminded == true
-        }
-    }
-
-
-    // MARK: - Log builder
-    private func buildLog(from appts: [Appointment], asOf day: Date) -> [ReminderEntry] {
-        let cal = Calendar.current
-        let todays = appts.filter { cal.isDate($0.timeSlot.startTime, inSameDayAs: day) }
-
-        let sentBase = cal.date(byAdding: .day, value: -1, to: day) ?? day
-        let sentAt = cal.date(bySettingHour: 7, minute: 36, second: 0, of: sentBase) ?? sentBase
-
-        return todays.map { a in
-            ReminderEntry(
-                patientName: a.patient?.fullName ?? a.name,
-                apptKind: a.name,
-                apptDate: a.timeSlot.startTime,
-                sentAt: sentAt
-            )
         }
     }
 }

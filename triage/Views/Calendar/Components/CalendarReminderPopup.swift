@@ -47,6 +47,7 @@ struct ReminderPopup: View {
                                 assertionFailure("Save failed: \(error)")
                                 print("Save failed:", error)
                             }
+                            vm.markReminded(appt)
                         }
                     }
                 } label: {

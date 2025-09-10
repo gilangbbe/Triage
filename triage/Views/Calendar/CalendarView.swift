@@ -17,7 +17,6 @@ struct CalendarView: View {
 
     @State private var showLog = false
     @State private var showAddAppointment = false
-    @State private var logEntries: [ReminderEntry] = []
 
     var body: some View {
         ZStack {
@@ -29,7 +28,6 @@ struct CalendarView: View {
                             set: { vm.selectedDate = $0 }
                         ),
                         showLog: $showLog,
-                        logEntries: $logEntries,
                         appointments: vm.appointments(on: vm.selectedDate)
                     )
 
@@ -85,9 +83,10 @@ struct CalendarView: View {
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showLog) {
-            ReminderLogView(entries: logEntries) {
-                withAnimation(.easeInOut(duration: 0.2)) { showLog = false }
-            }
+            ReminderLogView(
+                logs: HistoryManager.shared.history,
+                onClose: { withAnimation(.easeInOut(duration: 0.2)) { showLog = false } }
+            )
         }
         .sheet(isPresented: $showAddAppointment) {
             AddAppointmentView(appointmentManager: listVM.manager)
@@ -96,7 +95,6 @@ struct CalendarView: View {
 }
 
 
-/// Generic segmented control you already had
 private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where E.AllCases: RandomAccessCollection {
     @Binding var selection: E
     let titles: [String]
@@ -106,7 +104,6 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
     var font: Font = .subheadline.weight(.semibold)
 
     var trackColor: Color = Color(.secondarySystemBackground)
-//    var trackStroke: Color = Color(.separator)
     var pillColor: Color = Color(.tertiarySystemBackground)
     var textColor: Color = Color(.secondaryLabel)
     var selectedText: Color = Color(.label)
@@ -127,7 +124,6 @@ private struct EnumPillSegmentedControl<E: CaseIterable & Equatable>: View where
             
             Capsule()
                 .fill(pillColor)
-                .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 4)
                 .frame(width: segW, height: pillH)
                 .offset(x: segW * CGFloat(index))
                 .padding(inset)

@@ -33,6 +33,7 @@ enum HistoryType: Codable {
     case patientDataUpdate(customerCareName: String, patientName: String)
     case serviceChoiceUpdate(customerCareName: String, patientName: String, serviceChoice: String)
     case newPatient(patientName: String)
+    case patitentReminderNotification(patientName: String, appointmentDate: String, AppointmentTime: String, )
 }
 
 extension HistoryManager {
@@ -48,6 +49,11 @@ extension HistoryManager {
     
     func logNewPatient(patientName: String) {
         let newHistory = History(type: .newPatient(patientName: patientName))
+        addHistory(newHistory)
+    }
+    
+    func logPatientReminderNotification(patientName: String, appointmentDate: String, AppointmentTime: String) {
+        let newHistory = History(type: .patitentReminderNotification(patientName: patientName, appointmentDate: appointmentDate, AppointmentTime: AppointmentTime))
         addHistory(newHistory)
     }
 }
