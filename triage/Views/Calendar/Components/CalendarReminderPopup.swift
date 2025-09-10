@@ -8,7 +8,10 @@
 import SwiftUI
 
 struct ReminderPopup: View {
-    let appt: Appointment
+    @Environment(\.modelContext) private var modelContext
+    @Environment(CalendarViewModel.self) private var vm
+    @Bindable var appt: Appointment
+    @Binding var isPresented: Bool
     var onClose: () -> Void
 
     @State private var copied = false
@@ -35,12 +38,17 @@ struct ReminderPopup: View {
             HStack {
                 Spacer()
                 Button {
-                    #if canImport(UIKit)
-                    UIPasteboard.general.string = plainReminder(for: appt)
-                    #endif
                     withAnimation(.easeInOut(duration: 0.15)) { copied = true }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        withAnimation(.easeInOut(duration: 0.15)) { copied = false }
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isPresented = false
+                            appt.isReminded = true
+                            do { try modelContext.save() } catch {
+                                assertionFailure("Save failed: \(error)")
+                                print("Save failed:", error)
+                            }
+                            vm.markReminded(appt)
+                        }
                     }
                 } label: {
                     Label(copied ? "Copied!" : "Copy Reminder", systemImage: "doc.on.doc")

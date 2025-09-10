@@ -34,6 +34,8 @@ struct HistoryRowView: View {
             return Text(customerCare).bold() + Text(" updated the service choice to ") + Text(service).bold() + Text(" for ") + Text(patient).bold() + Text("'s appointment")
         case .newPatient(patientName: let patientName):
             return Text("New patient").bold() + Text(" has been added : ") + Text(patientName).bold()
+        case .patitentReminderNotification(patientName: let patientName, appointmentDate: let appointmentDate, AppointmentTime: let AppointmentTime):
+            return Text(patientName).bold() + Text(" has an appointment on ") + Text(appointmentDate).bold() + Text(" at ") + Text(AppointmentTime).bold()
         }
     }
     

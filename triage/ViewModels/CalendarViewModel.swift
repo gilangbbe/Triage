@@ -14,25 +14,19 @@ final class CalendarViewModel {
 
     private let appointmentManager: AppointmentManager
     @ObservationIgnored private let cal = Calendar.current
-    @ObservationIgnored private var context: ModelContext?
 
+    // MARK: - UI State
     var scope: Scope = .day
     var selectedDate: Date = .now
     var monthAnchor: Date = .now
 
-    // (Optional) legacy cache—avoid relying on this for day/week screens
     var appointments: [Appointment] = []
 
     init(appointmentManager: AppointmentManager = .shared) {
         self.appointmentManager = appointmentManager
     }
 
-    func setModelContext(_ ctx: ModelContext) {
-        self.context = ctx
-        appointmentManager.setModelContext(ctx)
-        reload() // ok to keep if other parts still use 'appointments'
-    }
-
+    // MARK: - Visible range
     var visibleInterval: DateInterval {
         switch scope {
         case .day:
@@ -122,26 +116,84 @@ final class CalendarViewModel {
     // but don't use it for Day/Week screens now that we fetch directly.
     func reload() {
         appointments = appointmentManager.appointments
+            .filter { $0.timeSlot != nil }
+            .sorted { appointment1, appointment2 in
+                guard let timeSlot1 = appointment1.timeSlot,
+                      let timeSlot2 = appointment2.timeSlot else { return false }
+                return timeSlot1.startTime < timeSlot2.startTime
+            }
     }
 
-    // Mutations
+    @MainActor
+    func reloadForVisibleInterval() {
+        appointments = filter(appointmentManager.appointments, in: visibleInterval)
+    }
+
+    @MainActor
     func addAppointment(_ appointment: Appointment) {
         appointmentManager.addAppointment(appointment)
-        try? context?.save()
+        reloadForVisibleInterval()
     }
 
+    @MainActor
     func deleteAppointment(_ appointment: Appointment) {
         appointmentManager.deleteAppointment(appointment)
-        try? context?.save()
+        reloadForVisibleInterval()
     }
 
-    // ✅ Persist a reminder toggle
-    func markReminded(_ appt: Appointment) {
+    // MARK: - REMINDER LOG
+    @MainActor func markReminded(_ appt: Appointment) {
         appt.isReminded = true
-        try? context?.save()
+        appointmentManager.updateAppointment(appt)
+        reloadForVisibleInterval()
+        logReminderIfNeeded(for: appt)
+    }
+    
+    private func shouldLogReminder(now: Date = Date(), start: Date, leadTime: TimeInterval = 2*60*60) -> Bool {
+        now >= start.addingTimeInterval(-leadTime)
     }
 
-    // Helper if you still need a filter on arrays somewhere
+    private func alreadyLoggedReminder(for appt: Appointment, in history: [History]) -> Bool {
+        let patientName = appt.patient?.fullName ?? appt.name
+        
+        guard let timeSlot = appt.timeSlot else { return false }
+        let dateStr = DateFormatter.with("dd MMMM yyyy").string(from: timeSlot.startTime)
+        let timeStr = DateFormatter.with("HH:mm").string(from: timeSlot.startTime)
+
+        return history.contains { h in
+            switch h.type {
+            case .patitentReminderNotification(let n, let d, let t):
+                return n == patientName && d == dateStr && t == timeStr
+            default:
+                return false
+            }
+        }
+    }
+
+    private func logReminderIfNeeded(for appt: Appointment, historyManager: HistoryManager = .shared) {
+        guard let timeSlot = appt.timeSlot else { return }
+        let start = timeSlot.startTime
+        guard shouldLogReminder(start: start) else { return }
+        guard !alreadyLoggedReminder(for: appt, in: historyManager.history) else { return }
+
+        let patientName = appt.patient?.fullName ?? appt.name
+        let packageName = appt.package?.department?.name ?? appt.name
+
+        let dateStr = DateFormatter.with("dd MMMM yyyy").string(from: start)
+        let timeStr = DateFormatter.with("hh:mm a").string(from: start)
+
+        let dateWithPackage = "\(dateStr) with \(packageName)"
+
+        historyManager.logPatientReminderNotification(
+            patientName: patientName,
+            appointmentDate: dateWithPackage,
+            AppointmentTime: timeStr
+        )
+    }
+
+
+
+    // MARK: - Local filter
     private func filter(_ appts: [Appointment], in iv: DateInterval) -> [Appointment] {
         appts
             .filter { 

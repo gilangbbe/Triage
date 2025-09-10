@@ -351,7 +351,10 @@ struct AppointmentListRow: View {
             .padding(.bottom, 4)
             HStack {
                 if let timeSlot = appointment.timeSlot {
-                    Text(timeSlot.startTime.formatted(date: .omitted, time: .shortened))
+                    Text(timeSlot.startTime.formatted(Date.FormatStyle()
+                        .hour(.twoDigits(amPM: .omitted))
+                        .minute(.twoDigits)
+                        .locale(Locale(identifier: "en_GB"))))
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundColor(.accentColor)

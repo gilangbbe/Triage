@@ -30,7 +30,6 @@ private struct TimelineBoard: View {
     let selectedDate: Date
     let appointments: [Appointment]
 
-    // Layout
     private let minEmptyRowHeight: CGFloat = 128
     private let timeTextWidth: CGFloat = 56
     private let timeLeadingPad: CGFloat = 12

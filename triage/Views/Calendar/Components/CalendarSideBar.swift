@@ -9,9 +9,7 @@ import SwiftUI
 struct SidebarPanel: View {
     @Binding var selectedDate: Date
     @Binding var showLog: Bool
-    @Binding var logEntries: [ReminderEntry]
 
-    /// Plain array of SwiftData @Model objects (reference semantics)
     let appointments: [Appointment]
 
     var body: some View {
@@ -20,10 +18,9 @@ struct SidebarPanel: View {
                 HStack {
                     Text("Schedule")
                         .font(.largeTitle.weight(.bold))
-                        .foregroundStyle(Color(red: 0.08, green: 0.10, blue: 0.24))
+                        .foregroundStyle(Color.primary)
                     Spacer()
                     Button {
-                        logEntries = buildLog(from: appointments, asOf: selectedDate)
                         withAnimation(.easeInOut(duration: 0.2)) { showLog = true }
                     } label: {
                         Label("Reminder Log", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
@@ -83,31 +80,12 @@ struct SidebarPanel: View {
     }
 
     private var sortedReminders: [Appointment] {
-        todaysAppts.sorted { 
-            guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
-            return timeSlot1.startTime < timeSlot2.startTime 
-        }
-    }
-
-    // MARK: - Log builder
-    private func buildLog(from appts: [Appointment], asOf day: Date) -> [ReminderEntry] {
-        let cal = Calendar.current
-        let todays = appts.filter { 
-            guard let timeSlot = $0.timeSlot else { return false }
-            return cal.isDate(timeSlot.startTime, inSameDayAs: day) 
-        }
-
-        let sentBase = cal.date(byAdding: .day, value: -1, to: day) ?? day
-        let sentAt = cal.date(bySettingHour: 7, minute: 36, second: 0, of: sentBase) ?? sentBase
-
-        return todays.compactMap { a in
-            guard let timeSlot = a.timeSlot else { return nil }
-            return ReminderEntry(
-                patientName: a.patient?.fullName ?? a.name,
-                apptKind: a.name,
-                apptDate: timeSlot.startTime,
-                sentAt: sentAt
-            )
+        todaysAppts.sorted {
+            if $0.isReminded == $1.isReminded {
+                guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
+                return timeSlot1.startTime < timeSlot2.startTime
+            }
+            return $0.isReminded == false && $1.isReminded == true
         }
     }
 }
