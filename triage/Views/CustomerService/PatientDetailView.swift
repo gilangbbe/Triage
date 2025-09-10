@@ -19,25 +19,30 @@ struct PatientDetailView: View {
     @Environment(AppointmentManager.self) private var appointmentManager
     @Environment(PatientManager.self) private var patientManager
     
+    // Get appointments from AppointmentManager instead of patient relationship
+    private var patientAppointments: [Appointment] {
+        appointmentManager.appointments.filter { $0.patient?.id == patient.id }
+    }
+    
     // Computed properties to separate upcoming and completed appointments
     private var upcomingAppointments: [Appointment] {
-        patient.appointments?.filter { appointment in
+        patientAppointments.filter { appointment in
             guard let timeSlot = appointment.timeSlot else { return false }
             return timeSlot.date >= Calendar.current.startOfDay(for: Date())
         }.sorted { 
             guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
             return timeSlot1.date < timeSlot2.date 
-        } ?? []
+        }
     }
     
     private var completedAppointments: [Appointment] {
-        patient.appointments?.filter { appointment in
+        patientAppointments.filter { appointment in
             guard let timeSlot = appointment.timeSlot else { return false }
             return timeSlot.date < Calendar.current.startOfDay(for: Date())
         }.sorted { 
             guard let timeSlot1 = $0.timeSlot, let timeSlot2 = $1.timeSlot else { return false }
             return timeSlot1.date > timeSlot2.date 
-        } ?? []
+        }
     }
     
     var body: some View {
@@ -302,7 +307,7 @@ struct PatientDetailView: View {
         let timeSlotModel = TimeSlot(
             date: date,
             startTime: timeSlot.startTime,
-            endTime: timeSlot.endTime
+            endTime: timeSlot.endTime,
         )
         
         let appointmentTitle = "\(patient.fullName) - \(package.name)"

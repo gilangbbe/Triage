@@ -20,6 +20,12 @@ class NotificationManager {
     private init() {}
     
     func scheduleReminder(for appointment: Appointment, hoursBefore: Int = 2) {
+        // Ensure we have a valid timeSlot
+        guard let timeSlot = appointment.timeSlot else {
+            print("Cannot schedule reminder: appointment has no timeSlot")
+            return
+        }
+        
         badgeCount += 1
         
         let content = UNMutableNotificationContent()
@@ -29,7 +35,7 @@ class NotificationManager {
         content.badge = NSNumber(value: badgeCount)
         
         // Get Appointment Datetime
-        let appointmentDate = appointment.timeSlot.startTime
+        let appointmentDate = timeSlot.startTime
         
         // Calculate Reminder Time (Event - 2 hours)
         guard let reminderDate = Calendar.current.date(byAdding: .hour, value: -hoursBefore, to: appointmentDate) else {
