@@ -8,16 +8,34 @@
 import SwiftUI
 
 struct SegmentedControlFilterView: View {
-    @State private var selectedSegment = 0
+    @Binding var selectedSegment: Int
+    
+    let departments = ["MCU", "Radiology", "Laboratory"]
     
     var body : some View {
         VStack {
-            Picker("Select Service", selection: $selectedSegment) {
-                Text("MCU").tag(0)
-                Text("Radiology").tag(1)
-                Text("Laboratory").tag(2)
+            HStack(spacing: 0) {
+                ForEach(1...departments.count, id: \.self) { index in
+                    Button(action: {
+                        // Toggle behavior: if same segment is tapped, deselect (show all)
+                        if selectedSegment == index {
+                            selectedSegment = 0 // 0 means "All" (no filter)
+                        } else {
+                            selectedSegment = index
+                        }
+                    }) {
+                        Text(departments[index - 1])
+                            .font(.subheadline)
+                            .foregroundColor(selectedSegment == index ? Color("ButtonPrimary") : Color("TextPrimary"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(selectedSegment == index ? Color("TextPrimary") : Color("BackgroundSettings"))
+                    }
+                    .contentShape(Rectangle())
+                }
             }
-            .pickerStyle(.segmented)
+            .background(Color(.systemGray5))
+            .cornerRadius(8)
             .padding(.horizontal, 18)
         }
     }

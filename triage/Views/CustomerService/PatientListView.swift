@@ -34,7 +34,7 @@ struct PatientListView: View {
             VStack(spacing: 16) {
                 SearchBarPatientView(text: $patientViewModel.searchText)
                 
-                SegmentedControlFilterView()
+                SegmentedControlFilterView(selectedSegment: $patientViewModel.selectedDepartmentIndex)
 
                 ScrollViewReader { proxy in
                     ZStack(alignment: .trailing) {

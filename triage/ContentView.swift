@@ -55,7 +55,7 @@ struct ContentView: View {
         }
         .onAppear {
             if patientListViewModel == nil {
-                patientListViewModel = PatientListViewModel(patientManager: patientManager)
+                patientListViewModel = PatientListViewModel(patientManager: patientManager, appointmentManager: appointmentManager)
             }
             if appointmentListViewModel == nil {
                 appointmentListViewModel = AppointmentListViewModel(appointmentManager: appointmentManager)
