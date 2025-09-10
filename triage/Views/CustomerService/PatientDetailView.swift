@@ -69,7 +69,7 @@ struct PatientDetailView: View {
                                 Button(action: {
                                     showingAddAppointment = true
                                 }) {
-                                    Text("Add")
+                                    Text("Add/Edit")
                                 }
                             }
                             VStack {
@@ -189,6 +189,8 @@ struct PatientDetailView: View {
                     Button(action: {
                         if isEditing {
                             recordPatientUpdateHistory()
+                            // Sync patient updates to server
+                            patientManager.updatePatient(patient)
                         }
                         
                         isEditing.toggle()
