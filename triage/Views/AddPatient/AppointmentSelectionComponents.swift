@@ -271,12 +271,12 @@ struct AppointmentSelectionSheet: View {
                                 }
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 12)
-                                .background(Color(hex: "FFE4E4"))
-                                .foregroundColor(Color(hex: "DB0000"))
+                                .background(Color("ButtonDelete"))
+                                .foregroundColor(Color("OutlineDelete"))
                                 .cornerRadius(6)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color(hex: "DB0000"), lineWidth: 1)
+                                        .stroke(Color("OutlineDelete"), lineWidth: 1)
                                 )
                             }
                         }
