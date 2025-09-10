@@ -157,6 +157,10 @@ struct Step3AppointmentsView: View {
                                     date: date,
                                     timeSlot: timeSlot
                                 )
+                                // Save the updated appointment to database
+                                if let patient = patient {
+                                    viewModel.updatePatientAppointment(editing, newPackage: package, newDate: date, newTimeSlot: timeSlot, for: patient)
+                                }
                             }
                         } else {
                             if let index = viewModel.selectedAppointments.firstIndex(where: { $0.id == editing.id }) {
@@ -216,6 +220,10 @@ struct Step3AppointmentsView: View {
                                     date: date,
                                     timeSlot: timeSlot
                                 )
+                                // Save the updated appointment to database
+                                if let patient = patient {
+                                    viewModel.updatePatientAppointment(editing, newPackage: package, newDate: date, newTimeSlot: timeSlot, for: patient)
+                                }
                             }
                         } else {
                             if let index = viewModel.selectedDoctorAppointments.firstIndex(where: { $0.id == editing.id }) {

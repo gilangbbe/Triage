@@ -431,6 +431,32 @@ class AddPatientViewModel {
         clearForm()
     }
     
+    // MARK: - Standalone Mode Appointment Management
+    func updatePatientAppointment(_ appointmentSelection: AppointmentSelection, newPackage: Package, newDate: Date, newTimeSlot: TimeSlotOption, for patient: Patient) {
+        // Find the existing appointment to update
+        if let existingAppointment = patient.appointments?.first(where: { appointment in
+            guard let timeSlot = appointment.timeSlot else { return false }
+            return timeSlot.date == appointmentSelection.date &&
+                   timeSlot.startTime == appointmentSelection.timeSlot.startTime &&
+                   appointment.package?.id == appointmentSelection.package?.id
+        }) {
+            // Update the existing appointment
+            let newTimeSlotModel = TimeSlot(
+                date: newDate,
+                startTime: newTimeSlot.startTime,
+                endTime: newTimeSlot.endTime
+            )
+            
+            // Update appointment properties
+            existingAppointment.timeSlot = newTimeSlotModel
+            existingAppointment.package = newPackage
+            existingAppointment.name = "\(patient.fullName) - \(newPackage.name)"
+            
+            // Save changes through AppointmentManager
+            appointmentManager.updateAppointment(existingAppointment)
+        }
+    }
+    
     private func clearForm() {
         rawText = ""
         nationalId = nil
