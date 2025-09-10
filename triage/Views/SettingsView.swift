@@ -36,41 +36,58 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationSplitView {
-            VStack(spacing: 16) {
-                ScrollViewReader { proxy in
-                    List(selection: $selectedSection) {
-                        // Profile Section
-                        Section("CUSTOMER CARE IDENTITY") {
-                            ProfileRowView(
-                                fullName: fullName,
-                                isSelected: selectedSection == .profile
-                            )
-                            .tag(SettingsSection.profile)
-                        }
-                        
-                        // Service Setup Section
-                        Section("SERVICE SETUP") {
-                            SettingsRowView(
-                                section: .packages,
-                                isSelected: selectedSection == .packages
-                            )
-                        }
-                        
-                        // Keyboard Extension Section
-                        Section("KEYBOARD EXTENSION") {
-                            SettingsRowView(
-                                section: .setupInstructions,
-                                isSelected: selectedSection == .setupInstructions
-                            )
-                            SettingsRowView(
-                                section: .quickReplies,
-                                isSelected: selectedSection == .quickReplies
-                            )
-                        }
-                    }
-                    .scrollContentBackground(.hidden)
+            List(selection: $selectedSection) {
+                // Profile Section
+                Section {
+                    ProfileRowView(
+                        fullName: fullName,
+                        isSelected: selectedSection == .profile
+                    )
+                    .tag(SettingsSection.profile)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                } header: {
+                    Text("CUSTOMER CARE IDENTITY")
+                        .font(.footnote)
+                        .foregroundColor(Color(hex: "#272556").opacity(0.5))
                 }
+                .headerProminence(.increased)
+                
+                // Service Setup Section
+                Section {
+                    SettingsRowView(
+                        section: .packages,
+                        isSelected: selectedSection == .packages
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                } header: {
+                    Text("SERVICE SETUP")
+                        .font(.footnote)
+                        .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                }
+                .headerProminence(.increased)
+                
+                // Keyboard Extension Section
+                Section {
+                    SettingsRowView(
+                        section: .setupInstructions,
+                        isSelected: selectedSection == .setupInstructions
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    SettingsRowView(
+                        section: .quickReplies,
+                        isSelected: selectedSection == .quickReplies
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                } header: {
+                    Text("KEYBOARD EXTENSION")
+                        .font(.footnote)
+                        .foregroundColor(Color(hex: "#272556").opacity(0.5))
+                }
+                .headerProminence(.increased)
             }
+            .listSectionSpacing(20)
+            .scrollContentBackground(.hidden)
+            .background(Color.white)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.automatic)
             .toolbar(removing: .sidebarToggle)
@@ -96,22 +113,17 @@ struct SettingsView: View {
             case .quickReplies:
                 QuickRepliesPaneView()
             case .none:
-                PlaceholderDetailView(title: "Settings", description: "Select a settings category")
+                PlaceholderDetailView(
+                    title: "Settings",
+                    description: "Select a settings category"
+                )
             }
         }
         .navigationSplitViewStyle(.balanced)
     }
-    
-    // MARK: - Helper Functions
-    private func initials(_ name: String) -> String {
-        let comps = name.split(separator: " ")
-        let first = comps.first?.first.map(String.init) ?? ""
-        let second = comps.dropFirst().first?.first.map(String.init) ?? ""
-        return (first + second).uppercased()
-    }
 }
 
-// MARK: - Supporting Views
+// MARK: - Sidebar Row Views
 
 struct SettingsRowView: View {
     let section: SettingsView.SettingsSection
@@ -121,16 +133,18 @@ struct SettingsRowView: View {
         HStack(spacing: 12) {
             Text(section.rawValue)
                 .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .white : .primary)
+                .foregroundColor(isSelected ? .white : .primary)
             
             Spacer()
         }
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading) // stretch full width
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .background(
-            isSelected ? Color.accentColor : Color.placeholder,
-            in: RoundedRectangle(cornerRadius: 8)
+            (isSelected ? Color(hex: "#0F0E46") : Color(hex: "#F9F9F9"))
+                .ignoresSafeArea()
         )
+        .cornerRadius(6)
         .tag(section)
     }
 }
@@ -148,14 +162,14 @@ struct ProfileRowView: View {
                     Text(initials(fullName))
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundStyle(isSelected ? .white : .primary)
+                        .foregroundColor(isSelected ? .white : .primary)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(fullName)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(isSelected ? .white : .primary)
+                    .foregroundColor(isSelected ? .white : .primary)
             }
             
             Spacer()
@@ -163,8 +177,8 @@ struct ProfileRowView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
         .background(
-            isSelected ? Color.accentColor : Color.placeholder,
-            in: RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected ? Color(hex: "#0F0E46") : Color(hex: "#F9F9F9"))
         )
     }
     
@@ -175,6 +189,8 @@ struct ProfileRowView: View {
         return (first + second).uppercased()
     }
 }
+
+// MARK: - Profile Detail View
 
 struct ProfileDetailView: View {
     @Binding var fullName: String
@@ -241,6 +257,8 @@ struct ProfileDetailView: View {
         }
     }
 }
+
+// MARK: - Placeholder View
 
 struct PlaceholderDetailView: View {
     let title: String
