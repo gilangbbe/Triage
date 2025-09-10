@@ -350,12 +350,12 @@ struct PackageRowView: View {
                 }
                 
                 // Show appointment count if there are any
-                if let appointments = package.appointments, !appointments.isEmpty {
-                    Text("\(appointments.count) appointment(s) scheduled")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                        .padding(.top, 2)
-                }
+//                if let appointments = package.appointments, !appointments.isEmpty {
+//                    Text("\(appointments.count) appointment(s) scheduled")
+//                        .font(.caption2)
+//                        .foregroundColor(.orange)
+//                        .padding(.top, 2)
+//                }
 //                if !package.appointments.isEmpty {
 //                    Text("\(package.appointments.count) appointment(s) scheduled")
 //                        .font(.caption2)

@@ -81,6 +81,7 @@ struct Step3AppointmentsView: View {
                         .foregroundColor(Color("TextPrimary"))
                     
                     AddRowButton(title: "+ Add Package") {
+                        editingAppointment = nil
                         showAppointmentForm = true
                     }
                     
@@ -114,6 +115,7 @@ struct Step3AppointmentsView: View {
                         .foregroundColor(Color("TextPrimary"))
                     
                     AddRowButton(title: "+ Add Doctor") {
+                        editingDoctorAppointment = nil
                         showDoctorAppointmentForm = true
                     }
                     
@@ -141,11 +143,27 @@ struct Step3AppointmentsView: View {
             Spacer()
         }
         .padding()
-        .sheet(isPresented: $showAppointmentForm) {
+        .sheet(item: Binding<AppointmentSheetData?>(
+            get: { 
+                if showAppointmentForm {
+                    return AppointmentSheetData(
+                        editingAppointment: editingAppointment,
+                        appointmentType: .package
+                    )
+                }
+                return nil
+            },
+            set: { value in
+                showAppointmentForm = value != nil
+                if value == nil {
+                    editingAppointment = nil
+                }
+            }
+        )) { sheetData in
             AppointmentSelectionSheet(
                 viewModel: viewModel,
-                editingAppointment: editingAppointment,
-                appointmentType: .package,
+                editingAppointment: sheetData.editingAppointment,
+                appointmentType: sheetData.appointmentType,
                 onSave: { package, date, timeSlot in
                     if let editing = editingAppointment {
                         // Handle editing logic here
@@ -205,11 +223,27 @@ struct Step3AppointmentsView: View {
                 }
             )
         }
-        .sheet(isPresented: $showDoctorAppointmentForm) {
+        .sheet(item: Binding<AppointmentSheetData?>(
+            get: { 
+                if showDoctorAppointmentForm {
+                    return AppointmentSheetData(
+                        editingAppointment: editingDoctorAppointment,
+                        appointmentType: .doctor
+                    )
+                }
+                return nil
+            },
+            set: { value in
+                showDoctorAppointmentForm = value != nil
+                if value == nil {
+                    editingDoctorAppointment = nil
+                }
+            }
+        )) { sheetData in
             AppointmentSelectionSheet(
                 viewModel: viewModel,
-                editingAppointment: editingDoctorAppointment,
-                appointmentType: .doctor,
+                editingAppointment: sheetData.editingAppointment,
+                appointmentType: sheetData.appointmentType,
                 onSave: { package, date, timeSlot in
                     if let editing = editingDoctorAppointment {
                         if isStandaloneMode {
@@ -451,6 +485,13 @@ struct EmptyAppointmentState: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
     }
+}
+
+// MARK: - Supporting Types
+struct AppointmentSheetData: Identifiable {
+    let id = UUID()
+    let editingAppointment: AppointmentSelection?
+    let appointmentType: AppointmentType
 }
 
 #Preview {
