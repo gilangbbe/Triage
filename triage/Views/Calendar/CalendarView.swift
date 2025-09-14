@@ -21,7 +21,7 @@ struct CalendarView: View {
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
-                if vm.scope == .day {
+                if vm.scope == .Day {
                     SidebarPanel(
                         selectedDate: Binding(
                             get: { vm.selectedDate },
@@ -30,7 +30,6 @@ struct CalendarView: View {
                         showLog: $showLog,
                         appointments: vm.appointments(on: vm.selectedDate)
                     )
-
                     .frame(width: 360)
                     .background(Color(.systemBackground))
                     .overlay(Divider(), alignment: .trailing)
@@ -39,7 +38,7 @@ struct CalendarView: View {
                 VStack(spacing: 0) {
                     // Header
                     HStack {
-                        if vm.scope == .week {
+                        if vm.scope == .Week {
                             MonthYearSelector(
                                 monthAnchor: Binding(
                                     get: { vm.monthAnchor },
@@ -65,9 +64,9 @@ struct CalendarView: View {
 
                     Group {
                         switch vm.scope {
-                        case .day:
+                        case .Day:
                             CalendarDayView(showAddAppointment: $showAddAppointment)
-                        case .week:
+                        case .Week:
                             CalendarWeekView()
                         }
                     }

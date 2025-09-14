@@ -14,8 +14,8 @@ enum ReminderStyle {
 
     var accent: Color {
         switch self {
-        case .needToRemind: return Color(.systemRed)
-        case .remindAgain:  return Color(.systemIndigo)
+        case .needToRemind: return Color(hex:"#630B0C")
+        case .remindAgain:  return Color(hex:"#0F0E46")
         }
     }
     var pillText: String {
@@ -87,7 +87,7 @@ struct ReminderCard: View {
                 .frame(maxWidth: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(currentStyle.accent.opacity(currentStyle == .needToRemind ? 0.85 : 1.0))
+                        .fill(currentStyle.accent.opacity(currentStyle == .needToRemind ? 1 : 1))
                 )
             }
             .buttonStyle(.plain)
@@ -99,7 +99,7 @@ struct ReminderCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(currentStyle.accent.opacity(currentStyle == .needToRemind ? 0.30 : 0.22), lineWidth: 1)
+                .stroke(currentStyle.accent.opacity(currentStyle == .needToRemind ? 0.5 : 0.5), lineWidth: 1)
         )
         .popover(isPresented: $showReminder) {
             ReminderPopup(appt: appt, isPresented: $showReminder) {
