@@ -133,6 +133,38 @@ class DepartmentManager: CloudKitSyncable {
     
     func loadFromCloudKit() async {
         do {
+            // First, get all CloudKit record IDs to identify what should exist
+            let cloudKitRecordIDs = try await cloudKitHelper.fetchRecordIDs(ofType: "Department")
+            
+            // Get current local departments
+            await MainActor.run {
+                guard let context = modelContext else { return }
+                
+                // Get all local departments
+                let descriptor = FetchDescriptor<Department>()
+                do {
+                    let localDepartments = try context.fetch(descriptor)
+                    
+                    // Find local departments that no longer exist in CloudKit
+                    let localDepartmentsToDelete = localDepartments.filter { department in
+                        !cloudKitRecordIDs.contains(department.id.uuidString)
+                    }
+                    
+                    // Delete local departments that don't exist in CloudKit
+                    for department in localDepartmentsToDelete {
+                        print("🗑️ Deleting local department not found in CloudKit: \(department.name)")
+                        context.delete(department)
+                    }
+                    
+                    if !localDepartmentsToDelete.isEmpty {
+                        try context.save()
+                    }
+                } catch {
+                    print("❌ Failed to cleanup local departments: \(error)")
+                }
+            }
+            
+            // Now fetch and process records from CloudKit
             let records = try await cloudKitHelper.fetchRecords(ofType: "Department")
             
             await MainActor.run {
@@ -165,7 +197,12 @@ class DepartmentManager: CloudKitSyncable {
                                 try context.save()
                                 print("✅ Added new department from CloudKit: \(department.name)")
                             } else {
-                                print("ℹ️ Department already exists locally: \(record["name"] as? String ?? "Unknown")")
+                                // Update existing department with CloudKit data
+                                let existingDepartment = existingDepartments[0]
+                                existingDepartment.name = record["name"] as? String ?? existingDepartment.name
+                                existingDepartment.maxSlot = record["maxSlot"] as? Int ?? existingDepartment.maxSlot
+                                try context.save()
+                                print("🔄 Updated existing department from CloudKit: \(existingDepartment.name)")
                             }
                         } catch {
                             print("❌ Failed to check/save department from CloudKit: \(error)")

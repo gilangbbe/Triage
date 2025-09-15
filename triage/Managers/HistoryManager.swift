@@ -142,6 +142,38 @@ class HistoryManager: CloudKitSyncable {
     
     func loadFromCloudKit() async {
         do {
+            // First, get all CloudKit record IDs to identify what should exist
+            let cloudKitRecordIDs = try await cloudKitHelper.fetchRecordIDs(ofType: "History")
+            
+            // Get current local history and clean up those not in CloudKit
+            await MainActor.run {
+                guard let context = modelContext else { return }
+                
+                // Get all local history
+                let descriptor = FetchDescriptor<History>()
+                do {
+                    let localHistory = try context.fetch(descriptor)
+                    
+                    // Find local history that no longer exist in CloudKit
+                    let localHistoryToDelete = localHistory.filter { historyItem in
+                        !cloudKitRecordIDs.contains(historyItem.id.uuidString)
+                    }
+                    
+                    // Delete local history that don't exist in CloudKit
+                    for historyItem in localHistoryToDelete {
+                        print("🗑️ Deleting local history not found in CloudKit")
+                        context.delete(historyItem)
+                    }
+                    
+                    if !localHistoryToDelete.isEmpty {
+                        try context.save()
+                    }
+                } catch {
+                    print("❌ Failed to cleanup local history: \(error)")
+                }
+            }
+            
+            // Now fetch and process records from CloudKit
             let records = try await cloudKitHelper.fetchRecords(ofType: "History")
             
             await MainActor.run {
@@ -184,7 +216,19 @@ class HistoryManager: CloudKitSyncable {
                                 try context.save()
                                 print("✅ Added new history from CloudKit")
                             } else {
-                                print("ℹ️ History already exists locally")
+                                // Update existing history with CloudKit data
+                                let existingHistoryItem = existingHistory[0]
+                                existingHistoryItem.timestamp = record["timestamp"] as? Date ?? existingHistoryItem.timestamp
+                                
+                                // Update history type if available
+                                if let typeString = record["typeData"] as? String,
+                                   let typeData = typeString.data(using: .utf8),
+                                   let decodedType = try? JSONDecoder().decode(HistoryType.self, from: typeData) {
+                                    existingHistoryItem.type = decodedType
+                                }
+                                
+                                try context.save()
+                                print("🔄 Updated existing history from CloudKit")
                             }
                         } catch {
                             print("❌ Failed to check/save history from CloudKit: \(error)")

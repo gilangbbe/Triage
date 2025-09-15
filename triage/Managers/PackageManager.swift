@@ -179,6 +179,38 @@ class PackageManager: CloudKitSyncable {
     
     func loadFromCloudKit() async {
         do {
+            // First, get all CloudKit record IDs to identify what should exist
+            let cloudKitRecordIDs = try await cloudKitHelper.fetchRecordIDs(ofType: "Package")
+            
+            // Get current local packages and clean up those not in CloudKit
+            await MainActor.run {
+                guard let context = modelContext else { return }
+                
+                // Get all local packages
+                let descriptor = FetchDescriptor<Package>()
+                do {
+                    let localPackages = try context.fetch(descriptor)
+                    
+                    // Find local packages that no longer exist in CloudKit
+                    let localPackagesToDelete = localPackages.filter { package in
+                        !cloudKitRecordIDs.contains(package.id.uuidString)
+                    }
+                    
+                    // Delete local packages that don't exist in CloudKit
+                    for package in localPackagesToDelete {
+                        print("🗑️ Deleting local package not found in CloudKit: \(package.name)")
+                        context.delete(package)
+                    }
+                    
+                    if !localPackagesToDelete.isEmpty {
+                        try context.save()
+                    }
+                } catch {
+                    print("❌ Failed to cleanup local packages: \(error)")
+                }
+            }
+            
+            // Now fetch and process records from CloudKit
             let records = try await cloudKitHelper.fetchRecords(ofType: "Package")
             
             await MainActor.run {
@@ -223,7 +255,20 @@ class PackageManager: CloudKitSyncable {
                                     print("⚠️ Skipping package - department not found: \(record["name"] as? String ?? "Unknown")")
                                 }
                             } else {
-                                print("ℹ️ Package already exists locally: \(record["name"] as? String ?? "Unknown")")
+                                // Update existing package with CloudKit data
+                                let existingPackage = existingPackages[0]
+                                existingPackage.name = record["name"] as? String ?? existingPackage.name
+                                existingPackage.descriptionText = record["descriptionText"] as? String
+                                
+                                // Update department reference if needed
+                                if let departmentRef = record["department"] as? CKRecord.Reference,
+                                   let departmentId = UUID(uuidString: departmentRef.recordID.recordName),
+                                   let department = DepartmentManager.shared.departments.first(where: { $0.id == departmentId }) {
+                                    existingPackage.department = department
+                                }
+                                
+                                try context.save()
+                                print("🔄 Updated existing package from CloudKit: \(existingPackage.name)")
                             }
                         } catch {
                             print("❌ Failed to check/save package from CloudKit: \(error)")

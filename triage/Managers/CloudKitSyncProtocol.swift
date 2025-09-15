@@ -89,4 +89,22 @@ class CloudKitHelper {
         let (matchResults, _) = try await database.records(matching: query)
         return Array(matchResults)
     }
+    
+    // Method to get all CloudKit record IDs for a specific type (for sync comparison)
+    func fetchRecordIDs(ofType recordType: String) async throws -> Set<String> {
+        let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
+        let (matchResults, _) = try await database.records(matching: query)
+        
+        var recordNames = Set<String>()
+        for (recordID, result) in matchResults {
+            switch result {
+            case .success(_):
+                recordNames.insert(recordID.recordName)
+            case .failure(_):
+                // Skip failed records for now
+                continue
+            }
+        }
+        return recordNames
+    }
 }

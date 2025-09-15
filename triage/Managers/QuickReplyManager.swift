@@ -207,6 +207,38 @@ class QuickReplyManager: CloudKitSyncable {
     
     func loadFromCloudKit() async {
         do {
+            // First, get all CloudKit record IDs to identify what should exist
+            let cloudKitRecordIDs = try await cloudKitHelper.fetchRecordIDs(ofType: "QuickReply")
+            
+            // Get current local quick replies and clean up those not in CloudKit
+            await MainActor.run {
+                guard let context = modelContext else { return }
+                
+                // Get all local quick replies
+                let descriptor = FetchDescriptor<QuickReply>()
+                do {
+                    let localQuickReplies = try context.fetch(descriptor)
+                    
+                    // Find local quick replies that no longer exist in CloudKit
+                    let localQuickRepliesToDelete = localQuickReplies.filter { quickReply in
+                        !cloudKitRecordIDs.contains(quickReply.id.uuidString)
+                    }
+                    
+                    // Delete local quick replies that don't exist in CloudKit
+                    for quickReply in localQuickRepliesToDelete {
+                        print("🗑️ Deleting local quick reply not found in CloudKit: \(quickReply.title)")
+                        context.delete(quickReply)
+                    }
+                    
+                    if !localQuickRepliesToDelete.isEmpty {
+                        try context.save()
+                    }
+                } catch {
+                    print("❌ Failed to cleanup local quick replies: \(error)")
+                }
+            }
+            
+            // Now fetch and process records from CloudKit
             let records = try await cloudKitHelper.fetchRecords(ofType: "QuickReply")
             
             await MainActor.run {
@@ -241,7 +273,14 @@ class QuickReplyManager: CloudKitSyncable {
                                 try context.save()
                                 print("✅ Added new quick reply from CloudKit: \(quickReply.title)")
                             } else {
-                                print("ℹ️ Quick reply already exists locally: \(record["title"] as? String ?? "Unknown")")
+                                // Update existing quick reply with CloudKit data
+                                let existingQuickReply = existingQuickReplies[0]
+                                existingQuickReply.title = record["title"] as? String ?? existingQuickReply.title
+                                existingQuickReply.message = record["message"] as? String ?? existingQuickReply.message
+                                existingQuickReply.isActive = record["isActive"] as? Bool ?? existingQuickReply.isActive
+                                
+                                try context.save()
+                                print("🔄 Updated existing quick reply from CloudKit: \(existingQuickReply.title)")
                             }
                         } catch {
                             print("❌ Failed to check/save quick reply from CloudKit: \(error)")

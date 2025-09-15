@@ -212,6 +212,38 @@ class AppointmentManager: CloudKitSyncable {
     
     func loadFromCloudKit() async {
         do {
+            // First, get all CloudKit record IDs to identify what should exist
+            let cloudKitRecordIDs = try await cloudKitHelper.fetchRecordIDs(ofType: "Appointment")
+            
+            // Get current local appointments and clean up those not in CloudKit
+            await MainActor.run {
+                guard let context = modelContext else { return }
+                
+                // Get all local appointments
+                let descriptor = FetchDescriptor<Appointment>()
+                do {
+                    let localAppointments = try context.fetch(descriptor)
+                    
+                    // Find local appointments that no longer exist in CloudKit
+                    let localAppointmentsToDelete = localAppointments.filter { appointment in
+                        !cloudKitRecordIDs.contains(appointment.id.uuidString)
+                    }
+                    
+                    // Delete local appointments that don't exist in CloudKit
+                    for appointment in localAppointmentsToDelete {
+                        print("🗑️ Deleting local appointment not found in CloudKit: \(appointment.name)")
+                        context.delete(appointment)
+                    }
+                    
+                    if !localAppointmentsToDelete.isEmpty {
+                        try context.save()
+                    }
+                } catch {
+                    print("❌ Failed to cleanup local appointments: \(error)")
+                }
+            }
+            
+            // Now fetch and process records from CloudKit
             let records = try await cloudKitHelper.fetchRecords(ofType: "Appointment")
             
             await MainActor.run {
@@ -277,7 +309,32 @@ class AppointmentManager: CloudKitSyncable {
                                     print("⚠️ Skipping appointment - missing patient/package/timeslot: \(record["name"] as? String ?? "Unknown")")
                                 }
                             } else {
-                                print("ℹ️ Appointment already exists locally: \(record["name"] as? String ?? "Unknown")")
+                                // Update existing appointment with CloudKit data
+                                let existingAppointment = existingAppointments[0]
+                                existingAppointment.name = record["name"] as? String ?? existingAppointment.name
+                                
+                                // Update related objects if they exist
+                                if let patientRef = record["patient"] as? CKRecord.Reference,
+                                   let patientId = UUID(uuidString: patientRef.recordID.recordName),
+                                   let patient = PatientManager.shared.patients.first(where: { $0.id == patientId }) {
+                                    existingAppointment.patient = patient
+                                }
+                                
+                                if let packageRef = record["package"] as? CKRecord.Reference,
+                                   let packageId = UUID(uuidString: packageRef.recordID.recordName),
+                                   let package = PackageManager.shared.packages.first(where: { $0.id == packageId }) {
+                                    existingAppointment.package = package
+                                }
+                                
+                                // Update TimeSlot
+                                if let date = record["date"] as? Date,
+                                   let startTime = record["startTime"] as? Date,
+                                   let endTime = record["endTime"] as? Date {
+                                    existingAppointment.timeSlot = TimeSlot(date: date, startTime: startTime, endTime: endTime)
+                                }
+                                
+                                try context.save()
+                                print("🔄 Updated existing appointment from CloudKit: \(existingAppointment.name)")
                             }
                         } catch {
                             print("❌ Failed to check/save appointment from CloudKit: \(error)")

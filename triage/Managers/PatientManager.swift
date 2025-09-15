@@ -242,6 +242,38 @@ class PatientManager: CloudKitSyncable {
     
     func loadFromCloudKit() async {
         do {
+            // First, get all CloudKit record IDs to identify what should exist
+            let cloudKitRecordIDs = try await cloudKitHelper.fetchRecordIDs(ofType: "Patient")
+            
+            // Get current local patients and clean up those not in CloudKit
+            await MainActor.run {
+                guard let context = modelContext else { return }
+                
+                // Get all local patients
+                let descriptor = FetchDescriptor<Patient>()
+                do {
+                    let localPatients = try context.fetch(descriptor)
+                    
+                    // Find local patients that no longer exist in CloudKit
+                    let localPatientsToDelete = localPatients.filter { patient in
+                        !cloudKitRecordIDs.contains(patient.id.uuidString)
+                    }
+                    
+                    // Delete local patients that don't exist in CloudKit
+                    for patient in localPatientsToDelete {
+                        print("🗑️ Deleting local patient not found in CloudKit: \(patient.fullName)")
+                        context.delete(patient)
+                    }
+                    
+                    if !localPatientsToDelete.isEmpty {
+                        try context.save()
+                    }
+                } catch {
+                    print("❌ Failed to cleanup local patients: \(error)")
+                }
+            }
+            
+            // Now fetch and process records from CloudKit
             let records = try await cloudKitHelper.fetchRecords(ofType: "Patient")
             
             await MainActor.run {
@@ -283,7 +315,21 @@ class PatientManager: CloudKitSyncable {
                                 try context.save()
                                 print("✅ Added new patient from CloudKit: \(patient.fullName)")
                             } else {
-                                print("ℹ️ Patient already exists locally: \(record["fullName"] as? String ?? "Unknown")")
+                                // Update existing patient with CloudKit data
+                                let existingPatient = existingPatients[0]
+                                existingPatient.fullName = record["fullName"] as? String ?? existingPatient.fullName
+                                existingPatient.nationalID = record["nationalID"] as? String
+                                existingPatient.dateOfBirth = record["dateOfBirth"] as? Date
+                                if let genderString = record["gender"] as? String {
+                                    existingPatient.gender = Gender(rawValue: genderString)
+                                }
+                                existingPatient.placeOfBirth = record["placeOfBirth"] as? String
+                                existingPatient.registeredAt = record["registeredAt"] as? Date
+                                existingPatient.phoneNumber = record["phoneNumber"] as? String
+                                existingPatient.address = record["address"] as? String
+                                
+                                try context.save()
+                                print("🔄 Updated existing patient from CloudKit: \(existingPatient.fullName)")
                             }
                         } catch {
                             print("❌ Failed to check/save patient from CloudKit: \(error)")
