@@ -23,7 +23,7 @@ struct SidebarPanel: View {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { showLog = true }
                 } label: {
-                    Label("Reminder Log", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                    Label("Reminder Log", systemImage: "bell.fill")
                         .labelStyle(.iconOnly)
                         .font(.title3)
                         .foregroundStyle(.primary)
@@ -36,11 +36,11 @@ struct SidebarPanel: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Today’s Schedule")
-                        .font(.headline)
+                        .font(.title2)
                     Spacer()
                     if !todaysAppts.isEmpty {
                         Text("\(todaysAppts.count)")
-                            .font(.footnote.weight(.semibold))
+                            .font(.headline.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)

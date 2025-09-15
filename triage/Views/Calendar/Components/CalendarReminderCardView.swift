@@ -69,7 +69,7 @@ struct ReminderCard: View {
                         .font(.headline.weight(.semibold))
                 }
                 .foregroundStyle(
-                    currentStyle == .needToRemind ? currentStyle.accent : Color(.label)
+                    Color("TextPrimary")
                 )
             }
 

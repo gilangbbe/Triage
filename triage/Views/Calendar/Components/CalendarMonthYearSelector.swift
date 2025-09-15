@@ -62,7 +62,7 @@ struct MonthYearSelector: View {
 
                     Picker("Year", selection: $draftYear) {
                         ForEach(years, id: \.self) { y in
-                            Text("\(y)").tag(y)
+                            Text(String(y)).tag(y)
                         }
                     }
                     .pickerStyle(.wheel)

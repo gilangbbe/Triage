@@ -22,7 +22,7 @@ struct DaySelector: View {
         } label: {
             HStack(spacing: 6) {
                 Text(formatted(date))
-                    .font(.caption2.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(Color(.label))
                 Image(systemName: "chevron.down")
                     .font(.subheadline.weight(.semibold))
