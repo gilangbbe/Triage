@@ -11,7 +11,14 @@ struct ReminderLogView: View {
     var logs: [History]
     var onClose: () -> Void
 
-    // Only keep reminder notification histories
+    // MARK: - Section model used by your ForEach
+    private struct SectionGroup: Identifiable {
+        let id = UUID()
+        let date: String
+        let logs: [History]
+    }
+
+    // Keep only reminder notification histories
     private var reminderLogs: [History] {
         logs.filter {
             if case .patitentReminderNotification = $0.type { return true }
@@ -19,26 +26,33 @@ struct ReminderLogView: View {
         }
     }
 
-    private var sections: [(dateString: String, items: [History])] {
-        let grouped = Dictionary(grouping: reminderLogs) { apptDateOnly(from: $0) ?? "—" }
+    // Group by appointment date string only (remove trailing " with ...")
+    private var groupedHistory: [SectionGroup] {
+        let grouped = Dictionary(grouping: reminderLogs) { (h: History) -> String in
+            apptDateOnly(from: h) ?? "—"
+        }
+
         return grouped
-            .map { (key, items) in
-                (dateString: key, items: items.sorted { $0.timestamp > $1.timestamp })
+            .map { key, items in
+                SectionGroup(
+                    date: key,
+                    logs: items.sorted { $0.timestamp > $1.timestamp }
+                )
             }
-            .sorted { $0.dateString > $1.dateString }
+            // If your date strings are ISO-like (e.g., "2025-09-14"), this sorts correctly.
+            // If not, consider converting to Date for reliable sorting.
+            .sorted { $0.date > $1.date }
     }
 
     private func apptDateOnly(from h: History) -> String? {
         if case .patitentReminderNotification(_, let appointmentDate, _) = h.type {
-            if let range = appointmentDate.range(of: " with ") {
-                return String(appointmentDate[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
+            if let r = appointmentDate.range(of: " with ") {
+                return String(appointmentDate[..<r.lowerBound]).trimmingCharacters(in: .whitespaces)
             }
-            return appointmentDate
+            return appointmentDate.trimmingCharacters(in: .whitespaces)
         }
         return nil
     }
-
-
 
     var body: some View {
         ZStack {
@@ -59,106 +73,47 @@ struct ReminderLogView: View {
 
                 Divider().overlay(Color(.separator)).opacity(0.6)
 
-                // Content
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 18) {
-                        ForEach(sections, id: \.dateString) { section in
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text(section.dateString.uppercased())
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(Color(.secondaryLabel))
-                                    .padding(.leading, 8)
+                // Content (your requested block)
+                if groupedHistory.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "bell.slash")
+                            .font(.largeTitle)
+                            .foregroundStyle(.secondary)
+                        Text("No reminder logs yet")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(groupedHistory, id: \.date) { section in
+                                Text(section.date)
+                                    .font(.headline)
+                                    .padding(.vertical, 16)
 
                                 VStack(spacing: 0) {
-                                    ForEach(section.items, id: \.id) { item in
-                                        ReminderRow(history: item)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 10)
+                                    ForEach(Array(section.logs.enumerated()), id: \.element.id) { index, log in
+                                        HistoryRowView(historyLog: log)
 
-                                        if item.id != section.items.last?.id {
-                                            Divider().overlay(Color(.separator)).opacity(0.35)
+                                        // Add divider except for last log
+                                        if index < section.logs.count - 1 {
+                                            Divider().padding(.horizontal, 4)
                                         }
                                     }
                                 }
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(.secondarySystemBackground))
-                                )
+                                .background(Color.gray.opacity(0.05))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
-                            .padding(.horizontal, 20)
                         }
-                        Spacer(minLength: 8)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.vertical, 8)
                 }
             }
             .frame(maxWidth: 1024)
             .padding(12)
             .transition(.scale.combined(with: .opacity))
         }
-    }
-
-    // MARK: - Helpers
-    private func apptDateString(from h: History) -> String? {
-        if case .patitentReminderNotification(_, let appointmentDate, _) = h.type {
-            return appointmentDate
-        }
-        return nil
-    }
-}
-
-private struct ReminderRow: View {
-    let history: History
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.tertiarySystemFill))
-                    .frame(width: 36, height: 36)
-                Image(systemName: "bell.fill")
-                    .foregroundStyle(Color(.secondaryLabel))
-                    .font(.footnote.weight(.bold))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(styledMessage(history))
-                    .font(.callout)
-                    .foregroundStyle(Color(.label))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 12)
-
-            // Show the reminder log creation time
-            Text(time(history.timestamp))
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(Color(.secondaryLabel))
-                .frame(minWidth: 64, alignment: .trailing)
-        }
-    }
-
-    private func styledMessage(_ h: History) -> AttributedString {
-        switch h.type {
-        case .patitentReminderNotification(let patientName, let appointmentDate, let AppointmentTime):
-            var s = AttributedString("Patient ")
-            var name = AttributedString(patientName); name.font = .callout.bold(); s.append(name)
-            s.append(AttributedString(" has an appointment on "))
-            var d = AttributedString(appointmentDate); d.font = .callout.bold(); s.append(d)
-            s.append(AttributedString(" at "))
-            var t = AttributedString(AppointmentTime); t.font = .callout.bold(); s.append(t)
-            return s
-
-        default:
-            return AttributedString("")
-        }
-    }
-
-    private func time(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale.current
-        f.dateFormat = "HH:mm"
-        return f.string(from: date)
     }
 }

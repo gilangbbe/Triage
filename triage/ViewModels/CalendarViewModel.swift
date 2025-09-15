@@ -10,13 +10,13 @@ import SwiftData
 
 @Observable
 final class CalendarViewModel {
-    enum Scope: String, CaseIterable, Equatable { case day, week }
+    enum Scope: String, CaseIterable, Equatable { case Day, Week }
 
     private let appointmentManager: AppointmentManager
     @ObservationIgnored private let cal = Calendar.current
 
     // MARK: - UI State
-    var scope: Scope = .day
+    var scope: Scope = .Day
     var selectedDate: Date = .now
     var monthAnchor: Date = .now
 
@@ -29,11 +29,11 @@ final class CalendarViewModel {
     // MARK: - Visible range
     var visibleInterval: DateInterval {
         switch scope {
-        case .day:
+        case .Day:
             let start = cal.startOfDay(for: selectedDate)
             let end = cal.date(byAdding: .day, value: 1, to: start)!
             return DateInterval(start: start, end: end)
-        case .week:
+        case .Week:
             let start = cal.dateInterval(of: .weekOfYear, for: monthAnchor)!.start
             let end = cal.date(byAdding: .day, value: 7, to: start)!
             return DateInterval(start: start, end: end)

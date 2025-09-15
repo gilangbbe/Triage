@@ -22,7 +22,7 @@ struct OverviewHeader: View {
                 } label: {
                     Text("Add")
                         .font(.headline)
-                        .foregroundStyle(Color.blue)
+                        .foregroundStyle(Color(hex: "#0F0E46"))
                 }
                 .buttonStyle(.plain)
             }

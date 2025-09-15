@@ -81,7 +81,7 @@ private struct DayCell: View {
                 .background(
                     Circle().fill(
                         isSelected
-                        ? Color(.systemBlue).opacity(0.80)
+                        ? Color(hex: "#0F0E46").opacity(0.80)
                         : (isToday ? Color(.systemBlue).opacity(0.30)
                                    : .clear)
                     )
@@ -90,7 +90,7 @@ private struct DayCell: View {
                     Circle()
                         .stroke(
                             (isToday && !isSelected)
-                            ? Color(.systemBlue).opacity(0.30)
+                            ? Color(hex: "#0F0E46").opacity(0.30)
                             : .clear,
                             lineWidth: 1
                         )
