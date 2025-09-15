@@ -6,12 +6,12 @@
 //
 
 import UIKit
+import ObjectiveC
 
 class KeyboardViewController: UIInputViewController {
     
     private var parseButton: UIButton!
     private var pasteButton: UIButton!
-    private var quickRepliesButton: UIButton!
     private var textView: UITextView!
     private var statusLabel: UILabel!
     private var nextKeyboardButton: UIButton!
@@ -19,12 +19,11 @@ class KeyboardViewController: UIInputViewController {
     private var quickRepliesContainer: UIView!
     
     private var quickReplies: [QuickReplyData] = []
-    private var showingQuickReplies = false
     
     override func updateViewConstraints() {
         super.updateViewConstraints()
         
-        // Set the keyboard height - increased to accommodate quick replies
+        // Set the keyboard height - fixed height for always visible quick replies
         let heightConstraint = NSLayoutConstraint(
             item: view!,
             attribute: .height,
@@ -32,7 +31,7 @@ class KeyboardViewController: UIInputViewController {
             toItem: nil,
             attribute: .notAnAttribute,
             multiplier: 0.0,
-            constant: showingQuickReplies ? 320 : 220
+            constant: 380
         )
         heightConstraint.priority = UILayoutPriority(999)
         view.addConstraint(heightConstraint)
@@ -43,127 +42,187 @@ class KeyboardViewController: UIInputViewController {
         
         loadQuickReplies()
         setupKeyboardUI()
+        updateAppearanceForCurrentMode()
+        
+        // Load quick replies into collection view after UI is set up
+        DispatchQueue.main.async {
+            self.quickRepliesCollectionView.reloadData()
+            // Force layout update for proper 2x2 grid
+            self.quickRepliesCollectionView.collectionViewLayout.invalidateLayout()
+        }
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Update collection view layout when bounds change
+        quickRepliesCollectionView.collectionViewLayout.invalidateLayout()
+    }
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        
+        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            updateAppearanceForCurrentMode()
+        }
+    }
+    
+    private func updateAppearanceForCurrentMode() {
+        // Update container background
+        if let containerView = view.subviews.first {
+            containerView.backgroundColor = UIColor.systemBackground
+        }
+        
+        // Update button colors
+        pasteButton?.backgroundColor = UIColor.customButtonColor
+        pasteButton?.setTitleColor(UIColor.customTextColor, for: .normal)
+        
+        parseButton?.backgroundColor = UIColor.customButtonColor
+        parseButton?.setTitleColor(UIColor.customTextColor, for: .normal)
+        
+        nextKeyboardButton?.backgroundColor = UIColor.customButtonColor
+        nextKeyboardButton?.setTitleColor(UIColor.customTextColor, for: .normal)
+        
+        // Update status label colors
+        statusLabel?.textColor = UIColor.customTextColor
+        statusLabel?.backgroundColor = UIColor.customButtonColor.withAlphaComponent(0.1)
+        
+        // Update Quick Reply cells
+        quickRepliesCollectionView?.reloadData()
+        
+        // Force layout update
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
     }
     
     private func setupKeyboardUI() {
         view.backgroundColor = UIColor.systemGray6
         
-        // Create main container
+        // Create main container with improved styling
         let containerView = UIView()
         containerView.backgroundColor = UIColor.systemBackground
-        containerView.layer.cornerRadius = 12
+        containerView.layer.cornerRadius = 16
         containerView.layer.shadowColor = UIColor.black.cgColor
-        containerView.layer.shadowOffset = CGSize(width: 0, height: -2)
-        containerView.layer.shadowOpacity = 0.1
-        containerView.layer.shadowRadius = 4
+        containerView.layer.shadowOffset = CGSize(width: 0, height: -3)
+        containerView.layer.shadowOpacity = 0.15
+        containerView.layer.shadowRadius = 8
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
         
-        // Title label
-        let titleLabel = UILabel()
-        titleLabel.text = "Triage Customer Parser"
-        titleLabel.font = UIFont.boldSystemFont(ofSize: 16)
-        titleLabel.textAlignment = .center
-        titleLabel.textColor = UIColor.label
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        containerView.addSubview(titleLabel)
-        
-        // Text view for input
+        // Text view with improved styling and placeholder
         textView = UITextView()
-        textView.font = UIFont.systemFont(ofSize: 14)
+        textView.font = UIFont.systemFont(ofSize: 15)
         textView.layer.borderColor = UIColor.systemGray4.cgColor
-        textView.layer.borderWidth = 1
-        textView.layer.cornerRadius = 8
-        textView.text = "Paste customer message here..."
-        textView.textColor = UIColor.placeholderText
-        textView.backgroundColor = UIColor.systemBackground
+        textView.layer.borderWidth = 1.5
+        textView.layer.cornerRadius = 12
+        textView.backgroundColor = UIColor.secondarySystemBackground
         textView.delegate = self
         textView.translatesAutoresizingMaskIntoConstraints = false
+        textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        
+        // Add placeholder label
+        let placeholderLabel = UILabel()
+        placeholderLabel.text = "Paste patient information..."
+        placeholderLabel.font = UIFont.systemFont(ofSize: 15)
+        placeholderLabel.textColor = UIColor.placeholderText
+        placeholderLabel.numberOfLines = 0
+        placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+        textView.addSubview(placeholderLabel)
+        textView.placeholderLabel = placeholderLabel
+        
         containerView.addSubview(textView)
         
-        // Button stack
+        // Button stack with improved styling
         let buttonStack = UIStackView()
         buttonStack.axis = .horizontal
         buttonStack.distribution = .fillEqually
-        buttonStack.spacing = 8
+        buttonStack.spacing = 12
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(buttonStack)
         
-        // Paste button
-        pasteButton = UIButton(type: .system)
-        pasteButton.setTitle("Paste", for: .normal)
-        pasteButton.backgroundColor = UIColor.systemBlue
-        pasteButton.setTitleColor(.white, for: .normal)
-        pasteButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        pasteButton.layer.cornerRadius = 8
-        pasteButton.addTarget(self, action: #selector(pasteButtonTapped), for: .touchUpInside)
+        // Paste button with icon
+        pasteButton = createStyledButton(
+            title: "Paste",
+            backgroundColor: UIColor.customButtonColor,
+            action: #selector(pasteButtonTapped)
+        )
         buttonStack.addArrangedSubview(pasteButton)
         
-        // Parse button
-        parseButton = UIButton(type: .system)
-        parseButton.setTitle("Parse & Save", for: .normal)
-        parseButton.backgroundColor = UIColor.systemGreen
-        parseButton.setTitleColor(.white, for: .normal)
-        parseButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        parseButton.layer.cornerRadius = 8
-        parseButton.addTarget(self, action: #selector(parseButtonTapped), for: .touchUpInside)
+        // Parse button with icon
+        parseButton = createStyledButton(
+            title: "Save",
+            backgroundColor: UIColor.customButtonColor,
+            action: #selector(parseButtonTapped)
+        )
         buttonStack.addArrangedSubview(parseButton)
         
-        // Quick Replies button
-        quickRepliesButton = UIButton(type: .system)
-        quickRepliesButton.setTitle("Quick Replies", for: .normal)
-        quickRepliesButton.backgroundColor = UIColor.systemPurple
-        quickRepliesButton.setTitleColor(.white, for: .normal)
-        quickRepliesButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        quickRepliesButton.layer.cornerRadius = 8
-        quickRepliesButton.addTarget(self, action: #selector(toggleQuickReplies), for: .touchUpInside)
-        buttonStack.addArrangedSubview(quickRepliesButton)
-        
-        // Next keyboard button
+        // Next keyboard button with improved styling
         nextKeyboardButton = UIButton(type: .system)
-        nextKeyboardButton.setTitle("🌐", for: .normal)
-        nextKeyboardButton.titleLabel?.font = UIFont.systemFont(ofSize: 20)
+        nextKeyboardButton.setTitle("Back", for: .normal)
+        nextKeyboardButton.setTitleColor(UIColor.customTextColor, for: .normal)
+        nextKeyboardButton.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .bold)
+        nextKeyboardButton.backgroundColor = UIColor.customButtonColor
+        nextKeyboardButton.layer.cornerRadius = 8
         nextKeyboardButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
         nextKeyboardButton.translatesAutoresizingMaskIntoConstraints = false
         buttonStack.addArrangedSubview(nextKeyboardButton)
         
-        // Status label
+        // Status label with improved styling and app icon
         statusLabel = UILabel()
-        statusLabel.text = ""
-        statusLabel.font = UIFont.systemFont(ofSize: 12)
+        statusLabel.text = "Ready"
+        statusLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
         statusLabel.textAlignment = .center
-        statusLabel.numberOfLines = 2
-        statusLabel.textColor = UIColor.secondaryLabel
+        statusLabel.numberOfLines = 3
+        statusLabel.textColor = UIColor.customTextColor
+        statusLabel.backgroundColor = UIColor.customButtonColor.withAlphaComponent(0.1)
+        statusLabel.layer.cornerRadius = 8
+        statusLabel.layer.masksToBounds = true
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(statusLabel)
         
-        // Quick Replies Container
+        // App icon in the status area
+        let iconImageView = UIImageView()
+        iconImageView.image = UIImage(named: "AppIcon")
+        iconImageView.tintColor = UIColor.customTextColor
+        iconImageView.contentMode = .scaleAspectFit
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.addSubview(iconImageView)
+        
+        // Quick Replies Container with improved styling
         quickRepliesContainer = UIView()
-        quickRepliesContainer.backgroundColor = UIColor.systemBackground
-        quickRepliesContainer.layer.cornerRadius = 8
+        quickRepliesContainer.backgroundColor = UIColor.secondarySystemBackground
+        quickRepliesContainer.layer.cornerRadius = 12
         quickRepliesContainer.layer.borderColor = UIColor.systemGray4.cgColor
         quickRepliesContainer.layer.borderWidth = 1
         quickRepliesContainer.translatesAutoresizingMaskIntoConstraints = false
-        quickRepliesContainer.isHidden = true
         containerView.addSubview(quickRepliesContainer)
         
-        // Collection View for Quick Replies
+        // Quick replies header
+        let quickRepliesHeader = UILabel()
+        quickRepliesHeader.text = "Quick Replies"
+        quickRepliesHeader.font = UIFont.boldSystemFont(ofSize: 14)
+        quickRepliesHeader.textColor = UIColor.label
+        quickRepliesHeader.translatesAutoresizingMaskIntoConstraints = false
+        quickRepliesContainer.addSubview(quickRepliesHeader)
+        
+        // Collection View for Quick Replies with 2x2 grid layout
         let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
+        layout.scrollDirection = .vertical
         layout.minimumInteritemSpacing = 8
         layout.minimumLineSpacing = 8
-        layout.sectionInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
+        layout.sectionInset = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        layout.itemSize = CGSize(width: 140, height: 50) // Default size, will be overridden by delegate
         
         quickRepliesCollectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         quickRepliesCollectionView.backgroundColor = UIColor.clear
         quickRepliesCollectionView.delegate = self
         quickRepliesCollectionView.dataSource = self
         quickRepliesCollectionView.register(QuickReplyCell.self, forCellWithReuseIdentifier: "QuickReplyCell")
+        quickRepliesCollectionView.showsVerticalScrollIndicator = true
+        quickRepliesCollectionView.showsHorizontalScrollIndicator = false
         quickRepliesCollectionView.translatesAutoresizingMaskIntoConstraints = false
         quickRepliesContainer.addSubview(quickRepliesCollectionView)
         
-        // Setup constraints
+        // Setup constraints with improved spacing
         NSLayoutConstraint.activate([
             // Container
             containerView.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
@@ -171,44 +230,89 @@ class KeyboardViewController: UIInputViewController {
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -8),
             
-            // Title
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            
             // Text view
-            textView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            textView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            textView.heightAnchor.constraint(equalToConstant: 60),
+            textView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            textView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            textView.heightAnchor.constraint(equalToConstant: 80),
+            
+            // Placeholder label
+            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 12),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 16),
+            placeholderLabel.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -16),
             
             // Button stack
-            buttonStack.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 12),
-            buttonStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            buttonStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            buttonStack.heightAnchor.constraint(equalToConstant: 36),
+            buttonStack.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 16),
+            buttonStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            buttonStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            buttonStack.heightAnchor.constraint(equalToConstant: 44),
             
             // Next keyboard button constraint
-            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 36),
+            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 50),
             
             // Quick Replies Container
             quickRepliesContainer.topAnchor.constraint(equalTo: buttonStack.bottomAnchor, constant: 12),
-            quickRepliesContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            quickRepliesContainer.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            quickRepliesContainer.heightAnchor.constraint(equalToConstant: 80),
+            quickRepliesContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            quickRepliesContainer.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            quickRepliesContainer.heightAnchor.constraint(equalToConstant: 110),
+            
+            // Quick replies header
+            quickRepliesHeader.topAnchor.constraint(equalTo: quickRepliesContainer.topAnchor, constant: 8),
+            quickRepliesHeader.leadingAnchor.constraint(equalTo: quickRepliesContainer.leadingAnchor, constant: 12),
+            quickRepliesHeader.trailingAnchor.constraint(equalTo: quickRepliesContainer.trailingAnchor, constant: -12),
             
             // Collection View
-            quickRepliesCollectionView.topAnchor.constraint(equalTo: quickRepliesContainer.topAnchor),
+            quickRepliesCollectionView.topAnchor.constraint(equalTo: quickRepliesHeader.bottomAnchor, constant: 4),
             quickRepliesCollectionView.leadingAnchor.constraint(equalTo: quickRepliesContainer.leadingAnchor),
             quickRepliesCollectionView.trailingAnchor.constraint(equalTo: quickRepliesContainer.trailingAnchor),
-            quickRepliesCollectionView.bottomAnchor.constraint(equalTo: quickRepliesContainer.bottomAnchor),
+            quickRepliesCollectionView.bottomAnchor.constraint(equalTo: quickRepliesContainer.bottomAnchor, constant: -4),
             
             // Status label
-            statusLabel.topAnchor.constraint(equalTo: quickRepliesContainer.bottomAnchor, constant: 8),
-            statusLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
-            statusLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
-            statusLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -12)
+            statusLabel.topAnchor.constraint(equalTo: quickRepliesContainer.bottomAnchor, constant: 12),
+            statusLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            statusLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            statusLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
+            statusLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -16),
+            
+            // App icon in status area
+            iconImageView.trailingAnchor.constraint(equalTo: statusLabel.trailingAnchor, constant: -12),
+            iconImageView.centerYAnchor.constraint(equalTo: statusLabel.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 20),
+            iconImageView.heightAnchor.constraint(equalToConstant: 20)
         ])
+    }
+    
+    // Helper method to create styled buttons
+    private func createStyledButton(title: String, backgroundColor: UIColor, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.backgroundColor = backgroundColor
+        button.setTitleColor(UIColor.customTextColor, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
+        button.layer.cornerRadius = 10
+        button.layer.shadowColor = backgroundColor.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowOpacity = 0.3
+        button.layer.shadowRadius = 4
+        button.addTarget(self, action: action, for: .touchUpInside)
+        
+        // Add press animation
+        button.addTarget(self, action: #selector(buttonPressed(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(buttonReleased(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
+        return button
+    }
+    
+    @objc private func buttonPressed(_ button: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            button.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        }
+    }
+    
+    @objc private func buttonReleased(_ button: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            button.transform = CGAffineTransform.identity
+        }
     }
     
     override func viewWillLayoutSubviews() {
@@ -220,18 +324,16 @@ class KeyboardViewController: UIInputViewController {
         if let clipboardText = UIPasteboard.general.string {
             textView.text = clipboardText
             textView.textColor = UIColor.label
-            statusLabel.text = "Text pasted from clipboard"
-            statusLabel.textColor = UIColor.systemBlue
+            textView.placeholderLabel?.isHidden = !clipboardText.isEmpty
+            showStatus("Text pasted from clipboard", color: UIColor.customButtonColor)
         } else {
-            statusLabel.text = "No text found in clipboard"
-            statusLabel.textColor = UIColor.systemRed
+            showStatus("No text found in clipboard", color: UIColor.customButtonColor)
         }
     }
     
         @objc private func parseButtonTapped() {
         guard let text = textView.text, !text.isEmpty else {
-            statusLabel.text = "Error: No text to parse"
-            statusLabel.textColor = UIColor.systemRed
+            showStatus("Error: No text to parse", color: UIColor.customButtonColor)
             return
         }
         
@@ -239,8 +341,7 @@ class KeyboardViewController: UIInputViewController {
         let parsedData = parser.parse(from: text)
         
         guard !parsedData.fullName.isEmpty else {
-            statusLabel.text = "Error: Could not parse patient information"
-            statusLabel.textColor = UIColor.systemRed
+            showStatus("Error: Could not parse patient information", color: UIColor.customButtonColor)
             return
         }
         
@@ -258,23 +359,23 @@ class KeyboardViewController: UIInputViewController {
         savePatientToSharedContainer(patient)
         
         // Show success message
-        statusLabel.text = "✓ Patient parsed and saved successfully"
-        statusLabel.textColor = UIColor.systemGreen
+        showStatus("Patient '\(parsedData.fullName)' parsed and saved successfully!", color: UIColor.customButtonColor)
         
         // Clear the text view
         clearTextView()
     }
     
     private func clearTextView() {
-        textView.text = "Paste customer message here..."
-        textView.textColor = UIColor.placeholderText
-        statusLabel.text = ""
+        textView.text = ""
+        textView.placeholderLabel?.isHidden = false
+        statusLabel.text = "Ready"
+        statusLabel.textColor = UIColor.customTextColor
+        statusLabel.backgroundColor = UIColor.customButtonColor.withAlphaComponent(0.1)
     }
     
     private func savePatientToSharedContainer(_ patient: PatientData) {
         guard let sharedDefaults = SharedConfiguration.sharedUserDefaults else {
-            statusLabel.text = "Error: Could not access shared storage"
-            statusLabel.textColor = UIColor.systemRed
+            showStatus("Error: Could not access shared storage", color: UIColor.customButtonColor)
             return
         }
         
@@ -294,21 +395,21 @@ class KeyboardViewController: UIInputViewController {
         }
     }
     
-    @objc private func toggleQuickReplies() {
-        showingQuickReplies.toggle()
-        quickRepliesContainer.isHidden = !showingQuickReplies
+    private func showStatus(_ message: String, color: UIColor) {
+        statusLabel.text = message
+        statusLabel.textColor = UIColor.customTextColor
+        statusLabel.backgroundColor = UIColor.customButtonColor
         
-        // Update button appearance
-        quickRepliesButton.backgroundColor = showingQuickReplies ? UIColor.systemOrange : UIColor.systemPurple
-        quickRepliesButton.setTitle(showingQuickReplies ? "Hide Replies" : "Quick Replies", for: .normal)
-        
-        // Update keyboard height
-        updateViewConstraints()
-        
-        // Reload collection view if showing
-        if showingQuickReplies {
-            loadQuickReplies()
-            quickRepliesCollectionView.reloadData()
+        // Auto-clear after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            UIView.animate(withDuration: 0.3) {
+                self.statusLabel.alpha = 0
+            } completion: { _ in
+                self.statusLabel.text = "Ready"
+                self.statusLabel.backgroundColor = UIColor.customButtonColor.withAlphaComponent(0.1)
+                self.statusLabel.textColor = UIColor.customTextColor
+                self.statusLabel.alpha = 1
+            }
         }
     }
     
@@ -325,21 +426,7 @@ class KeyboardViewController: UIInputViewController {
     
     private func insertQuickReply(_ reply: QuickReplyData) {
         textDocumentProxy.insertText(reply.message)
-        
-        // Hide quick replies after selection
-        showingQuickReplies = false
-        quickRepliesContainer.isHidden = true
-        quickRepliesButton.backgroundColor = UIColor.systemPurple
-        quickRepliesButton.setTitle("Quick Replies", for: .normal)
-        updateViewConstraints()
-        
-        statusLabel.text = "Quick reply inserted: \(reply.title)"
-        statusLabel.textColor = UIColor.systemBlue
-        
-        // Clear status after delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.statusLabel.text = ""
-        }
+        showStatus("Quick reply inserted: \(reply.title)", color: UIColor.customButtonColor)
     }
     
     override func textWillChange(_ textInput: UITextInput?) {
@@ -363,8 +450,8 @@ class KeyboardViewController: UIInputViewController {
     }
 }
 
-// MARK: - UICollectionViewDataSource, UICollectionViewDelegate
-extension KeyboardViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+// MARK: - UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout
+extension KeyboardViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return quickReplies.count
     }
@@ -378,6 +465,24 @@ extension KeyboardViewController: UICollectionViewDataSource, UICollectionViewDe
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let reply = quickReplies[indexPath.item]
         insertQuickReply(reply)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        // Get the actual collection view width
+        let collectionViewWidth = collectionView.bounds.width
+        
+        // If collection view width is still 0, use container width as fallback
+        let containerWidth = collectionViewWidth > 0 ? collectionViewWidth : quickRepliesContainer.bounds.width
+        
+        // Calculate item width for 2 columns
+        let sectionInsets: CGFloat = 24 // 12 + 12 for left/right margins
+        let interItemSpacing: CGFloat = 8
+        let availableWidth = containerWidth - sectionInsets - interItemSpacing
+        let itemWidth = availableWidth / 2
+        
+        // Ensure minimum width in case calculations result in very small numbers
+        let finalWidth = max(itemWidth, 120) // Minimum width of 120
+        return CGSize(width: finalWidth, height: 50)
     }
 }
 
@@ -395,23 +500,27 @@ class QuickReplyCell: UICollectionViewCell {
     }
     
     private func setupCell() {
-        contentView.backgroundColor = UIColor.systemBlue
-        contentView.layer.cornerRadius = 8
+        contentView.backgroundColor = UIColor.customButtonColor
+        contentView.layer.cornerRadius = 12
+        contentView.layer.shadowColor = UIColor.customButtonColor.cgColor
+        contentView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        contentView.layer.shadowOpacity = 0.3
+        contentView.layer.shadowRadius = 4
         
-        titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        titleLabel.textColor = UIColor.white
+        titleLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = UIColor.customTextColor
         titleLabel.textAlignment = .center
         titleLabel.numberOfLines = 2
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(titleLabel)
         
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-            contentView.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
-            contentView.heightAnchor.constraint(equalToConstant: 64)
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -14),
+            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
+            contentView.widthAnchor.constraint(greaterThanOrEqualToConstant: 90),
+            contentView.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
     
@@ -421,7 +530,7 @@ class QuickReplyCell: UICollectionViewCell {
     
     override var isHighlighted: Bool {
         didSet {
-            contentView.backgroundColor = isHighlighted ? UIColor.systemBlue.withAlphaComponent(0.7) : UIColor.systemBlue
+            contentView.backgroundColor = isHighlighted ? UIColor.customButtonColor.withAlphaComponent(0.7) : UIColor.customButtonColor
         }
     }
 }
@@ -430,17 +539,76 @@ class QuickReplyCell: UICollectionViewCell {
 // MARK: - UITextViewDelegate
 extension KeyboardViewController: UITextViewDelegate {
     func textViewDidBeginEditing(_ textView: UITextView) {
-        if textView.textColor == UIColor.placeholderText {
-            textView.text = ""
-            textView.textColor = UIColor.label
-        }
+        textView.placeholderLabel?.isHidden = true
     }
     
     func textViewDidEndEditing(_ textView: UITextView) {
-        if textView.text.isEmpty {
-            textView.text = "Paste customer message here..."
-            textView.textColor = UIColor.placeholderText
+        textView.placeholderLabel?.isHidden = !textView.text.isEmpty
+    }
+    
+    func textViewDidChange(_ textView: UITextView) {
+        textView.placeholderLabel?.isHidden = !textView.text.isEmpty
+    }
+}
+
+// MARK: - UITextView Extension for Placeholder
+extension UITextView {
+    private struct AssociatedKeys {
+        static var placeholderLabel = "placeholderLabel"
+    }
+    
+    var placeholderLabel: UILabel? {
+        get {
+            return objc_getAssociatedObject(self, &AssociatedKeys.placeholderLabel) as? UILabel
         }
+        set {
+            objc_setAssociatedObject(self, &AssociatedKeys.placeholderLabel, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+}
+
+// MARK: - Custom Colors
+extension UIColor {
+    static let customTextColor = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(hex: "0F0E46") // Dark mode text
+        default:
+            return UIColor(hex: "EFEEFF") // Light mode text
+        }
+    }
+    
+    static let customButtonColor = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(hex: "EFEEFF") // Dark mode button
+        default:
+            return UIColor(hex: "0F0E46") // Light mode button
+        }
+    }
+    
+    convenience init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (1, 1, 1, 0)
+        }
+        
+        self.init(
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            alpha: Double(a) / 255
+        )
     }
 }
 
