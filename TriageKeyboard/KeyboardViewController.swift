@@ -79,7 +79,7 @@ class KeyboardViewController: UIInputViewController {
         parseButton?.backgroundColor = UIColor.customButtonColor
         parseButton?.setTitleColor(UIColor.customTextColor, for: .normal)
         
-        nextKeyboardButton?.backgroundColor = UIColor.customButtonColor
+        nextKeyboardButton?.backgroundColor = UIColor.lightGray
         nextKeyboardButton?.setTitleColor(UIColor.customTextColor, for: .normal)
         
         // Update status label colors
@@ -134,7 +134,7 @@ class KeyboardViewController: UIInputViewController {
         // Button stack with improved styling
         let buttonStack = UIStackView()
         buttonStack.axis = .horizontal
-        buttonStack.distribution = .fillEqually
+        buttonStack.distribution = .fill
         buttonStack.spacing = 12
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(buttonStack)
@@ -160,7 +160,7 @@ class KeyboardViewController: UIInputViewController {
         nextKeyboardButton.setTitle("Back", for: .normal)
         nextKeyboardButton.setTitleColor(UIColor.customTextColor, for: .normal)
         nextKeyboardButton.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .bold)
-        nextKeyboardButton.backgroundColor = UIColor.customButtonColor
+        nextKeyboardButton.backgroundColor = UIColor.customButtonColor.withAlphaComponent(0.1)
         nextKeyboardButton.layer.cornerRadius = 8
         nextKeyboardButton.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
         nextKeyboardButton.translatesAutoresizingMaskIntoConstraints = false
@@ -247,8 +247,9 @@ class KeyboardViewController: UIInputViewController {
             buttonStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
             buttonStack.heightAnchor.constraint(equalToConstant: 44),
             
-            // Next keyboard button constraint
-            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 50),
+            // Button width constraints - make Paste and Save equal width, Back button shorter
+            pasteButton.widthAnchor.constraint(equalTo: parseButton.widthAnchor),
+            nextKeyboardButton.widthAnchor.constraint(equalToConstant: 60),
             
             // Quick Replies Container
             quickRepliesContainer.topAnchor.constraint(equalTo: buttonStack.bottomAnchor, constant: 12),
