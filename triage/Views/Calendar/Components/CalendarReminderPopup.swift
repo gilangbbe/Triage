@@ -38,6 +38,7 @@ struct ReminderPopup: View {
             HStack {
                 Spacer()
                 Button {
+                    copyReminder(appt)
                     withAnimation(.easeInOut(duration: 0.15)) { copied = true }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -107,6 +108,25 @@ struct ReminderPopup: View {
         Please arrive 15 minutes earlier for registration.
         """
     }
+    
+    private func copyReminder(_ appt: Appointment) {
+        let plain = plainReminder(for: appt)
+
+        let attr = NSAttributedString(reminderMessage(for: appt))
+        let rtf = try? attr.data(from: NSRange(location: 0, length: attr.length),
+                                 documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
+
+        #if canImport(UIKit)
+        if let rtf { UIPasteboard.general.setData(rtf, forPasteboardType: "public.rtf") }
+        UIPasteboard.general.string = plain
+        #elseif canImport(AppKit)
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        if let rtf { pb.setData(rtf, forType: .rtf) }
+        pb.setString(plain, forType: .string)
+        #endif
+    }
+
 
     private func time(_ d: Date) -> String {
         let f = DateFormatter()
