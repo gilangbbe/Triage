@@ -33,7 +33,6 @@ class QuickReplyManager: CloudKitSyncable {
         Task {
             await loadFromCloudKit()
             loadQuickReplies() // Load any additional local data
-            setupDefaultReplies()
         }
     }
     
